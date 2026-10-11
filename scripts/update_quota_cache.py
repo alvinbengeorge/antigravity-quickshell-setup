@@ -21,11 +21,20 @@ def update_cache():
         with open(LOCK_FILE, 'w') as f:
             f.write(str(os.getpid()))
 
+        agy_bin = os.path.expanduser('~/.local/bin/agy')
+        if not os.path.exists(agy_bin):
+            import shutil
+            agy_bin = shutil.which('agy') or 'agy'
+
+        env = os.environ.copy()
+        env['PATH'] = f"{os.path.expanduser('~/.local/bin')}:{env.get('PATH', '')}"
+
         res = subprocess.run(
-            ['agy', '--print', '/quota', '--output-format', 'json'],
+            [agy_bin, '--print', '/quota', '--output-format', 'json'],
             capture_output=True,
             text=True,
-            timeout=15
+            timeout=15,
+            env=env
         )
 
         if res.returncode == 0 and res.stdout.strip():
