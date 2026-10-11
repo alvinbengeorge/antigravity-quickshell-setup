@@ -72,6 +72,7 @@ PanelWindow {
             }
 
             SystemPill {}
+            WifiPill {}
             BatteryPill {}
             ClockPill {}
         }

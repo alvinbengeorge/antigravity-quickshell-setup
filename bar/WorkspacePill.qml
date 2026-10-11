@@ -93,7 +93,6 @@ Rectangle {
                         text: wsDot.modelData.toString()
                         font.family: Theme.fontFamily
                         font.pixelSize: 9
-                        font.bold: true
                         color: wsDot.isCurrent ? Theme.textOnAccent : Theme.textMuted
                         visible: wsDot.isCurrent || mouseArea.containsMouse
                     }

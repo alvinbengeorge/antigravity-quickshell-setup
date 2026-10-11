@@ -28,21 +28,48 @@ Rectangle {
         anchors.centerIn: parent
         spacing: 10
 
-        // Time Text
-        Text {
-            text: Qt.formatTime(root.now, "HH:mm")
-            font.family: Theme.fontMono
-            font.pixelSize: 12
-            font.bold: true
-            color: Theme.textPrimary
-        }
+        // Time and Date click area
+        Item {
+            implicitWidth: timeDateRow.implicitWidth
+            implicitHeight: timeDateRow.implicitHeight
 
-        // Date Text
-        Text {
-            text: Qt.formatDate(root.now, "ddd, MMM d")
-            font.family: Theme.fontFamily
-            font.pixelSize: 11
-            color: Theme.textMuted
+            RowLayout {
+                id: timeDateRow
+                anchors.centerIn: parent
+                spacing: 8
+
+                // Time Text
+                Text {
+                    text: Qt.formatTime(root.now, "HH:mm")
+                    font.family: Theme.fontMono
+                    font.pixelSize: 12
+                    color: Theme.textPrimary
+                }
+
+                // Date Text
+                Text {
+                    text: Qt.formatDate(root.now, "ddd, MMM d")
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 11
+                    color: Theme.textMuted
+                }
+
+                // Dropdown indicator
+                Text {
+                    text: ShellState.controlCenterOpen ? "▲" : "▼"
+                    font.pixelSize: 8
+                    color: ShellState.controlCenterOpen ? Theme.accentCyan : Theme.textMuted
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    ShellState.toggleControlCenter();
+                }
+            }
         }
 
         // Divider

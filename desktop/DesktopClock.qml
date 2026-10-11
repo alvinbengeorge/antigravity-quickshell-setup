@@ -138,30 +138,6 @@ PanelWindow {
 
                 Item { Layout.fillWidth: true }
 
-                // Reposition Toggle (Left <-> Right)
-                Rectangle {
-                    width: 26
-                    height: 26
-                    radius: 6
-                    color: posMouse.containsMouse ? Theme.bgHover : Theme.bgPill
-                    border.color: Theme.borderDim
-                    border.width: 1
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: root.alignLeft ? "⇥" : "⇤"
-                        font.pixelSize: 12
-                        color: posMouse.containsMouse ? Theme.accentSky : Theme.textMuted
-                    }
-
-                    MouseArea {
-                        id: posMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.alignLeft = !root.alignLeft
-                    }
-                }
 
                 // 12H / 24H Toggle Button
                 Rectangle {

@@ -31,8 +31,19 @@ ShellRoot {
         }
     }
 
-    // Centered Floating Overlays
+    // Instantiate Desktop Antigravity Usage Widget on all detected screens
+    Variants {
+        model: Quickshell.screens
+
+        AntigravityWidget {
+            required property ShellScreen modelData
+            screen: modelData
+        }
+    }
+
+    // Centered & Dropdown Overlays
     AntigravityPanel {}
     Launcher {}
     SessionDialog {}
+    ControlCenter {}
 }

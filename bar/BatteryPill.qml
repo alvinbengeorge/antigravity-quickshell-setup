@@ -30,7 +30,6 @@ Rectangle {
             text: BatteryService.percentage + "%"
             font.family: Theme.fontMono
             font.pixelSize: 11
-            font.bold: true
             color: BatteryService.isCharging ? Theme.accentEmerald : (BatteryService.percentage <= 20 ? Theme.accentRose : (BatteryService.percentage <= 40 ? Theme.accentAmber : Theme.textPrimary))
         }
     }

@@ -49,7 +49,6 @@ Rectangle {
                 text: "✦"
                 font.family: Theme.fontFamily
                 font.pixelSize: 14
-                font.bold: true
                 color: AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet
             }
         }
@@ -58,7 +57,6 @@ Rectangle {
             text: "Antigravity"
             font.family: Theme.fontFamily
             font.pixelSize: 12
-            font.bold: true
             color: Theme.textPrimary
         }
 
@@ -77,7 +75,6 @@ Rectangle {
                 text: AntigravityService.isActive ? "ACTIVE" : "READY"
                 font.family: Theme.fontMono
                 font.pixelSize: 9
-                font.bold: true
                 color: AntigravityService.isActive ? Theme.accentCyan : Theme.textMuted
             }
         }

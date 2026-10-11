@@ -9,10 +9,26 @@ Singleton {
     property bool antigravityPanelOpen: false
     property bool sessionDialogOpen: false
     property bool launcherOpen: false
+    property bool controlCenterOpen: false
     property bool desktopClockVisible: true
+    property bool desktopAntigravityVisible: true
 
     function toggleDesktopClock() {
         root.desktopClockVisible = !root.desktopClockVisible;
+    }
+
+    function toggleDesktopAntigravity() {
+        root.desktopAntigravityVisible = !root.desktopAntigravityVisible;
+    }
+
+    function toggleControlCenter() {
+        root.controlCenterOpen = !root.controlCenterOpen;
+        if (root.controlCenterOpen) {
+            root.antigravityPanelOpen = false;
+            root.sessionDialogOpen = false;
+            root.launcherOpen = false;
+            NetworkService.refresh();
+        }
     }
 
     function toggleAntigravityPanel() {
@@ -20,6 +36,7 @@ Singleton {
         if (root.antigravityPanelOpen) {
             root.sessionDialogOpen = false;
             root.launcherOpen = false;
+            root.controlCenterOpen = false;
         }
     }
 
@@ -28,6 +45,7 @@ Singleton {
         if (root.sessionDialogOpen) {
             root.antigravityPanelOpen = false;
             root.launcherOpen = false;
+            root.controlCenterOpen = false;
         }
     }
 
@@ -36,6 +54,7 @@ Singleton {
         if (root.launcherOpen) {
             root.antigravityPanelOpen = false;
             root.sessionDialogOpen = false;
+            root.controlCenterOpen = false;
         }
     }
 
@@ -43,6 +62,7 @@ Singleton {
         root.antigravityPanelOpen = false;
         root.sessionDialogOpen = false;
         root.launcherOpen = false;
+        root.controlCenterOpen = false;
     }
 
     // Hyprland / CLI IPC Handlers
@@ -60,6 +80,13 @@ Singleton {
         function keybindsToggle(): void { root.toggleLauncher(); }
         function clipboardToggle(): void { root.toggleLauncher(); }
         function emojisToggle(): void { root.toggleLauncher(); }
+    }
+
+    IpcHandler {
+        target: "controlCenter"
+        function toggle(): void { root.toggleControlCenter(); }
+        function show(): void { root.controlCenterOpen = true; }
+        function hide(): void { root.controlCenterOpen = false; }
     }
 
     IpcHandler {
@@ -87,5 +114,12 @@ Singleton {
         function toggle(): void { root.toggleDesktopClock(); }
         function show(): void { root.desktopClockVisible = true; }
         function hide(): void { root.desktopClockVisible = false; }
+    }
+
+    IpcHandler {
+        target: "antigravityWidget"
+        function toggle(): void { root.toggleDesktopAntigravity(); }
+        function show(): void { root.desktopAntigravityVisible = true; }
+        function hide(): void { root.desktopAntigravityVisible = false; }
     }
 }

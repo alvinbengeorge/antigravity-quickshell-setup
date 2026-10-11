@@ -39,7 +39,6 @@ Rectangle {
             text: root.winTitle
             font.family: Theme.fontFamily
             font.pixelSize: 11
-            font.bold: true
             color: Theme.textSecondary
             elide: Text.ElideRight
             clip: true

@@ -3,3 +3,4 @@ __pycache__/
 *$py.class
 *.lock
 .DS_Store
+.playwright-mcp/

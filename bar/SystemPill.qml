@@ -27,14 +27,12 @@ Rectangle {
                 text: "CPU"
                 font.family: Theme.fontMono
                 font.pixelSize: 10
-                font.bold: true
                 color: Theme.textMuted
             }
             Text {
                 text: SystemStats.cpuPercent + "%"
                 font.family: Theme.fontMono
                 font.pixelSize: 11
-                font.bold: true
                 color: SystemStats.cpuPercent > 80 ? Theme.accentRose : (SystemStats.cpuPercent > 50 ? Theme.accentAmber : Theme.accentSky)
             }
         }
@@ -53,14 +51,12 @@ Rectangle {
                 text: "RAM"
                 font.family: Theme.fontMono
                 font.pixelSize: 10
-                font.bold: true
                 color: Theme.textMuted
             }
             Text {
                 text: SystemStats.memPercent + "%"
                 font.family: Theme.fontMono
                 font.pixelSize: 11
-                font.bold: true
                 color: SystemStats.memPercent > 85 ? Theme.accentRose : (SystemStats.memPercent > 70 ? Theme.accentAmber : Theme.accentEmerald)
             }
         }
@@ -79,14 +75,12 @@ Rectangle {
                 text: "SWP"
                 font.family: Theme.fontMono
                 font.pixelSize: 10
-                font.bold: true
                 color: Theme.textMuted
             }
             Text {
                 text: SystemStats.swapPercent + "%"
                 font.family: Theme.fontMono
                 font.pixelSize: 11
-                font.bold: true
                 color: SystemStats.swapPercent > 80 ? Theme.accentRose : (SystemStats.swapPercent > 50 ? Theme.accentAmber : Theme.accentEmerald)
             }
         }
@@ -117,7 +111,6 @@ Rectangle {
                     text: agyMetric.displayMode === 0 ? "✦ 5h" : (agyMetric.displayMode === 1 ? "✦ Wk" : "✦ Ctx")
                     font.family: Theme.fontFamily
                     font.pixelSize: 10
-                    font.bold: true
                     color: AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet
                 }
 
@@ -133,7 +126,6 @@ Rectangle {
                     }
                     font.family: Theme.fontMono
                     font.pixelSize: 11
-                    font.bold: true
                     color: {
                         if (agyMetric.displayMode === 0) {
                             return AntigravityService.gemini5hRemaining < 20 ? Theme.accentRose : (AntigravityService.gemini5hRemaining < 50 ? Theme.accentAmber : Theme.accentCyan);
@@ -184,7 +176,6 @@ Rectangle {
                     text: AudioService.muted ? "Mute" : Math.round(AudioService.volume * 100) + "%"
                     font.family: Theme.fontMono
                     font.pixelSize: 11
-                    font.bold: true
                     color: AudioService.muted ? Theme.accentRose : Theme.textSecondary
                 }
             }

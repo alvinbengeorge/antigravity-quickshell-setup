@@ -82,7 +82,7 @@ PanelWindow {
 
                 Repeater {
                     model: [
-                        { name: "Lock", icon: "🔒", cmd: ["loginctl", "lock-session"], color: Theme.accentSky },
+                        { name: "Lock", icon: "🔒", cmd: ["hyprlock"], color: Theme.accentSky },
                         { name: "Logout", icon: "🚪", cmd: ["hyprctl", "dispatch", "exit"], color: Theme.accentAmber },
                         { name: "Sleep", icon: "🌙", cmd: ["systemctl", "suspend"], color: Theme.accentViolet },
                         { name: "Reboot", icon: "🔄", cmd: ["systemctl", "reboot"], color: Theme.accentCyan },
