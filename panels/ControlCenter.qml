@@ -47,7 +47,7 @@ PanelWindow {
         anchors.topMargin: 56
         anchors.right: parent.right
         anchors.rightMargin: 16
-        implicitHeight: mainCol.implicitHeight + 36
+        height: Math.min(mainCol.implicitHeight + 36, controlCenterWindow.height - 76)
         radius: Theme.cardRadius
         clip: true
         color: Theme.bgModal
@@ -60,11 +60,24 @@ PanelWindow {
             onClicked: {}
         }
 
-        ColumnLayout {
-            id: mainCol
+        Flickable {
+            id: mainFlickable
             anchors.fill: parent
             anchors.margins: 18
-            spacing: 16
+            contentWidth: width
+            contentHeight: mainCol.implicitHeight
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+
+            ScrollBar.vertical: ScrollBar {
+                active: mainFlickable.moving || mainFlickable.flicking
+                policy: mainFlickable.contentHeight > mainFlickable.height ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
+            }
+
+            ColumnLayout {
+                id: mainCol
+                width: mainFlickable.width
+                spacing: 16
 
             // Header Row
             RowLayout {
@@ -671,20 +684,36 @@ PanelWindow {
                     }
 
                     // Expanded All Profiles List (when showAllProfiles is true)
-                    ColumnLayout {
+                    Rectangle {
                         Layout.fillWidth: true
-                        spacing: 4
+                        height: 180
+                        radius: 8
+                        color: Theme.bgPill
+                        border.color: Theme.borderDim
+                        border.width: 1
+                        clip: true
                         visible: tunedCol.parent.showAllProfiles
 
-                        Repeater {
+                        ListView {
+                            id: tunedListView
+                            anchors.fill: parent
+                            anchors.margins: 4
+                            spacing: 4
+                            clip: true
+                            boundsBehavior: Flickable.StopAtBounds
                             model: TunedService.profiles
 
+                            ScrollBar.vertical: ScrollBar {
+                                active: tunedListView.moving || tunedListView.flicking
+                                policy: ScrollBar.AsNeeded
+                            }
+
                             delegate: Rectangle {
-                                Layout.fillWidth: true
+                                width: tunedListView.width - 8
                                 height: 32
                                 radius: 6
                                 readonly property bool isSelected: TunedService.activeProfile === modelData.id
-                                color: isSelected ? Qt.alpha(modelData.color || Theme.accentCyan, 0.15) : (rowMouse.containsMouse ? Theme.bgHover : Theme.bgSurface)
+                                color: isSelected ? Qt.alpha(modelData.color || Theme.accentCyan, 0.15) : (rowMouse.containsMouse ? Theme.bgHover : "transparent")
                                 border.color: isSelected ? (modelData.color || Theme.accentCyan) : "transparent"
                                 border.width: 1
 
@@ -696,7 +725,7 @@ PanelWindow {
 
                                     Icon {
                                         name: modelData.icon || "sliders"
-                                        size: 12
+                                        size: 13
                                         color: modelData.color || Theme.textMuted
                                     }
 
@@ -1529,6 +1558,7 @@ PanelWindow {
                     }
                 }
             }
+        }
         }
     }
 }
