@@ -49,8 +49,8 @@ PanelWindow {
     // Modal Card
     Rectangle {
         id: card
-        width: 780
-        height: 540
+        width: 820
+        height: 560
         anchors.centerIn: parent
         radius: Theme.cardRadius
         color: Theme.bgModal
@@ -97,7 +97,7 @@ PanelWindow {
                         clip: true
 
                         Text {
-                            text: "Search clipboard history..."
+                            text: "Search clipboard history (text, code, images, links)..."
                             font.family: Theme.fontFamily
                             font.pixelSize: 13
                             color: Theme.textMuted
@@ -108,7 +108,7 @@ PanelWindow {
                             ClipboardService.search(searchInput.text);
                             clipList.currentIndex = 0;
                             if (ClipboardService.items.length > 0) {
-                                ClipboardService.selectItem(ClipboardService.items[0].id);
+                                ClipboardService.selectItem(ClipboardService.items[0]);
                             }
                         }
 
@@ -118,15 +118,15 @@ PanelWindow {
 
                         Keys.onDownPressed: {
                             clipList.incrementCurrentIndex();
-                            if (clipList.currentItem) {
-                                ClipboardService.selectItem(ClipboardService.items[clipList.currentIndex].id);
+                            if (clipList.currentIndex >= 0 && clipList.currentIndex < ClipboardService.items.length) {
+                                ClipboardService.selectItem(ClipboardService.items[clipList.currentIndex]);
                             }
                         }
 
                         Keys.onUpPressed: {
                             clipList.decrementCurrentIndex();
-                            if (clipList.currentItem) {
-                                ClipboardService.selectItem(ClipboardService.items[clipList.currentIndex].id);
+                            if (clipList.currentIndex >= 0 && clipList.currentIndex < ClipboardService.items.length) {
+                                ClipboardService.selectItem(ClipboardService.items[clipList.currentIndex]);
                             }
                         }
 
@@ -147,14 +147,14 @@ PanelWindow {
 
                     // Count Badge
                     Rectangle {
-                        height: 20
-                        implicitWidth: countText.implicitWidth + 10
-                        radius: 10
+                        height: 22
+                        implicitWidth: countText.implicitWidth + 12
+                        radius: 11
                         color: Theme.bgPill
                         Text {
                             id: countText
                             anchors.centerIn: parent
-                            text: ClipboardService.items.length + " items"
+                            text: ClipboardService.items.length + " clips"
                             font.family: Theme.fontMono
                             font.pixelSize: 9
                             color: Theme.textMuted
@@ -171,7 +171,7 @@ PanelWindow {
 
                 // Left Column: Items List
                 Rectangle {
-                    Layout.preferredWidth: 380
+                    Layout.preferredWidth: 390
                     Layout.fillHeight: true
                     radius: 10
                     color: Theme.bgCard
@@ -190,7 +190,7 @@ PanelWindow {
                         delegate: Rectangle {
                             id: itemDelegate
                             width: clipList.width
-                            height: 48
+                            height: 52
                             radius: 8
                             readonly property bool isCurrent: clipList.currentIndex === index || ClipboardService.selectedId === modelData.id
                             color: isCurrent ? Theme.bgActive : (itemMouse.containsMouse ? Theme.bgHover : "transparent")
@@ -199,50 +199,64 @@ PanelWindow {
 
                             RowLayout {
                                 anchors.fill: parent
-                                anchors.leftMargin: 10
-                                anchors.rightMargin: 10
-                                spacing: 8
+                                anchors.leftMargin: 8
+                                anchors.rightMargin: 8
+                                spacing: 9
 
-                                // Type icon pill
+                                // Thumbnail / Icon Container
                                 Rectangle {
-                                    width: 26
-                                    height: 26
+                                    width: 34
+                                    height: 34
                                     radius: 6
                                     color: Theme.bgPill
                                     border.color: Theme.borderDim
                                     border.width: 1
+                                    clip: true
 
+                                    // Real thumbnail image if type === "image"
+                                    Image {
+                                        anchors.fill: parent
+                                        source: modelData.type === "image" && modelData.thumb ? ("file://" + modelData.thumb) : ""
+                                        fillMode: Image.PreserveAspectCrop
+                                        visible: modelData.type === "image" && modelData.thumb && modelData.thumb.length > 0
+                                        asynchronous: true
+                                        cache: true
+                                    }
+
+                                    // Icon emoji fallback for text/code/urls
                                     Text {
                                         anchors.centerIn: parent
                                         text: modelData.type === "url" ? "🔗" : (modelData.type === "code" ? "💻" : (modelData.type === "image" ? "🖼" : "📄"))
-                                        font.pixelSize: 11
+                                        font.pixelSize: 13
+                                        visible: modelData.type !== "image" || !modelData.thumb
                                     }
                                 }
 
-                                // Text snippet
+                                // Snippet & Meta
                                 ColumnLayout {
                                     Layout.fillWidth: true
                                     spacing: 2
 
                                     Text {
                                         Layout.fillWidth: true
-                                        text: modelData.text
-                                        font.family: Theme.fontMono
+                                        text: modelData.type === "image" ? "Image (" + (modelData.meta || "PNG") + ")" : modelData.text
+                                        font.family: modelData.type === "code" ? Theme.fontMono : Theme.fontFamily
                                         font.pixelSize: 11
+                                        font.bold: modelData.type === "image"
                                         color: itemDelegate.isCurrent ? Theme.accentSky : Theme.textPrimary
                                         elide: Text.ElideRight
                                         maximumLineCount: 1
                                     }
 
                                     Text {
-                                        text: "#" + modelData.id + " • " + modelData.type.toUpperCase()
+                                        text: "#" + modelData.id + " • " + (modelData.meta || modelData.type.toUpperCase())
                                         font.family: Theme.fontMono
                                         font.pixelSize: 9
-                                        color: Theme.textMuted
+                                        color: itemDelegate.isCurrent ? Theme.accentCyan : Theme.textMuted
                                     }
                                 }
 
-                                // Delete button on hover
+                                // Delete Button on hover
                                 Rectangle {
                                     width: 20
                                     height: 20
@@ -276,7 +290,7 @@ PanelWindow {
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
                                     clipList.currentIndex = index;
-                                    ClipboardService.selectItem(modelData.id);
+                                    ClipboardService.selectItem(modelData);
                                 }
                                 onDoubleClicked: {
                                     ClipboardService.copyItem(modelData.id);
@@ -296,7 +310,7 @@ PanelWindow {
                     }
                 }
 
-                // Right Column: Live Decoded Preview
+                // Right Column: Live Decoded Preview (Image or Text)
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -308,7 +322,7 @@ PanelWindow {
 
                     ColumnLayout {
                         anchors.fill: parent
-                        anchors.margins: 12
+                        anchors.margins: 14
                         spacing: 8
 
                         // Preview Header
@@ -316,19 +330,26 @@ PanelWindow {
                             Layout.fillWidth: true
 
                             Text {
-                                text: "PREVIEW CONTENT"
+                                text: ClipboardService.isImage ? "🖼 IMAGE PREVIEW" : "📄 TEXT PREVIEW"
                                 font.family: Theme.fontMono
                                 font.pixelSize: 10
                                 font.bold: true
                                 color: Theme.accentCyan
                             }
 
-                            Item { Layout.fillWidth: true }
+                            Text {
+                                text: ClipboardService.selectedItem ? (" • #" + ClipboardService.selectedItem.id + " • " + (ClipboardService.selectedItem.meta || "")) : ""
+                                font.family: Theme.fontMono
+                                font.pixelSize: 9
+                                color: Theme.textMuted
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                            }
 
                             // Quick Copy Button
                             Rectangle {
-                                height: 24
-                                implicitWidth: copyRow.implicitWidth + 12
+                                height: 26
+                                implicitWidth: copyRow.implicitWidth + 14
                                 radius: 6
                                 color: copyMouse.containsMouse ? Theme.accentViolet : Theme.bgPill
                                 border.color: Theme.borderDim
@@ -337,17 +358,17 @@ PanelWindow {
                                 RowLayout {
                                     id: copyRow
                                     anchors.centerIn: parent
-                                    spacing: 4
+                                    spacing: 5
 
                                     Text {
                                         text: "⎘"
-                                        font.pixelSize: 11
+                                        font.pixelSize: 12
                                         color: copyMouse.containsMouse ? Theme.textOnAccent : Theme.accentViolet
                                     }
                                     Text {
-                                        text: "Paste"
+                                        text: ClipboardService.isImage ? "Paste Image" : "Paste"
                                         font.family: Theme.fontFamily
-                                        font.pixelSize: 10
+                                        font.pixelSize: 11
                                         font.bold: true
                                         color: copyMouse.containsMouse ? Theme.textOnAccent : Theme.textPrimary
                                     }
@@ -367,18 +388,71 @@ PanelWindow {
                             }
                         }
 
-                        // Preview Scroll Area
+                        // Divider
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 1
+                            color: Theme.borderDim
+                        }
+
+                        // --- IMAGE PREVIEW VIEWPORT ---
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            radius: 8
+                            color: Theme.bgSurface
+                            border.color: Theme.borderDim
+                            border.width: 1
+                            clip: true
+                            visible: ClipboardService.isImage
+
+                            Image {
+                                id: fullImagePreview
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                source: ClipboardService.isImage ? ClipboardService.previewImagePath : ""
+                                fillMode: Image.PreserveAspectFit
+                                asynchronous: true
+                                cache: false
+                            }
+
+                            // Image dimensions badge
+                            Rectangle {
+                                anchors.bottom: parent.bottom
+                                anchors.right: parent.right
+                                anchors.margins: 10
+                                height: 22
+                                implicitWidth: imgDimText.implicitWidth + 12
+                                radius: 6
+                                color: Qt.rgba(0, 0, 0, 0.75)
+                                border.color: Theme.borderDim
+                                border.width: 1
+                                visible: ClipboardService.selectedItem && ClipboardService.selectedItem.meta
+
+                                Text {
+                                    id: imgDimText
+                                    anchors.centerIn: parent
+                                    text: ClipboardService.selectedItem ? ClipboardService.selectedItem.meta : ""
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 9
+                                    color: Theme.accentSky
+                                }
+                            }
+                        }
+
+                        // --- TEXT PREVIEW VIEWPORT ---
                         ScrollView {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             clip: true
+                            visible: !ClipboardService.isImage
 
                             TextArea {
                                 id: previewText
-                                text: ClipboardService.previewContent || "Select an item to view preview"
+                                text: ClipboardService.previewText || "Select an item to view preview"
                                 font.family: Theme.fontMono
                                 font.pixelSize: 11
-                                color: ClipboardService.previewContent ? Theme.textPrimary : Theme.textMuted
+                                color: ClipboardService.previewText ? Theme.textPrimary : Theme.textMuted
                                 wrapMode: Text.WrapAnywhere
                                 readOnly: true
                                 background: null

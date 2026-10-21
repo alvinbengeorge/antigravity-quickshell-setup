@@ -8,9 +8,14 @@ Singleton {
 
     property var rawItems: []
     property var items: []
+    property var selectedItem: null
     property string selectedId: ""
-    property string previewContent: ""
+    property string previewText: ""
+    property string previewImagePath: ""
+    property bool isImage: false
     property bool isLoading: false
+
+    readonly property string helperScript: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/cliphist_helper.py"
 
     function refresh() {
         if (root.isLoading) return;
@@ -21,7 +26,7 @@ Singleton {
     Process {
         id: fetchProc
         running: false
-        command: ["python3", "-c", "import subprocess, json; res = subprocess.run(['cliphist', 'list'], capture_output=True, text=True); lines = res.stdout.strip().splitlines()[:100]; out = [];\nfor line in lines:\n    parts = line.split('\t', 1)\n    if len(parts) == 2:\n        i, t = parts[0], parts[1]\n        kind = 'image' if t.startswith('[[ binary') else ('url' if t.startswith('http://') or t.startswith('https://') else ('code' if any(k in t for k in ['def ', 'function', 'class ', 'import ', '{', '}', 'const ', 'var ']) else 'text'))\n        out.append({'id': i, 'text': t, 'type': kind})\nprint(json.dumps(out))"]
+        command: ["python3", root.helperScript, "list", "80"]
         stdout: StdioCollector {
             onStreamFinished: {
                 root.isLoading = false;
@@ -30,8 +35,21 @@ Singleton {
                     if (Array.isArray(parsed)) {
                         root.rawItems = parsed;
                         root.items = parsed;
-                        if (parsed.length > 0 && root.selectedId.length === 0) {
-                            root.selectItem(parsed[0].id);
+                        if (parsed.length > 0) {
+                            // Re-select current or first
+                            let found = false;
+                            if (root.selectedId) {
+                                for (let i = 0; i < parsed.length; i++) {
+                                    if (parsed[i].id === root.selectedId) {
+                                        root.selectItem(parsed[i]);
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!found) {
+                                root.selectItem(parsed[0]);
+                            }
                         }
                     }
                 } catch(e) {}
@@ -45,13 +63,28 @@ Singleton {
             return;
         }
         const q = query.toLowerCase();
-        root.items = root.rawItems.filter(item => item.text.toLowerCase().includes(q));
+        root.items = root.rawItems.filter(item => {
+            return (item.text && item.text.toLowerCase().includes(q)) ||
+                   (item.meta && item.meta.toLowerCase().includes(q)) ||
+                   (item.type && item.type.toLowerCase().includes(q));
+        });
     }
 
-    function selectItem(id) {
-        root.selectedId = id;
-        decodeProc.command = ["cliphist", "decode", id];
-        decodeProc.running = true;
+    function selectItem(item) {
+        if (!item) return;
+        root.selectedItem = item;
+        root.selectedId = item.id;
+
+        if (item.type === "image") {
+            root.isImage = true;
+            root.previewText = "";
+            root.previewImagePath = item.thumb ? ("file://" + item.thumb) : "";
+        } else {
+            root.isImage = false;
+            root.previewImagePath = "";
+            decodeProc.command = ["python3", root.helperScript, "decode-text", item.id];
+            decodeProc.running = true;
+        }
     }
 
     Process {
@@ -60,38 +93,39 @@ Singleton {
         command: []
         stdout: StdioCollector {
             onStreamFinished: {
-                root.previewContent = text;
+                root.previewText = text;
             }
         }
     }
 
     function copyItem(id) {
-        Quickshell.execDetached([
-            "python3", "-c",
-            `import subprocess; p1 = subprocess.Popen(['cliphist', 'decode', '${id}'], stdout=subprocess.PIPE); p2 = subprocess.run(['wl-copy'], stdin=p1.stdout)`
-        ]);
+        Quickshell.execDetached(["python3", root.helperScript, "copy", id]);
         ShellState.clipboardOpen = false;
     }
 
     function deleteItem(id, rawText) {
-        Quickshell.execDetached([
-            "python3", "-c",
-            `import subprocess; p = subprocess.Popen(['cliphist', 'delete'], stdin=subprocess.PIPE, text=True); p.communicate('${id}\\t${rawText}\\n')`
-        ]);
+        Quickshell.execDetached(["python3", root.helperScript, "delete", id, rawText || ""]);
         root.rawItems = root.rawItems.filter(i => i.id !== id);
         root.items = root.items.filter(i => i.id !== id);
         if (root.items.length > 0) {
-            root.selectItem(root.items[0].id);
+            root.selectItem(root.items[0]);
         } else {
-            root.previewContent = "";
+            root.selectedItem = null;
+            root.selectedId = "";
+            root.previewText = "";
+            root.previewImagePath = "";
+            root.isImage = false;
         }
     }
 
     function clearAll() {
-        Quickshell.execDetached(["cliphist", "wipe"]);
+        Quickshell.execDetached(["python3", root.helperScript, "wipe"]);
         root.rawItems = [];
         root.items = [];
-        root.previewContent = "";
+        root.selectedItem = null;
         root.selectedId = "";
+        root.previewText = "";
+        root.previewImagePath = "";
+        root.isImage = false;
     }
 }
