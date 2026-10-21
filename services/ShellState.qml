@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../theme"
 
 Singleton {
     id: root
@@ -158,5 +159,25 @@ Singleton {
         function toggle(): void { root.toggleDesktopPullRequests(); }
         function show(): void { root.desktopPullRequestsVisible = true; }
         function hide(): void { root.desktopPullRequestsVisible = false; }
+    }
+
+    IpcHandler {
+        target: "theme"
+        function next(): void { Theme.nextTheme(); }
+        function prev(): void { Theme.prevTheme(); }
+        function set(name: string): void { Theme.setTheme(name); }
+        function cycleToggle(): void { Theme.autoCycle = !Theme.autoCycle; }
+        function cycleOn(): void { Theme.autoCycle = true; }
+        function cycleOff(): void { Theme.autoCycle = false; }
+    }
+
+    IpcHandler {
+        target: "wallpaper"
+        function next(): void { WallpaperService.nextWallpaper(); }
+        function prev(): void { WallpaperService.prevWallpaper(); }
+        function set(path: string): void { WallpaperService.setWallpaper(path); }
+        function mode(newMode: string): void { WallpaperService.setMode(newMode); }
+        function themeMode(): void { WallpaperService.setMode("theme"); }
+        function gradientMode(): void { WallpaperService.setMode("gradient"); }
     }
 }

@@ -64,18 +64,23 @@ Rectangle {
         Rectangle {
             height: 18
             radius: 9
-            color: AntigravityService.isActive ? "#06B6D422" : "#1E293B"
-            border.color: AntigravityService.isActive ? Theme.accentCyan : Theme.borderDim
+            color: AntigravityService.isActive
+                ? Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.18)
+                : Qt.rgba(Theme.accentViolet.r, Theme.accentViolet.g, Theme.accentViolet.b, 0.16)
+            border.color: AntigravityService.isActive
+                ? Theme.accentCyan
+                : Qt.rgba(Theme.accentViolet.r, Theme.accentViolet.g, Theme.accentViolet.b, 0.40)
             border.width: 1
             implicitWidth: statusText.implicitWidth + 12
 
             Text {
                 id: statusText
                 anchors.centerIn: parent
-                text: AntigravityService.isActive ? "ACTIVE" : "READY"
+                text: AntigravityService.isActive ? "ACTIVE" : Theme.themeName.toUpperCase()
                 font.family: Theme.fontMono
                 font.pixelSize: 9
-                color: AntigravityService.isActive ? Theme.accentCyan : Theme.textMuted
+                font.bold: true
+                color: AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet
             }
         }
 
@@ -83,9 +88,11 @@ Rectangle {
         Rectangle {
             height: 18
             radius: 9
-            color: "#8B5CF620"
+            color: Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.18)
+            border.color: Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.40)
+            border.width: 1
             visible: AntigravityService.stepCount > 0
-            implicitWidth: stepText.implicitWidth + 10
+            implicitWidth: stepText.implicitWidth + 12
 
             Text {
                 id: stepText
@@ -93,7 +100,8 @@ Rectangle {
                 text: AntigravityService.stepCount + " steps"
                 font.family: Theme.fontMono
                 font.pixelSize: 9
-                color: Theme.accentViolet
+                font.bold: true
+                color: Theme.accentEmerald
             }
         }
     }
@@ -103,8 +111,13 @@ Rectangle {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: {
-            ShellState.toggleAntigravityPanel();
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onClicked: (mouse) => {
+            if (mouse.button === Qt.RightButton) {
+                Theme.nextTheme();
+            } else {
+                ShellState.toggleAntigravityPanel();
+            }
         }
     }
 }

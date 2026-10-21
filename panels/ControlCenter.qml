@@ -202,6 +202,328 @@ PanelWindow {
                 }
             }
 
+            // Theme Switcher Section
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text {
+                        text: "THEME PALETTE"
+                        font.family: Theme.fontMono
+                        font.pixelSize: 10
+                        font.bold: true
+                        color: Theme.textMuted
+                    }
+                    Item { Layout.fillWidth: true }
+                    // Auto-cycle toggle button
+                    Rectangle {
+                        height: 22
+                        implicitWidth: cycleRow.implicitWidth + 12
+                        radius: 6
+                        color: Theme.autoCycle ? Theme.accentViolet : Theme.bgPill
+                        border.color: Theme.autoCycle ? Theme.accentViolet : Theme.borderDim
+                        border.width: 1
+
+                        RowLayout {
+                            id: cycleRow
+                            anchors.centerIn: parent
+                            spacing: 4
+                            Text {
+                                text: "⟳"
+                                font.pixelSize: 11
+                                color: Theme.autoCycle ? Theme.textOnAccent : Theme.accentViolet
+                            }
+                            Text {
+                                text: Theme.autoCycle ? "10s Cycle: ON" : "10s Cycle: OFF"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 9
+                                font.bold: true
+                                color: Theme.autoCycle ? Theme.textOnAccent : Theme.textMuted
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Theme.autoCycle = !Theme.autoCycle
+                        }
+                    }
+                }
+
+                // Theme Chips Grid (2 columns x 3 rows)
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: 2
+                    columnSpacing: 6
+                    rowSpacing: 6
+
+                    Repeater {
+                        model: Theme.themeKeys
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 32
+                            radius: 8
+                            readonly property bool isSelected: Theme.currentThemeKey === modelData
+                            readonly property var pal: Theme.palettes[modelData]
+
+                            color: isSelected ? Theme.bgCard : (chipMouse.containsMouse ? Theme.bgHover : Theme.bgPill)
+                            border.color: isSelected ? pal.accentViolet : Theme.borderDim
+                            border.width: isSelected ? 1.5 : 1
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 8
+                                anchors.rightMargin: 8
+                                spacing: 8
+
+                                // Color preview dots
+                                Row {
+                                    spacing: 3
+                                    Rectangle {
+                                        width: 8
+                                        height: 8
+                                        radius: 4
+                                        color: pal.accentViolet
+                                    }
+                                    Rectangle {
+                                        width: 8
+                                        height: 8
+                                        radius: 4
+                                        color: pal.accentSky
+                                    }
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: pal.name
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 10
+                                    font.bold: isSelected
+                                    color: isSelected ? pal.accentViolet : Theme.textPrimary
+                                    elide: Text.ElideRight
+                                }
+
+                                Text {
+                                    visible: isSelected
+                                    text: "✓"
+                                    font.pixelSize: 10
+                                    color: pal.accentViolet
+                                }
+                            }
+
+                            MouseArea {
+                                id: chipMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    Theme.setTheme(modelData);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Wallpaper Controller Section
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text {
+                        text: "WALLPAPER"
+                        font.family: Theme.fontMono
+                        font.pixelSize: 10
+                        font.bold: true
+                        color: Theme.textMuted
+                    }
+                    Item { Layout.fillWidth: true }
+
+                    // Previous Wallpaper
+                    Rectangle {
+                        width: 22
+                        height: 22
+                        radius: 6
+                        color: wpPrevMouse.containsMouse ? Theme.bgHover : Theme.bgPill
+                        border.color: Theme.borderDim
+                        border.width: 1
+                        Text {
+                            anchors.centerIn: parent
+                            text: "◀"
+                            font.pixelSize: 9
+                            color: Theme.accentViolet
+                        }
+                        MouseArea {
+                            id: wpPrevMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: WallpaperService.prevWallpaper()
+                        }
+                    }
+
+                    // Next Wallpaper
+                    Rectangle {
+                        width: 22
+                        height: 22
+                        radius: 6
+                        color: wpNextMouse.containsMouse ? Theme.bgHover : Theme.bgPill
+                        border.color: Theme.borderDim
+                        border.width: 1
+                        Text {
+                            anchors.centerIn: parent
+                            text: "▶"
+                            font.pixelSize: 9
+                            color: Theme.accentViolet
+                        }
+                        MouseArea {
+                            id: wpNextMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: WallpaperService.nextWallpaper()
+                        }
+                    }
+                }
+
+                // Mode Selector Bar (Theme, Custom, Gradient)
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 30
+                    radius: 8
+                    color: Theme.bgPill
+                    border.color: Theme.borderDim
+                    border.width: 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 3
+                        spacing: 3
+
+                        // Theme Matched Mode
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            radius: 6
+                            readonly property bool active: WallpaperService.mode === "theme"
+                            color: active ? Theme.accentViolet : (modeThemeM.containsMouse ? Theme.bgHover : "transparent")
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "Theme Match"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 10
+                                font.bold: parent.active
+                                color: parent.active ? Theme.textOnAccent : Theme.textMuted
+                            }
+
+                            MouseArea {
+                                id: modeThemeM
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: WallpaperService.setMode("theme")
+                            }
+                        }
+
+                        // Custom / Manual Mode
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            radius: 6
+                            readonly property bool active: WallpaperService.mode === "manual"
+                            color: active ? Theme.accentViolet : (modeManM.containsMouse ? Theme.bgHover : "transparent")
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "Wallpapers (" + WallpaperService.wallpapers.length + ")"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 10
+                                font.bold: parent.active
+                                color: parent.active ? Theme.textOnAccent : Theme.textMuted
+                            }
+
+                            MouseArea {
+                                id: modeManM
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (WallpaperService.manualWallpaper.length === 0 && WallpaperService.wallpapers.length > 0) {
+                                        WallpaperService.nextWallpaper();
+                                    } else {
+                                        WallpaperService.setMode("manual");
+                                    }
+                                }
+                            }
+                        }
+
+                        // Gradient Mode
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            radius: 6
+                            readonly property bool active: WallpaperService.mode === "gradient"
+                            color: active ? Theme.accentViolet : (modeGradM.containsMouse ? Theme.bgHover : "transparent")
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "Gradient"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 10
+                                font.bold: parent.active
+                                color: parent.active ? Theme.textOnAccent : Theme.textMuted
+                            }
+
+                            MouseArea {
+                                id: modeGradM
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: WallpaperService.setMode("gradient")
+                            }
+                        }
+                    }
+                }
+
+                // Current Wallpaper Info Pill
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 26
+                    radius: 6
+                    color: Theme.bgCard
+                    border.color: Theme.borderDim
+                    border.width: 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+                        spacing: 6
+
+                        Text {
+                            text: "🖼"
+                            font.pixelSize: 10
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: WallpaperService.currentFileName
+                            font.family: Theme.fontMono
+                            font.pixelSize: 9
+                            color: Theme.textSecondary
+                            elide: Text.ElideMiddle
+                        }
+                    }
+                }
+            }
+
             // Wi-Fi Section
             ColumnLayout {
                 Layout.fillWidth: true
