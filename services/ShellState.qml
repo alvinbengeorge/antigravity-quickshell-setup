@@ -12,6 +12,29 @@ Singleton {
     property bool controlCenterOpen: false
     property bool desktopClockVisible: true
     property bool desktopAntigravityVisible: true
+    property bool desktopPullRequestsVisible: true
+    property bool use24Hour: false
+
+    function toggleTimeFormat() {
+        root.use24Hour = !root.use24Hour;
+    }
+
+    // Auto-detect system clock format preference (12h vs 24h)
+    Process {
+        id: clockFormatDetect
+        running: true
+        command: ["gsettings", "get", "org.gnome.desktop.interface", "clock-format"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const cleaned = text.trim().replace(/['"]/g, "");
+                if (cleaned === "24h") {
+                    root.use24Hour = true;
+                } else if (cleaned === "12h") {
+                    root.use24Hour = false;
+                }
+            }
+        }
+    }
 
     function toggleDesktopClock() {
         root.desktopClockVisible = !root.desktopClockVisible;
@@ -19,6 +42,10 @@ Singleton {
 
     function toggleDesktopAntigravity() {
         root.desktopAntigravityVisible = !root.desktopAntigravityVisible;
+    }
+
+    function toggleDesktopPullRequests() {
+        root.desktopPullRequestsVisible = !root.desktopPullRequestsVisible;
     }
 
     function toggleControlCenter() {
@@ -114,6 +141,9 @@ Singleton {
         function toggle(): void { root.toggleDesktopClock(); }
         function show(): void { root.desktopClockVisible = true; }
         function hide(): void { root.desktopClockVisible = false; }
+        function toggleFormat(): void { root.toggleTimeFormat(); }
+        function set12(): void { root.use24Hour = false; }
+        function set24(): void { root.use24Hour = true; }
     }
 
     IpcHandler {
@@ -121,5 +151,12 @@ Singleton {
         function toggle(): void { root.toggleDesktopAntigravity(); }
         function show(): void { root.desktopAntigravityVisible = true; }
         function hide(): void { root.desktopAntigravityVisible = false; }
+    }
+
+    IpcHandler {
+        target: "pullRequests"
+        function toggle(): void { root.toggleDesktopPullRequests(); }
+        function show(): void { root.desktopPullRequestsVisible = true; }
+        function hide(): void { root.desktopPullRequestsVisible = false; }
     }
 }

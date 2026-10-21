@@ -9,9 +9,33 @@ PanelWindow {
     id: root
 
     property bool alignLeft: false
-    property bool use24Hour: true
+    property bool use24Hour: ShellState.use24Hour
     property bool showSeconds: true
     property bool showCalendar: true
+
+    onUse24HourChanged: {
+        if (ShellState.use24Hour !== root.use24Hour) {
+            ShellState.use24Hour = root.use24Hour;
+        }
+    }
+
+    function toggleFormat() {
+        ShellState.use24Hour = !ShellState.use24Hour;
+    }
+
+    function setFormat(is24) {
+        ShellState.use24Hour = is24;
+    }
+
+    function getFormattedHours() {
+        const h = root.now.getHours();
+        if (root.use24Hour) {
+            return h < 10 ? ("0" + h) : h.toString();
+        } else {
+            const h12 = h % 12 || 12;
+            return h12.toString();
+        }
+    }
 
     property var now: new Date()
 
@@ -139,31 +163,75 @@ PanelWindow {
                 Item { Layout.fillWidth: true }
 
 
-                // 12H / 24H Toggle Button
+                // 12H / 24H Segmented Toggle
                 Rectangle {
                     height: 26
-                    implicitWidth: modeText.implicitWidth + 12
+                    implicitWidth: toggleRow.implicitWidth + 4
                     radius: 6
-                    color: modeMouse.containsMouse ? Theme.bgHover : Theme.bgPill
+                    color: Theme.bgPill
                     border.color: Theme.borderDim
                     border.width: 1
 
-                    Text {
-                        id: modeText
+                    RowLayout {
+                        id: toggleRow
                         anchors.centerIn: parent
-                        text: root.use24Hour ? "24H" : "12H"
-                        font.family: Theme.fontMono
-                        font.pixelSize: 10
-                        font.bold: true
-                        color: modeMouse.containsMouse ? Theme.accentViolet : Theme.textMuted
-                    }
+                        spacing: 2
 
-                    MouseArea {
-                        id: modeMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.use24Hour = !root.use24Hour
+                        // 12H Pill
+                        Rectangle {
+                            height: 20
+                            implicitWidth: text12.implicitWidth + 10
+                            radius: 4
+                            color: !root.use24Hour ? Theme.accentViolet : (mouse12.containsMouse ? Theme.bgHover : "transparent")
+
+                            Behavior on color { ColorAnimation { duration: 150 } }
+
+                            Text {
+                                id: text12
+                                anchors.centerIn: parent
+                                text: "12H"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 10
+                                font.bold: true
+                                color: !root.use24Hour ? Theme.textOnAccent : (mouse12.containsMouse ? Theme.textPrimary : Theme.textMuted)
+                            }
+
+                            MouseArea {
+                                id: mouse12
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.setFormat(false)
+                            }
+                        }
+
+                        // 24H Pill
+                        Rectangle {
+                            height: 20
+                            implicitWidth: text24.implicitWidth + 10
+                            radius: 4
+                            color: root.use24Hour ? Theme.accentViolet : (mouse24.containsMouse ? Theme.bgHover : "transparent")
+
+                            Behavior on color { ColorAnimation { duration: 150 } }
+
+                            Text {
+                                id: text24
+                                anchors.centerIn: parent
+                                text: "24H"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 10
+                                font.bold: true
+                                color: root.use24Hour ? Theme.textOnAccent : (mouse24.containsMouse ? Theme.textPrimary : Theme.textMuted)
+                            }
+
+                            MouseArea {
+                                id: mouse24
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.setFormat(true)
+                            }
+                        }
                     }
                 }
 
@@ -198,7 +266,7 @@ PanelWindow {
                 implicitHeight: clockHeroRow.implicitHeight
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: root.use24Hour = !root.use24Hour
+                onClicked: root.toggleFormat()
 
                 RowLayout {
                     id: clockHeroRow
@@ -207,7 +275,7 @@ PanelWindow {
 
                     // Hours
                     Text {
-                        text: root.use24Hour ? Qt.formatTime(root.now, "HH") : Qt.formatTime(root.now, "hh")
+                        text: root.use24Hour ? Qt.formatTime(root.now, "HH") : (root.now.getHours() % 12 || 12).toString()
                         font.family: Theme.fontFamily
                         font.pixelSize: 58
                         font.bold: true
@@ -253,7 +321,7 @@ PanelWindow {
                             Text {
                                 id: ampmText
                                 anchors.centerIn: parent
-                                text: Qt.formatTime(root.now, "AP")
+                                text: root.now.getHours() >= 12 ? "PM" : "AM"
                                 font.family: Theme.fontMono
                                 font.pixelSize: 9
                                 font.bold: true

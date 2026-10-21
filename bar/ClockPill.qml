@@ -40,7 +40,7 @@ Rectangle {
 
                 // Time Text
                 Text {
-                    text: Qt.formatTime(root.now, "HH:mm")
+                    text: ShellState.use24Hour ? Qt.formatTime(root.now, "HH:mm") : Qt.formatTime(root.now, "h:mm AP")
                     font.family: Theme.fontMono
                     font.pixelSize: 12
                     color: Theme.textPrimary
@@ -66,8 +66,13 @@ Rectangle {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    ShellState.toggleControlCenter();
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                onClicked: (mouse) => {
+                    if (mouse.button === Qt.RightButton) {
+                        ShellState.toggleTimeFormat();
+                    } else {
+                        ShellState.toggleControlCenter();
+                    }
                 }
             }
         }

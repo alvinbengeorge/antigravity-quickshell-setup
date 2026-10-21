@@ -88,4 +88,7 @@ qs -c antigravity ipc call session toggle
 
 # Toggle Desktop Clock Widget
 qs -c antigravity ipc call clock toggle
+
+# Toggle Desktop Clock Format (12H / 24H)
+qs -c antigravity ipc call clock toggleFormat
 ```
