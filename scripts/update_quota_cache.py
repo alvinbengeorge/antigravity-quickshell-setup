@@ -26,7 +26,11 @@ def update_cache():
             import shutil
             agy_bin = shutil.which('agy') or 'agy'
 
+        dummy_home = '/tmp/agy_quota_profile'
+        os.makedirs(os.path.join(dummy_home, '.gemini'), exist_ok=True)
         env = os.environ.copy()
+        env['HOME'] = dummy_home
+        env['XDG_CONFIG_HOME'] = os.path.join(dummy_home, '.config')
         env['PATH'] = f"{os.path.expanduser('~/.local/bin')}:{env.get('PATH', '')}"
 
         res = subprocess.run(

@@ -41,6 +41,16 @@ ShellRoot {
         }
     }
 
+    // Instantiate Desktop Pull Requests Widget on all detected screens
+    Variants {
+        model: Quickshell.screens
+
+        PullRequestsWidget {
+            required property ShellScreen modelData
+            screen: modelData
+        }
+    }
+
     // Centered & Dropdown Overlays
     AntigravityPanel {}
     Launcher {}

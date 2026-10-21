@@ -149,6 +149,7 @@ quickshell kill -c antigravity                  # Stop shell
 qs -c antigravity ipc call antigravity toggle   # Toggle HUD (Super + A)
 qs -c antigravity ipc call search toggle        # Toggle App Launcher (Super + Space)
 qs -c antigravity ipc call session toggle       # Toggle Power Menu (Super + X)
+qs -c antigravity ipc call pullRequests toggle  # Toggle Pull Requests Widget
 ```
 
 ---
