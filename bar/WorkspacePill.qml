@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Hyprland
 import "../theme"
 import "../services"
+import "../components"
 
 Rectangle {
     id: root
@@ -34,11 +35,10 @@ Rectangle {
 
             Behavior on color { ColorAnimation { duration: 120 } }
 
-            Text {
+            Icon {
                 anchors.centerIn: parent
-                text: "✦"
-                font.family: Theme.fontFamily
-                font.pixelSize: 12
+                name: "sparkles"
+                size: 12
                 color: Theme.textOnAccent
             }
 

@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
 import "../theme"
+import "../components"
 
 Rectangle {
     id: root
@@ -27,10 +28,9 @@ Rectangle {
         anchors.rightMargin: 12
         spacing: 8
 
-        Text {
-            text: "❖"
-            font.family: Theme.fontFamily
-            font.pixelSize: 13
+        Icon {
+            name: "monitor"
+            size: 13
             color: Theme.accentSky
         }
 

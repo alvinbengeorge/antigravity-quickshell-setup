@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Wayland
 import "../theme"
 import "../services"
+import "../components"
 
 PanelWindow {
     id: toastWindow
@@ -75,9 +76,10 @@ PanelWindow {
                         spacing: 8
 
                         // App Icon or default bell
-                        Text {
-                            text: modelData.urgency === 2 ? "🚨" : "🔔"
-                            font.pixelSize: 12
+                        Icon {
+                            name: modelData.urgency === 2 ? "alert-circle" : "bell"
+                            size: 14
+                            color: modelData.urgency === 2 ? Theme.accentRose : Theme.accentSky
                         }
 
                         Text {
@@ -104,10 +106,10 @@ PanelWindow {
                             radius: 9
                             color: closeMouse.containsMouse ? Theme.bgHover : "transparent"
 
-                            Text {
+                            Icon {
                                 anchors.centerIn: parent
-                                text: "✕"
-                                font.pixelSize: 9
+                                name: "x"
+                                size: 10
                                 color: closeMouse.containsMouse ? Theme.accentRose : Theme.textMuted
                             }
 

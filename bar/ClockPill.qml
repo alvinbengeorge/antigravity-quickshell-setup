@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import "../theme"
 import "../services"
+import "../components"
 
 Rectangle {
     id: root
@@ -55,9 +56,9 @@ Rectangle {
                 }
 
                 // Dropdown indicator
-                Text {
-                    text: ShellState.controlCenterOpen ? "▲" : "▼"
-                    font.pixelSize: 8
+                Icon {
+                    name: ShellState.controlCenterOpen ? "chevron-up" : "chevron-down"
+                    size: 11
                     color: ShellState.controlCenterOpen ? Theme.accentCyan : Theme.textMuted
                 }
             }
@@ -90,11 +91,12 @@ Rectangle {
             RowLayout {
                 id: notifBadgeRow
                 anchors.centerIn: parent
-                spacing: 3
+                spacing: 4
 
-                Text {
-                    text: "🔔"
-                    font.pixelSize: 8
+                Icon {
+                    name: "bell"
+                    size: 10
+                    color: Theme.accentRose
                 }
                 Text {
                     text: NotificationService.unreadCount.toString()

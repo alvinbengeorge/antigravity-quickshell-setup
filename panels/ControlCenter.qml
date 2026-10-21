@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Wayland
 import "../theme"
 import "../services"
+import "../components"
 
 PanelWindow {
     id: controlCenterWindow
@@ -46,8 +47,9 @@ PanelWindow {
         anchors.topMargin: 56
         anchors.right: parent.right
         anchors.rightMargin: 16
-        implicitHeight: mainCol.implicitHeight + 32
+        implicitHeight: mainCol.implicitHeight + 36
         radius: Theme.cardRadius
+        clip: true
         color: Theme.bgModal
         border.color: Theme.borderGlow
         border.width: 1
@@ -67,6 +69,14 @@ PanelWindow {
             // Header Row
             RowLayout {
                 Layout.fillWidth: true
+                spacing: 8
+
+                Icon {
+                    name: "sliders"
+                    size: 13
+                    color: Theme.accentCyan
+                }
+
                 Text {
                     text: "CONNECTIVITY & CONTROLS"
                     font.family: Theme.fontMono
@@ -81,11 +91,14 @@ PanelWindow {
                     height: 24
                     radius: 12
                     color: refreshMouse.containsMouse ? Theme.bgHover : "transparent"
-                    Text {
+
+                    Icon {
                         anchors.centerIn: parent
-                        text: "🔄"
-                        font.pixelSize: 11
+                        name: "refresh-cw"
+                        size: 12
+                        color: refreshMouse.containsMouse ? Theme.accentCyan : Theme.textMuted
                     }
+
                     MouseArea {
                         id: refreshMouse
                         anchors.fill: parent
@@ -118,14 +131,18 @@ PanelWindow {
                         readonly property bool active: controlCenterWindow.activeTab === "controls"
                         color: active ? Theme.accentViolet : (ctrlTabM.containsMouse ? Theme.bgHover : "transparent")
 
+                        Behavior on color { ColorAnimation { duration: 150 } }
+
                         RowLayout {
                             anchors.centerIn: parent
                             spacing: 6
-                            Text {
-                                text: "⚙"
-                                font.pixelSize: 11
+
+                            Icon {
+                                name: "sliders"
+                                size: 12
                                 color: parent.parent.active ? Theme.textOnAccent : Theme.textMuted
                             }
+
                             Text {
                                 text: "Controls"
                                 font.family: Theme.fontFamily
@@ -152,14 +169,18 @@ PanelWindow {
                         readonly property bool active: controlCenterWindow.activeTab === "notifications"
                         color: active ? Theme.accentViolet : (notifTabM.containsMouse ? Theme.bgHover : "transparent")
 
+                        Behavior on color { ColorAnimation { duration: 150 } }
+
                         RowLayout {
                             anchors.centerIn: parent
                             spacing: 6
-                            Text {
-                                text: "🔔"
-                                font.pixelSize: 11
+
+                            Icon {
+                                name: NotificationService.unreadCount > 0 ? "bell-ring" : "bell"
+                                size: 12
                                 color: parent.parent.active ? Theme.textOnAccent : (NotificationService.unreadCount > 0 ? Theme.accentRose : Theme.textMuted)
                             }
+
                             Text {
                                 text: "Notifications" + (NotificationService.unreadCount > 0 ? " (" + NotificationService.unreadCount + ")" : "")
                                 font.family: Theme.fontFamily
@@ -209,13 +230,10 @@ PanelWindow {
                         anchors.margins: 10
                         spacing: 10
 
-                        Image {
-                            source: NetworkService.wifiEnabled ? "../assets/wifi.svg" : "../assets/wifi-off.svg"
-                            width: 22
-                            height: 22
-                            sourceSize.width: 22
-                            sourceSize.height: 22
-                            fillMode: Image.PreserveAspectFit
+                        Icon {
+                            name: NetworkService.wifiEnabled ? "wifi" : "wifi-off"
+                            size: 20
+                            color: NetworkService.wifiEnabled ? Theme.accentCyan : Theme.textMuted
                         }
 
                         ColumnLayout {
@@ -261,13 +279,10 @@ PanelWindow {
                         anchors.margins: 10
                         spacing: 10
 
-                        Image {
-                            source: NetworkService.btPowered ? "../assets/bluetooth.svg" : "../assets/bluetooth-off.svg"
-                            width: 22
-                            height: 22
-                            sourceSize.width: 22
-                            sourceSize.height: 22
-                            fillMode: Image.PreserveAspectFit
+                        Icon {
+                            name: NetworkService.btPowered ? "bluetooth" : "bluetooth-off"
+                            size: 20
+                            color: NetworkService.btPowered ? Theme.accentSky : Theme.textMuted
                         }
 
                         ColumnLayout {
@@ -301,25 +316,28 @@ PanelWindow {
             // Now Playing Media Player Card
             Rectangle {
                 Layout.fillWidth: true
-                height: 84
-                radius: 12
+                implicitHeight: mediaRow.implicitHeight + 24
+                radius: 14
                 color: Theme.bgCard
                 border.color: MediaService.isPlaying ? Theme.accentViolet : Theme.borderDim
                 border.width: 1
                 visible: MediaService.hasMedia
 
                 RowLayout {
+                    id: mediaRow
                     anchors.fill: parent
-                    anchors.margins: 10
+                    anchors.margins: 12
                     spacing: 12
 
                     // Album Art / Disc
                     Rectangle {
-                        width: 64
-                        height: 64
-                        radius: 8
+                        width: 72
+                        height: 72
+                        radius: 10
                         color: Theme.bgSurface
                         clip: true
+                        border.color: Theme.borderDim
+                        border.width: 1
 
                         Image {
                             anchors.fill: parent
@@ -328,10 +346,11 @@ PanelWindow {
                             visible: MediaService.trackArtUrl.length > 0
                         }
 
-                        Text {
+                        Icon {
                             anchors.centerIn: parent
-                            text: MediaService.isPlaying ? "🎵" : "💿"
-                            font.pixelSize: 22
+                            name: "music"
+                            size: 28
+                            color: Theme.accentViolet
                             visible: MediaService.trackArtUrl.length === 0
                         }
                     }
@@ -339,8 +358,7 @@ PanelWindow {
                     // Metadata & Controls
                     ColumnLayout {
                         Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        spacing: 3
+                        spacing: 4
 
                         Text {
                             Layout.fillWidth: true
@@ -408,10 +426,19 @@ PanelWindow {
                             Layout.alignment: Qt.AlignHCenter
                             spacing: 16
 
-                            Text {
-                                text: "⏮"
-                                font.pixelSize: 12
-                                color: prevMediaM.containsMouse ? Theme.accentSky : Theme.textMuted
+                            Rectangle {
+                                width: 28
+                                height: 28
+                                radius: 14
+                                color: prevMediaM.containsMouse ? Theme.bgHover : "transparent"
+
+                                Icon {
+                                    anchors.centerIn: parent
+                                    name: "skip-back"
+                                    size: 14
+                                    color: prevMediaM.containsMouse ? Theme.accentCyan : Theme.textMuted
+                                }
+
                                 MouseArea {
                                     id: prevMediaM
                                     anchors.fill: parent
@@ -422,27 +449,41 @@ PanelWindow {
                             }
 
                             Rectangle {
-                                width: 22
-                                height: 22
-                                radius: 11
-                                color: Theme.accentViolet
-                                Text {
+                                width: 32
+                                height: 32
+                                radius: 16
+                                color: playMediaM.containsMouse ? Theme.accentCyan : Theme.accentViolet
+                                Behavior on color { ColorAnimation { duration: 150 } }
+
+                                Icon {
                                     anchors.centerIn: parent
-                                    text: MediaService.isPlaying ? "⏸" : "▶"
-                                    font.pixelSize: 10
+                                    name: MediaService.isPlaying ? "pause" : "play"
+                                    size: 14
                                     color: Theme.textOnAccent
                                 }
+
                                 MouseArea {
+                                    id: playMediaM
                                     anchors.fill: parent
+                                    hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: MediaService.playPause()
                                 }
                             }
 
-                            Text {
-                                text: "⏭"
-                                font.pixelSize: 12
-                                color: nextMediaM.containsMouse ? Theme.accentSky : Theme.textMuted
+                            Rectangle {
+                                width: 28
+                                height: 28
+                                radius: 14
+                                color: nextMediaM.containsMouse ? Theme.bgHover : "transparent"
+
+                                Icon {
+                                    anchors.centerIn: parent
+                                    name: "skip-forward"
+                                    size: 14
+                                    color: nextMediaM.containsMouse ? Theme.accentCyan : Theme.textMuted
+                                }
+
                                 MouseArea {
                                     id: nextMediaM
                                     anchors.fill: parent
@@ -455,6 +496,7 @@ PanelWindow {
                     }
                 }
             }
+            }
 
             // Theme Switcher Section
             ColumnLayout {
@@ -463,6 +505,14 @@ PanelWindow {
 
                 RowLayout {
                     Layout.fillWidth: true
+                    spacing: 6
+
+                    Icon {
+                        name: "palette"
+                        size: 12
+                        color: Theme.textMuted
+                    }
+
                     Text {
                         text: "THEME PALETTE"
                         font.family: Theme.fontMono
@@ -484,11 +534,13 @@ PanelWindow {
                             id: cycleRow
                             anchors.centerIn: parent
                             spacing: 4
-                            Text {
-                                text: "⟳"
-                                font.pixelSize: 11
+
+                            Icon {
+                                name: "refresh-cw"
+                                size: 10
                                 color: Theme.autoCycle ? Theme.textOnAccent : Theme.accentViolet
                             }
+
                             Text {
                                 text: Theme.autoCycle ? "10s Cycle: ON" : "10s Cycle: OFF"
                                 font.family: Theme.fontMono
@@ -561,10 +613,10 @@ PanelWindow {
                                     elide: Text.ElideRight
                                 }
 
-                                Text {
+                                Icon {
                                     visible: isSelected
-                                    text: "✓"
-                                    font.pixelSize: 10
+                                    name: "check"
+                                    size: 11
                                     color: pal.accentViolet
                                 }
                             }
@@ -590,6 +642,14 @@ PanelWindow {
 
                 RowLayout {
                     Layout.fillWidth: true
+                    spacing: 6
+
+                    Icon {
+                        name: "image"
+                        size: 12
+                        color: Theme.textMuted
+                    }
+
                     Text {
                         text: "WALLPAPER"
                         font.family: Theme.fontMono
@@ -607,12 +667,14 @@ PanelWindow {
                         color: wpPrevMouse.containsMouse ? Theme.bgHover : Theme.bgPill
                         border.color: Theme.borderDim
                         border.width: 1
-                        Text {
+
+                        Icon {
                             anchors.centerIn: parent
-                            text: "◀"
-                            font.pixelSize: 9
+                            name: "chevron-left"
+                            size: 12
                             color: Theme.accentViolet
                         }
+
                         MouseArea {
                             id: wpPrevMouse
                             anchors.fill: parent
@@ -630,12 +692,14 @@ PanelWindow {
                         color: wpNextMouse.containsMouse ? Theme.bgHover : Theme.bgPill
                         border.color: Theme.borderDim
                         border.width: 1
-                        Text {
+
+                        Icon {
                             anchors.centerIn: parent
-                            text: "▶"
-                            font.pixelSize: 9
+                            name: "chevron-right"
+                            size: 12
                             color: Theme.accentViolet
                         }
+
                         MouseArea {
                             id: wpNextMouse
                             anchors.fill: parent
@@ -761,9 +825,10 @@ PanelWindow {
                         anchors.rightMargin: 8
                         spacing: 6
 
-                        Text {
-                            text: "🖼"
-                            font.pixelSize: 10
+                        Icon {
+                            name: "image"
+                            size: 11
+                            color: Theme.accentViolet
                         }
 
                         Text {
@@ -785,6 +850,14 @@ PanelWindow {
 
                 RowLayout {
                     Layout.fillWidth: true
+                    spacing: 6
+
+                    Icon {
+                        name: "wifi"
+                        size: 12
+                        color: Theme.textMuted
+                    }
+
                     Text {
                         text: "AVAILABLE WI-FI NETWORKS"
                         font.family: Theme.fontMono
@@ -837,9 +910,9 @@ PanelWindow {
                                 anchors.rightMargin: 8
                                 spacing: 8
 
-                                Text {
-                                    text: modelData.inUse ? "✓" : (modelData.security.includes("WPA") ? "🔒" : "🌐")
-                                    font.pixelSize: 11
+                                Icon {
+                                    name: modelData.inUse ? "check" : (modelData.security.includes("WPA") ? "lock" : "globe")
+                                    size: 12
                                     color: modelData.inUse ? Theme.accentCyan : Theme.textMuted
                                 }
 
@@ -884,6 +957,14 @@ PanelWindow {
 
                 RowLayout {
                     Layout.fillWidth: true
+                    spacing: 6
+
+                    Icon {
+                        name: "bluetooth"
+                        size: 12
+                        color: Theme.textMuted
+                    }
+
                     Text {
                         text: "BLUETOOTH DEVICES"
                         font.family: Theme.fontMono
@@ -921,9 +1002,20 @@ PanelWindow {
                                 anchors.rightMargin: 10
                                 spacing: 8
 
-                                Text {
-                                    text: modelData.connected ? "🎧" : "📱"
-                                    font.pixelSize: 12
+                                Icon {
+                                    name: {
+                                        const lower = (modelData.name || "").toLowerCase();
+                                        if (lower.includes("bud") || lower.includes("headphone") || lower.includes("ear") || lower.includes("airpod")) {
+                                            return "headphones";
+                                        } else if (lower.includes("soundbar") || lower.includes("speaker") || lower.includes("audio")) {
+                                            return "speaker";
+                                        } else if (lower.includes("phone") || lower.includes("pixel") || lower.includes("iphone") || lower.includes("galaxy")) {
+                                            return "smartphone";
+                                        }
+                                        return modelData.connected ? "headphones" : "bluetooth";
+                                    }
+                                    size: 13
+                                    color: modelData.connected ? Theme.accentSky : Theme.textMuted
                                 }
 
                                 Text {
@@ -936,7 +1028,7 @@ PanelWindow {
                                 }
 
                                 Rectangle {
-                                    width: 58
+                                    width: 64
                                     height: 22
                                     radius: 11
                                     color: modelData.connected ? Theme.accentRose : Theme.bgHover
@@ -991,10 +1083,13 @@ PanelWindow {
                             id: dndRow
                             anchors.centerIn: parent
                             spacing: 5
-                            Text {
-                                text: NotificationService.dnd ? "🔕" : "🔔"
-                                font.pixelSize: 10
+
+                            Icon {
+                                name: NotificationService.dnd ? "bell-off" : "bell"
+                                size: 11
+                                color: NotificationService.dnd ? Theme.textOnAccent : Theme.textMuted
                             }
+
                             Text {
                                 text: NotificationService.dnd ? "Do Not Disturb: ON" : "DND: OFF"
                                 font.family: Theme.fontMono
@@ -1027,11 +1122,13 @@ PanelWindow {
                             id: clearNotifsRow
                             anchors.centerIn: parent
                             spacing: 4
-                            Text {
-                                text: "🗑"
-                                font.pixelSize: 10
+
+                            Icon {
+                                name: "trash-2"
+                                size: 11
                                 color: clearNotifsMouse.containsMouse ? "#FFFFFF" : Theme.accentRose
                             }
+
                             Text {
                                 text: "Clear All"
                                 font.family: Theme.fontFamily
@@ -1077,9 +1174,10 @@ PanelWindow {
                                     Layout.fillWidth: true
                                     spacing: 6
 
-                                    Text {
-                                        text: modelData.urgency === 2 ? "🚨" : "🔔"
-                                        font.pixelSize: 10
+                                    Icon {
+                                        name: modelData.urgency === 2 ? "alert-circle" : "bell"
+                                        size: 12
+                                        color: modelData.urgency === 2 ? Theme.accentRose : Theme.accentSky
                                     }
 
                                     Text {
@@ -1106,10 +1204,10 @@ PanelWindow {
                                         radius: 8
                                         color: disMouse.containsMouse ? Theme.bgHover : "transparent"
 
-                                        Text {
+                                        Icon {
                                             anchors.centerIn: parent
-                                            text: "✕"
-                                            font.pixelSize: 8
+                                            name: "x"
+                                            size: 9
                                             color: disMouse.containsMouse ? Theme.accentRose : Theme.textMuted
                                         }
 
@@ -1165,10 +1263,10 @@ PanelWindow {
                         anchors.centerIn: parent
                         spacing: 8
 
-                        Text {
+                        Icon {
                             Layout.alignment: Qt.AlignHCenter
-                            text: "✦"
-                            font.pixelSize: 22
+                            name: "bell"
+                            size: 26
                             color: Theme.accentViolet
                         }
 
@@ -1193,4 +1291,3 @@ PanelWindow {
             }
         }
     }
-}

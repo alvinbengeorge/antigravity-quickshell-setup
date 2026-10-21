@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Services.Pipewire
 import "../theme"
 import "../services"
+import "../components"
 
 Rectangle {
     id: root
@@ -107,8 +108,14 @@ Rectangle {
                 anchors.fill: parent
                 spacing: 4
 
+                Icon {
+                    name: "sparkles"
+                    size: 11
+                    color: AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet
+                }
+
                 Text {
-                    text: agyMetric.displayMode === 0 ? "✦ 5h" : (agyMetric.displayMode === 1 ? "✦ Wk" : "✦ Ctx")
+                    text: agyMetric.displayMode === 0 ? "5h" : (agyMetric.displayMode === 1 ? "Wk" : "Ctx")
                     font.family: Theme.fontFamily
                     font.pixelSize: 10
                     color: AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet
@@ -167,9 +174,10 @@ Rectangle {
                 anchors.fill: parent
                 spacing: 5
 
-                Text {
-                    text: AudioService.muted ? "🔇" : (AudioService.volume > 0.5 ? "🔊" : (AudioService.volume > 0.1 ? "🔉" : "🔈"))
-                    font.pixelSize: 12
+                Icon {
+                    name: AudioService.muted ? "volume-x" : (AudioService.volume > 0.5 ? "volume-2" : "volume-1")
+                    size: 13
+                    color: AudioService.muted ? Theme.accentRose : Theme.textSecondary
                 }
 
                 Text {
@@ -208,9 +216,10 @@ Rectangle {
             spacing: 4
             visible: BatteryService.available
 
-            Text {
-                text: BatteryService.isCharging ? "⚡" : (BatteryService.percentage <= 20 ? "🪫" : "🔋")
-                font.pixelSize: 12
+            Icon {
+                name: BatteryService.isCharging ? "battery-charging" : (BatteryService.percentage <= 20 ? "battery-warning" : "battery")
+                size: 13
+                color: BatteryService.isCharging ? Theme.accentEmerald : (BatteryService.percentage <= 20 ? Theme.accentRose : (BatteryService.percentage <= 40 ? Theme.accentAmber : Theme.textSecondary))
             }
 
             Text {

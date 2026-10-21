@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import "../theme"
 import "../services"
+import "../components"
 
 Rectangle {
     id: root
@@ -76,11 +77,10 @@ Rectangle {
                         }
                     }
 
-                    Text {
+                    Icon {
                         anchors.centerIn: parent
-                        text: MediaService.isPlaying ? "🎵" : "✦"
-                        font.family: Theme.fontFamily
-                        font.pixelSize: 13
+                        name: MediaService.isPlaying ? "music" : "sparkles"
+                        size: 13
                         color: AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet
                     }
                 }
@@ -204,10 +204,10 @@ Rectangle {
                     radius: 11
                     color: prevMouse.containsMouse ? Theme.bgHover : "transparent"
 
-                    Text {
+                    Icon {
                         anchors.centerIn: parent
-                        text: "⏮"
-                        font.pixelSize: 11
+                        name: "skip-back"
+                        size: 11
                         color: prevMouse.containsMouse ? Theme.accentCyan : Theme.textMuted
                     }
 
@@ -230,10 +230,10 @@ Rectangle {
                     border.color: playMouse.containsMouse ? Theme.accentCyan : Theme.accentViolet
                     border.width: 1
 
-                    Text {
+                    Icon {
                         anchors.centerIn: parent
-                        text: MediaService.isPlaying ? "⏸" : "▶"
-                        font.pixelSize: 10
+                        name: MediaService.isPlaying ? "pause" : "play"
+                        size: 11
                         color: playMouse.containsMouse ? Theme.accentCyan : Theme.accentViolet
                     }
 
@@ -254,10 +254,10 @@ Rectangle {
                     radius: 11
                     color: nextMouse.containsMouse ? Theme.bgHover : "transparent"
 
-                    Text {
+                    Icon {
                         anchors.centerIn: parent
-                        text: "⏭"
-                        font.pixelSize: 11
+                        name: "skip-forward"
+                        size: 11
                         color: nextMouse.containsMouse ? Theme.accentCyan : Theme.textMuted
                     }
 
