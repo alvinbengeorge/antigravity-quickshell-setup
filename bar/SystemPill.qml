@@ -238,34 +238,24 @@ Rectangle {
             visible: TunedService.available
         }
 
-        // TuneD Profile Metric
+        // TuneD Profile Metric (Icon Only)
         Item {
-            implicitWidth: tunedPillRow.implicitWidth
+            implicitWidth: 16
             implicitHeight: 20
             visible: TunedService.available
 
-            RowLayout {
-                id: tunedPillRow
-                anchors.fill: parent
-                spacing: 4
-
-                Icon {
-                    name: TunedService.activeMeta.icon || "zap"
-                    size: 13
-                    color: TunedService.activeMeta.color || Theme.accentAmber
-                }
-
-                Text {
-                    text: TunedService.activeMeta.name || "TuneD"
-                    font.family: Theme.fontMono
-                    font.pixelSize: 10
-                    font.bold: true
-                    color: TunedService.activeMeta.color || Theme.accentAmber
-                }
+            Icon {
+                anchors.centerIn: parent
+                name: TunedService.activeMeta.icon || "zap"
+                size: 14
+                color: tunedMouse.containsMouse ? Theme.textPrimary : (TunedService.activeMeta.color || Theme.accentAmber)
+                Behavior on color { ColorAnimation { duration: 150 } }
             }
 
             MouseArea {
+                id: tunedMouse
                 anchors.fill: parent
+                anchors.margins: -4
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
