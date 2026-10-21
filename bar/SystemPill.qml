@@ -194,5 +194,31 @@ Rectangle {
                 }
             }
         }
+
+        // Divider (Battery)
+        Rectangle {
+            width: 1
+            height: 12
+            color: Theme.borderDim
+            visible: BatteryService.available
+        }
+
+        // Battery Metric
+        RowLayout {
+            spacing: 4
+            visible: BatteryService.available
+
+            Text {
+                text: BatteryService.isCharging ? "⚡" : (BatteryService.percentage <= 20 ? "🪫" : "🔋")
+                font.pixelSize: 12
+            }
+
+            Text {
+                text: BatteryService.percentage + "%"
+                font.family: Theme.fontMono
+                font.pixelSize: 11
+                color: BatteryService.isCharging ? Theme.accentEmerald : (BatteryService.percentage <= 20 ? Theme.accentRose : (BatteryService.percentage <= 40 ? Theme.accentAmber : Theme.textSecondary))
+            }
+        }
     }
 }

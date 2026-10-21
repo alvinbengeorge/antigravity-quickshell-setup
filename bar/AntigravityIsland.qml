@@ -121,9 +121,9 @@ Rectangle {
                 color: Theme.borderDim
             }
 
-            // Track Title & Artist
+            // Track Title
             Text {
-                text: (MediaService.trackTitle || "Playing") + (MediaService.trackArtist ? " • " + MediaService.trackArtist : "")
+                text: MediaService.trackTitle || "Playing"
                 font.family: Theme.fontFamily
                 font.pixelSize: 11
                 color: Theme.accentSky
