@@ -126,21 +126,25 @@ Rectangle {
         // Power button
         Rectangle {
             id: pwrBtn
-            width: 20
-            height: 20
-            radius: 10
+            width: 24
+            height: 24
+            radius: 12
             color: pwrMouse.containsMouse ? Theme.accentRose : "transparent"
 
-            Text {
+            Behavior on color { ColorAnimation { duration: 150 } }
+
+            Icon {
                 anchors.centerIn: parent
-                text: "⏻"
-                font.pixelSize: 12
-                color: pwrMouse.containsMouse ? Theme.textOnAccent : Theme.textMuted
+                name: "power"
+                size: 15
+                color: pwrMouse.containsMouse ? Theme.textOnAccent : Theme.accentRose
+                Behavior on color { ColorAnimation { duration: 150 } }
             }
 
             MouseArea {
                 id: pwrMouse
                 anchors.fill: parent
+                anchors.margins: -2
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {

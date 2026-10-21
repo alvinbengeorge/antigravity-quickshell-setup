@@ -496,7 +496,6 @@ PanelWindow {
                     }
                 }
             }
-            }
 
             // Theme Switcher Section
             ColumnLayout {
@@ -1291,3 +1290,4 @@ PanelWindow {
             }
         }
     }
+}
