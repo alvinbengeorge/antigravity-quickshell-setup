@@ -7,6 +7,7 @@ import "services"
 import "bar"
 import "panels"
 import "desktop"
+import "notifications"
 
 ShellRoot {
     id: root
@@ -64,6 +65,8 @@ ShellRoot {
     // Centered & Dropdown Overlays
     AntigravityPanel {}
     Launcher {}
+    ClipboardManager {}
     SessionDialog {}
     ControlCenter {}
+    NotificationToasts {}
 }

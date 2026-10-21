@@ -24,6 +24,8 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: ShellState.controlCenterOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
+    property string activeTab: "controls"
+
     // Backdrop click to close
     MouseArea {
         anchors.fill: parent
@@ -94,10 +96,104 @@ PanelWindow {
                 }
             }
 
-            // Quick Toggle Tiles (Wi-Fi & Bluetooth)
-            RowLayout {
+            // Segmented Tab Switcher (Controls vs Notifications)
+            Rectangle {
                 Layout.fillWidth: true
-                spacing: 12
+                height: 32
+                radius: 8
+                color: Theme.bgBase
+                border.color: Theme.borderDim
+                border.width: 1
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 3
+                    spacing: 4
+
+                    // Controls Tab
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        radius: 6
+                        readonly property bool active: controlCenterWindow.activeTab === "controls"
+                        color: active ? Theme.accentViolet : (ctrlTabM.containsMouse ? Theme.bgHover : "transparent")
+
+                        RowLayout {
+                            anchors.centerIn: parent
+                            spacing: 6
+                            Text {
+                                text: "⚙"
+                                font.pixelSize: 11
+                                color: parent.parent.active ? Theme.textOnAccent : Theme.textMuted
+                            }
+                            Text {
+                                text: "Controls"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 11
+                                font.bold: parent.parent.active
+                                color: parent.parent.active ? Theme.textOnAccent : Theme.textPrimary
+                            }
+                        }
+
+                        MouseArea {
+                            id: ctrlTabM
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: controlCenterWindow.activeTab = "controls"
+                        }
+                    }
+
+                    // Notifications Tab
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        radius: 6
+                        readonly property bool active: controlCenterWindow.activeTab === "notifications"
+                        color: active ? Theme.accentViolet : (notifTabM.containsMouse ? Theme.bgHover : "transparent")
+
+                        RowLayout {
+                            anchors.centerIn: parent
+                            spacing: 6
+                            Text {
+                                text: "🔔"
+                                font.pixelSize: 11
+                                color: parent.parent.active ? Theme.textOnAccent : (NotificationService.unreadCount > 0 ? Theme.accentRose : Theme.textMuted)
+                            }
+                            Text {
+                                text: "Notifications" + (NotificationService.unreadCount > 0 ? " (" + NotificationService.unreadCount + ")" : "")
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 11
+                                font.bold: parent.parent.active
+                                color: parent.parent.active ? Theme.textOnAccent : (NotificationService.unreadCount > 0 ? Theme.accentRose : Theme.textPrimary)
+                            }
+                        }
+
+                        MouseArea {
+                            id: notifTabM
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                controlCenterWindow.activeTab = "notifications";
+                                NotificationService.markAllRead();
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --- CONTROLS CONTENT WRAPPER ---
+            ColumnLayout {
+                id: controlsCol
+                Layout.fillWidth: true
+                spacing: 16
+                visible: controlCenterWindow.activeTab === "controls"
+
+                // Quick Toggle Tiles (Wi-Fi & Bluetooth)
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
 
                 // Wi-Fi Toggle Tile
                 Rectangle {
@@ -198,6 +294,164 @@ PanelWindow {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: NetworkService.toggleBluetooth()
+                    }
+                }
+            }
+
+            // Now Playing Media Player Card
+            Rectangle {
+                Layout.fillWidth: true
+                height: 84
+                radius: 12
+                color: Theme.bgCard
+                border.color: MediaService.isPlaying ? Theme.accentViolet : Theme.borderDim
+                border.width: 1
+                visible: MediaService.hasMedia
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 12
+
+                    // Album Art / Disc
+                    Rectangle {
+                        width: 64
+                        height: 64
+                        radius: 8
+                        color: Theme.bgSurface
+                        clip: true
+
+                        Image {
+                            anchors.fill: parent
+                            source: MediaService.trackArtUrl
+                            fillMode: Image.PreserveAspectCrop
+                            visible: MediaService.trackArtUrl.length > 0
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: MediaService.isPlaying ? "🎵" : "💿"
+                            font.pixelSize: 22
+                            visible: MediaService.trackArtUrl.length === 0
+                        }
+                    }
+
+                    // Metadata & Controls
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        spacing: 3
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: MediaService.trackTitle || "Not Playing"
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 12
+                            font.bold: true
+                            color: Theme.textPrimary
+                            elide: Text.ElideRight
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: MediaService.trackArtist || "Unknown Artist"
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 10
+                            color: Theme.textMuted
+                            elide: Text.ElideRight
+                        }
+
+                        // Progress Bar & Time
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
+
+                            Text {
+                                text: MediaService.positionStr
+                                font.family: Theme.fontMono
+                                font.pixelSize: 9
+                                color: Theme.textMuted
+                            }
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                height: 4
+                                radius: 2
+                                color: Theme.bgSurface
+
+                                Rectangle {
+                                    width: parent.width * MediaService.progress
+                                    height: parent.height
+                                    radius: 2
+                                    color: Theme.accentViolet
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: mouse => {
+                                        MediaService.seekFraction(mouse.x / width);
+                                    }
+                                }
+                            }
+
+                            Text {
+                                text: MediaService.lengthStr
+                                font.family: Theme.fontMono
+                                font.pixelSize: 9
+                                color: Theme.textMuted
+                            }
+                        }
+
+                        // Controls Row
+                        RowLayout {
+                            Layout.alignment: Qt.AlignHCenter
+                            spacing: 16
+
+                            Text {
+                                text: "⏮"
+                                font.pixelSize: 12
+                                color: prevMediaM.containsMouse ? Theme.accentSky : Theme.textMuted
+                                MouseArea {
+                                    id: prevMediaM
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: MediaService.previous()
+                                }
+                            }
+
+                            Rectangle {
+                                width: 22
+                                height: 22
+                                radius: 11
+                                color: Theme.accentViolet
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: MediaService.isPlaying ? "⏸" : "▶"
+                                    font.pixelSize: 10
+                                    color: Theme.textOnAccent
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: MediaService.playPause()
+                                }
+                            }
+
+                            Text {
+                                text: "⏭"
+                                font.pixelSize: 12
+                                color: nextMediaM.containsMouse ? Theme.accentSky : Theme.textMuted
+                                MouseArea {
+                                    id: nextMediaM
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: MediaService.next()
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -707,6 +961,232 @@ PanelWindow {
                                     NetworkService.toggleBtDevice(modelData.mac, modelData.connected);
                                 }
                             }
+                        }
+                    }
+                }
+            }
+            } // Close controlsCol
+
+            // --- NOTIFICATIONS CONTENT WRAPPER ---
+            ColumnLayout {
+                id: notificationsCol
+                Layout.fillWidth: true
+                spacing: 12
+                visible: controlCenterWindow.activeTab === "notifications"
+
+                // Subheader & Actions
+                RowLayout {
+                    Layout.fillWidth: true
+
+                    // DND Toggle Pill
+                    Rectangle {
+                        height: 26
+                        implicitWidth: dndRow.implicitWidth + 12
+                        radius: 13
+                        color: NotificationService.dnd ? Theme.accentRose : Theme.bgPill
+                        border.color: NotificationService.dnd ? Theme.accentRose : Theme.borderDim
+                        border.width: 1
+
+                        RowLayout {
+                            id: dndRow
+                            anchors.centerIn: parent
+                            spacing: 5
+                            Text {
+                                text: NotificationService.dnd ? "🔕" : "🔔"
+                                font.pixelSize: 10
+                            }
+                            Text {
+                                text: NotificationService.dnd ? "Do Not Disturb: ON" : "DND: OFF"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 9
+                                font.bold: true
+                                color: NotificationService.dnd ? Theme.textOnAccent : Theme.textMuted
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: NotificationService.toggleDnd()
+                        }
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    // Clear All Button
+                    Rectangle {
+                        height: 24
+                        implicitWidth: clearNotifsRow.implicitWidth + 12
+                        radius: 6
+                        color: clearNotifsMouse.containsMouse ? Theme.accentRose : Theme.bgPill
+                        border.color: Theme.borderDim
+                        border.width: 1
+                        visible: NotificationService.history.length > 0
+
+                        RowLayout {
+                            id: clearNotifsRow
+                            anchors.centerIn: parent
+                            spacing: 4
+                            Text {
+                                text: "🗑"
+                                font.pixelSize: 10
+                                color: clearNotifsMouse.containsMouse ? "#FFFFFF" : Theme.accentRose
+                            }
+                            Text {
+                                text: "Clear All"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 9
+                                color: clearNotifsMouse.containsMouse ? "#FFFFFF" : Theme.textMuted
+                            }
+                        }
+
+                        MouseArea {
+                            id: clearNotifsMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: NotificationService.clearAll()
+                        }
+                    }
+                }
+
+                // Notification History List
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+                    visible: NotificationService.history.length > 0
+
+                    Repeater {
+                        model: NotificationService.history
+
+                        delegate: Rectangle {
+                            Layout.fillWidth: true
+                            radius: 10
+                            color: Theme.bgCard
+                            border.color: Theme.borderDim
+                            border.width: 1
+                            implicitHeight: notifHistCol.implicitHeight + 16
+
+                            ColumnLayout {
+                                id: notifHistCol
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                spacing: 4
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 6
+
+                                    Text {
+                                        text: modelData.urgency === 2 ? "🚨" : "🔔"
+                                        font.pixelSize: 10
+                                    }
+
+                                    Text {
+                                        text: modelData.appName
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: 10
+                                        font.bold: true
+                                        color: Theme.accentSky
+                                        elide: Text.ElideRight
+                                        Layout.fillWidth: true
+                                    }
+
+                                    Text {
+                                        text: modelData.time
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: 9
+                                        color: Theme.textMuted
+                                    }
+
+                                    // Dismiss button
+                                    Rectangle {
+                                        width: 16
+                                        height: 16
+                                        radius: 8
+                                        color: disMouse.containsMouse ? Theme.bgHover : "transparent"
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "✕"
+                                            font.pixelSize: 8
+                                            color: disMouse.containsMouse ? Theme.accentRose : Theme.textMuted
+                                        }
+
+                                        MouseArea {
+                                            id: disMouse
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: NotificationService.dismissHistory(modelData.id)
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: modelData.summary
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    color: Theme.textPrimary
+                                    wrapMode: Text.Wrap
+                                    elide: Text.ElideRight
+                                    maximumLineCount: 2
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: modelData.body
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 10
+                                    color: Theme.textSecondary
+                                    wrapMode: Text.Wrap
+                                    elide: Text.ElideRight
+                                    maximumLineCount: 3
+                                    visible: modelData.body && modelData.body.length > 0
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Empty State
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 120
+                    radius: 10
+                    color: Theme.bgCard
+                    border.color: Theme.borderDim
+                    border.width: 1
+                    visible: NotificationService.history.length === 0
+
+                    ColumnLayout {
+                        anchors.centerIn: parent
+                        spacing: 8
+
+                        Text {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: "✦"
+                            font.pixelSize: 22
+                            color: Theme.accentViolet
+                        }
+
+                        Text {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: "All caught up"
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 12
+                            font.bold: true
+                            color: Theme.textPrimary
+                        }
+
+                        Text {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: "No new notifications"
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 10
+                            color: Theme.textMuted
                         }
                     }
                 }

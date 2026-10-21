@@ -77,6 +77,43 @@ Rectangle {
             }
         }
 
+        // Unread Notification Badge
+        Rectangle {
+            height: 18
+            implicitWidth: notifBadgeRow.implicitWidth + 8
+            radius: 9
+            color: Qt.rgba(Theme.accentRose.r, Theme.accentRose.g, Theme.accentRose.b, 0.20)
+            border.color: Theme.accentRose
+            border.width: 1
+            visible: NotificationService.unreadCount > 0
+
+            RowLayout {
+                id: notifBadgeRow
+                anchors.centerIn: parent
+                spacing: 3
+
+                Text {
+                    text: "🔔"
+                    font.pixelSize: 8
+                }
+                Text {
+                    text: NotificationService.unreadCount.toString()
+                    font.family: Theme.fontMono
+                    font.pixelSize: 9
+                    font.bold: true
+                    color: Theme.accentRose
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    ShellState.controlCenterOpen = true;
+                }
+            }
+        }
+
         // Divider
         Rectangle {
             width: 1

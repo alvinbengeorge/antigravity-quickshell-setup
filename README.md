@@ -67,6 +67,7 @@ custom_quickshell/
 | :--- | :--- |
 | `Super + A` / `Super + I` | Toggle Antigravity Assistant HUD |
 | `Super + Space` / `Super + D` | Toggle App Launcher & Search |
+| `Super + V` | Toggle Visual Clipboard History Manager |
 | `Super + X` / `Super + Escape` | Toggle System Session & Power Dialog |
 | `Super + Shift + R` | Reload / restart Quickshell (`launch-shell.sh`) |
 
@@ -82,6 +83,9 @@ qs -c antigravity ipc call antigravity toggle
 
 # Toggle Launcher
 qs -c antigravity ipc call search toggle
+
+# Toggle Visual Clipboard History Manager
+qs -c antigravity ipc call clipboard toggle
 
 # Toggle Session / Power Dialog
 qs -c antigravity ipc call session toggle

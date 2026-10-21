@@ -10,6 +10,7 @@ Singleton {
     property bool antigravityPanelOpen: false
     property bool sessionDialogOpen: false
     property bool launcherOpen: false
+    property bool clipboardOpen: false
     property bool controlCenterOpen: false
     property bool desktopClockVisible: true
     property bool desktopAntigravityVisible: true
@@ -83,6 +84,17 @@ Singleton {
             root.antigravityPanelOpen = false;
             root.sessionDialogOpen = false;
             root.controlCenterOpen = false;
+            root.clipboardOpen = false;
+        }
+    }
+
+    function toggleClipboard() {
+        root.clipboardOpen = !root.clipboardOpen;
+        if (root.clipboardOpen) {
+            root.antigravityPanelOpen = false;
+            root.sessionDialogOpen = false;
+            root.controlCenterOpen = false;
+            root.launcherOpen = false;
         }
     }
 
@@ -91,6 +103,7 @@ Singleton {
         root.sessionDialogOpen = false;
         root.launcherOpen = false;
         root.controlCenterOpen = false;
+        root.clipboardOpen = false;
     }
 
     // Hyprland / CLI IPC Handlers
@@ -106,8 +119,15 @@ Singleton {
         function toggle(): void { root.toggleLauncher(); }
         function workspacesToggle(): void { root.toggleLauncher(); }
         function keybindsToggle(): void { root.toggleLauncher(); }
-        function clipboardToggle(): void { root.toggleLauncher(); }
+        function clipboardToggle(): void { root.toggleClipboard(); }
         function emojisToggle(): void { root.toggleLauncher(); }
+    }
+
+    IpcHandler {
+        target: "clipboard"
+        function toggle(): void { root.toggleClipboard(); }
+        function show(): void { root.clipboardOpen = true; }
+        function hide(): void { root.clipboardOpen = false; }
     }
 
     IpcHandler {

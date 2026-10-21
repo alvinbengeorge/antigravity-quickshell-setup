@@ -34,7 +34,7 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
         }
 
-        // Left Island (Workspaces & Active Window, constrained before center island)
+        // Left Island (Workspaces, Active Window & Active Apps / System Tray)
         RowLayout {
             id: leftRow
             anchors.left: parent.left
@@ -50,7 +50,11 @@ PanelWindow {
 
             ActiveWindowPill {
                 id: activeWinPill
-                maxAllowedWidth: Math.max(60, leftRow.width - wsPill.width - leftRow.spacing - 12)
+                maxAllowedWidth: Math.max(60, leftRow.width - wsPill.width - (trayPill.visible ? trayPill.width + leftRow.spacing : 0) - leftRow.spacing - 12)
+            }
+
+            SystemTrayPill {
+                id: trayPill
             }
 
             Item {
