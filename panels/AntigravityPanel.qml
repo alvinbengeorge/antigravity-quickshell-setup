@@ -102,7 +102,7 @@ PanelWindow {
                 Rectangle {
                     height: 26
                     radius: 13
-                    color: AntigravityService.isActive ? "#06B6D433" : "#1E293B"
+                    color: AntigravityService.isActive ? Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.18) : Theme.bgPill
                     border.color: AntigravityService.isActive ? Theme.accentCyan : Theme.borderDim
                     border.width: 1
                     implicitWidth: statusText.implicitWidth + 20

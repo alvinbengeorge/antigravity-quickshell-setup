@@ -11,6 +11,16 @@ import "desktop"
 ShellRoot {
     id: root
 
+    // Instantiate Desktop Wallpaper on all detected screens
+    Variants {
+        model: Quickshell.screens
+
+        DesktopWallpaper {
+            required property ShellScreen modelData
+            screen: modelData
+        }
+    }
+
     // Instantiate TopBar on all detected screens
     Variants {
         model: Quickshell.screens

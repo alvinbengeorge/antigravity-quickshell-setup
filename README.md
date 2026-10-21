@@ -88,4 +88,29 @@ qs -c antigravity ipc call session toggle
 
 # Toggle Desktop Clock Widget
 qs -c antigravity ipc call clock toggle
+
+# Theme Controls
+qs -c antigravity ipc call theme next               # Cycle to next theme
+qs -c antigravity ipc call theme prev               # Cycle to previous theme
+qs -c antigravity ipc call theme set "cyberpunk"    # Set specific theme (deepspace, catppuccin, tokyonight, nord, cyberpunk, gruvbox)
+qs -c antigravity ipc call theme cycleToggle        # Toggle 10-second auto-cycle
+
+# Wallpaper Controls
+qs -c antigravity ipc call wallpaper next           # Next wallpaper from ~/Pictures/Wallpapers
+qs -c antigravity ipc call wallpaper prev           # Previous wallpaper
+qs -c antigravity ipc call wallpaper themeMode      # Match wallpaper to active theme
+qs -c antigravity ipc call wallpaper gradientMode   # Procedural ambient gradient mode
+qs -c antigravity ipc call wallpaper set "/path"    # Pin custom wallpaper path
 ```
+
+---
+
+## Ecosystem Theme Synchronization
+
+When changing or cycling themes (via top bar island, Control Center, or IPC), the shell simultaneously synchronizes:
+
+1. **Terminal (`kitty`)**: Generates `~/.local/state/quickshell/user/generated/terminal/kitty-theme.conf` with 16-color ANSI palettes and starship prompt colors, reloading live terminals via `SIGUSR1`.
+2. **Application Themes (GTK & Web Browsers)**:
+   - Sets GNOME `color-scheme` to `prefer-dark` (instantly syncing Chromium, Firefox, VS Code).
+   - Syncs `gtk-theme` across `settings.ini` (GTK 3.0 & GTK 4.0), `~/.gtkrc-2.0`, and Flatpak overrides (`Obsidian-flow-*-dark`).
+
