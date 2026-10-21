@@ -1,6 +1,7 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Mpris
 
 Singleton {
@@ -45,22 +46,78 @@ Singleton {
     readonly property string positionStr: formatTime(position)
     readonly property string lengthStr: formatTime(length)
 
+    Process {
+        id: cmdProc
+        running: false
+    }
+
+    function runCmd(args) {
+        if (!cmdProc.running) {
+            cmdProc.command = args;
+            cmdProc.running = true;
+        }
+    }
+
     function playPause() {
-        if (activePlayer) activePlayer.playPause();
+        if (activePlayer) {
+            try {
+                if (typeof activePlayer.togglePlaying === "function") {
+                    activePlayer.togglePlaying();
+                    return;
+                } else if (isPlaying && typeof activePlayer.pause === "function") {
+                    activePlayer.pause();
+                    return;
+                } else if (!isPlaying && typeof activePlayer.play === "function") {
+                    activePlayer.play();
+                    return;
+                }
+            } catch (err) {
+                console.warn("[MediaService] togglePlaying error, falling back to playerctl:", err);
+            }
+        }
+        runCmd(["playerctl", "play-pause"]);
     }
 
     function next() {
-        if (activePlayer && activePlayer.canGoNext) activePlayer.next();
+        if (activePlayer) {
+            try {
+                if (typeof activePlayer.next === "function") {
+                    activePlayer.next();
+                    return;
+                }
+            } catch (err) {
+                console.warn("[MediaService] next error, falling back to playerctl:", err);
+            }
+        }
+        runCmd(["playerctl", "next"]);
     }
 
     function previous() {
-        if (activePlayer && activePlayer.canGoPrevious) activePlayer.previous();
+        if (activePlayer) {
+            try {
+                if (typeof activePlayer.previous === "function") {
+                    activePlayer.previous();
+                    return;
+                }
+            } catch (err) {
+                console.warn("[MediaService] previous error, falling back to playerctl:", err);
+            }
+        }
+        runCmd(["playerctl", "previous"]);
     }
 
     function seekFraction(fraction) {
-        if (activePlayer && length > 0) {
+        if (length > 0) {
             const target = fraction * length;
-            activePlayer.position = target;
+            if (activePlayer) {
+                try {
+                    activePlayer.position = target;
+                    return;
+                } catch (e) {
+                    // fallback
+                }
+            }
+            runCmd(["playerctl", "position", target.toString()]);
         }
     }
 }

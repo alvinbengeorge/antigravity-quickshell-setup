@@ -158,6 +158,13 @@ Singleton {
     }
 
     IpcHandler {
+        target: "media"
+        function playPause(): void { MediaService.playPause(); }
+        function next(): void { MediaService.next(); }
+        function previous(): void { MediaService.previous(); }
+    }
+
+    IpcHandler {
         target: "clock"
         function toggle(): void { root.toggleDesktopClock(); }
         function show(): void { root.desktopClockVisible = true; }
