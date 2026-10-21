@@ -1,14 +1,60 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
-QtObject {
+Singleton {
     id: theme
 
     // Active Theme Management
     property var themeKeys: ["deepspace", "catppuccin", "tokyonight", "nord", "cyberpunk", "gruvbox"]
     property int currentThemeIndex: 0
     property string currentThemeKey: themeKeys[currentThemeIndex]
+    property bool isLoaded: false
+
+    property string stateDir: Quickshell.env("HOME") + "/.local/state/quickshell/user"
+    property string stateFile: stateDir + "/antigravity-theme.json"
+
+    Timer {
+        id: fileWriteTimer
+        interval: 50
+        repeat: false
+        onTriggered: {
+            themeFileView.writeAdapter();
+        }
+    }
+
+    FileView {
+        id: themeFileView
+        path: theme.stateFile
+
+        watchChanges: false
+        onAdapterUpdated: fileWriteTimer.restart()
+        onLoaded: {
+            if (themeAdapter.currentTheme) {
+                const idx = theme.themeKeys.indexOf(themeAdapter.currentTheme);
+                if (idx !== -1) {
+                    theme.currentThemeIndex = idx;
+                }
+            }
+            theme.isLoaded = true;
+            theme.syncKitty();
+            theme.syncSystemTheme();
+        }
+        onLoadFailed: error => {
+            console.log("Antigravity theme state not found or error, creating default:", error);
+            theme.isLoaded = true;
+            theme.syncKitty();
+            theme.syncSystemTheme();
+            themeAdapter.currentTheme = theme.currentThemeKey;
+            fileWriteTimer.restart();
+        }
+
+        adapter: JsonAdapter {
+            id: themeAdapter
+            property string currentTheme: "deepspace"
+        }
+    }
 
     // Auto-cycle every 10 seconds
     property bool autoCycle: false
@@ -30,18 +76,12 @@ QtObject {
     }
 
     onCurrentThemeKeyChanged: {
+        if (theme.isLoaded) {
+            themeAdapter.currentTheme = theme.currentThemeKey;
+            fileWriteTimer.restart();
+        }
         theme.syncKitty();
         theme.syncSystemTheme();
-    }
-
-    property var initTimer: Timer {
-        interval: 100
-        running: true
-        repeat: false
-        onTriggered: {
-            theme.syncKitty();
-            theme.syncSystemTheme();
-        }
     }
 
     function nextTheme() {
