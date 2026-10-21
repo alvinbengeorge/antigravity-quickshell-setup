@@ -13,6 +13,58 @@ Singleton {
     property string manualWallpaper: ""
     property string mode: "theme" // "theme", "manual", "gradient"
     property real dimOpacity: 0.22 // subtle dark scrim for contrast
+    property bool isLoaded: false
+
+    property string stateDir: Quickshell.env("HOME") + "/.local/state/quickshell/user"
+    property string stateFile: stateDir + "/antigravity-wallpaper.json"
+
+    Timer {
+        id: wpWriteTimer
+        interval: 50
+        repeat: false
+        onTriggered: {
+            wpFileView.writeAdapter();
+        }
+    }
+
+    FileView {
+        id: wpFileView
+        path: root.stateFile
+
+        watchChanges: false
+        onAdapterUpdated: wpWriteTimer.restart()
+        onLoaded: {
+            if (wpAdapter.mode) {
+                root.mode = wpAdapter.mode;
+            }
+            if (wpAdapter.manualWallpaper) {
+                root.manualWallpaper = wpAdapter.manualWallpaper;
+            }
+            root.isLoaded = true;
+        }
+        onLoadFailed: error => {
+            root.isLoaded = true;
+            wpAdapter.mode = root.mode;
+            wpAdapter.manualWallpaper = root.manualWallpaper;
+            wpWriteTimer.restart();
+        }
+
+        adapter: JsonAdapter {
+            id: wpAdapter
+            property string mode: "theme"
+            property string manualWallpaper: ""
+        }
+    }
+
+    function saveState() {
+        if (!root.isLoaded) return;
+        wpAdapter.mode = root.mode;
+        wpAdapter.manualWallpaper = root.manualWallpaper;
+        wpWriteTimer.restart();
+    }
+
+    onModeChanged: saveState()
+    onManualWallpaperChanged: saveState()
 
     readonly property string currentWallpaper: {
         if (root.mode === "theme") {
