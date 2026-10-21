@@ -497,6 +497,247 @@ PanelWindow {
                 }
             }
 
+            // TuneD Power & Performance Section
+            Rectangle {
+                Layout.fillWidth: true
+                radius: 12
+                color: Theme.bgCard
+                border.color: Theme.borderDim
+                border.width: 1
+                visible: TunedService.available
+                implicitHeight: tunedCol.implicitHeight + 20
+
+                property bool showAllProfiles: false
+
+                ColumnLayout {
+                    id: tunedCol
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 8
+
+                    // Header Row
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        Icon {
+                            name: "gauge"
+                            size: 12
+                            color: TunedService.activeMeta.color || Theme.accentAmber
+                        }
+
+                        Text {
+                            text: "TUNED PERFORMANCE PROFILES"
+                            font.family: Theme.fontMono
+                            font.pixelSize: 10
+                            font.bold: true
+                            color: Theme.textMuted
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        // Active Profile Badge Pill
+                        Rectangle {
+                            height: 20
+                            implicitWidth: badgeRow.implicitWidth + 12
+                            radius: 10
+                            color: Qt.alpha(TunedService.activeMeta.color || Theme.accentAmber, 0.15)
+                            border.color: TunedService.activeMeta.color || Theme.accentAmber
+                            border.width: 1
+
+                            RowLayout {
+                                id: badgeRow
+                                anchors.centerIn: parent
+                                spacing: 4
+
+                                Icon {
+                                    name: TunedService.activeMeta.icon || "zap"
+                                    size: 11
+                                    color: TunedService.activeMeta.color || Theme.accentAmber
+                                }
+
+                                Text {
+                                    text: TunedService.activeMeta.name || TunedService.activeProfile
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 9
+                                    font.bold: true
+                                    color: TunedService.activeMeta.color || Theme.accentAmber
+                                }
+                            }
+                        }
+
+                        // Toggle all profiles button
+                        Rectangle {
+                            width: 20
+                            height: 20
+                            radius: 10
+                            color: moreMouse.containsMouse ? Theme.bgHover : "transparent"
+
+                            Icon {
+                                anchors.centerIn: parent
+                                name: tunedCol.parent.showAllProfiles ? "chevron-up" : "chevron-down"
+                                size: 12
+                                color: moreMouse.containsMouse ? Theme.textPrimary : Theme.textMuted
+                            }
+
+                            MouseArea {
+                                id: moreMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: tunedCol.parent.showAllProfiles = !tunedCol.parent.showAllProfiles
+                            }
+                        }
+                    }
+
+                    // Primary 4 Profile Quick Tiles Row
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        Repeater {
+                            model: [
+                                { id: "powersave", name: "Power", icon: "leaf", color: "#10B981" },
+                                { id: "balanced", name: "Balanced", icon: "gauge", color: "#06B6D4" },
+                                { id: "throughput-performance", name: "Performance", icon: "zap", color: "#F59E0B" },
+                                { id: "latency-performance", name: "Low Latency", icon: "flame", color: "#EF4444" }
+                            ]
+
+                            delegate: Rectangle {
+                                id: profTile
+                                Layout.fillWidth: true
+                                height: 50
+                                radius: 8
+                                readonly property bool isActive: TunedService.activeProfile === modelData.id
+                                color: isActive ? Qt.alpha(modelData.color, 0.18) : (tileMouse.containsMouse ? Theme.bgHover : Theme.bgPill)
+                                border.color: isActive ? modelData.color : (tileMouse.containsMouse ? Theme.borderGlow : Theme.borderDim)
+                                border.width: isActive ? 1.5 : 1
+
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                                Behavior on border.color { ColorAnimation { duration: 150 } }
+
+                                ColumnLayout {
+                                    anchors.centerIn: parent
+                                    spacing: 3
+
+                                    Icon {
+                                        Layout.alignment: Qt.AlignHCenter
+                                        name: modelData.icon
+                                        size: 15
+                                        color: profTile.isActive ? modelData.color : (tileMouse.containsMouse ? Theme.textPrimary : Theme.textSecondary)
+                                    }
+
+                                    Text {
+                                        Layout.alignment: Qt.AlignHCenter
+                                        text: modelData.name
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: 10
+                                        font.bold: profTile.isActive
+                                        color: profTile.isActive ? Theme.textPrimary : Theme.textSecondary
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: tileMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: TunedService.switchProfile(modelData.id)
+                                }
+                            }
+                        }
+                    }
+
+                    // Active Profile Description Banner
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        visible: !tunedCol.parent.showAllProfiles
+
+                        Icon {
+                            name: "sparkles"
+                            size: 11
+                            color: TunedService.activeMeta.color || Theme.accentAmber
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: TunedService.activeMeta.summary || TunedService.activeMeta.description || ""
+                            font.family: Theme.fontMono
+                            font.pixelSize: 9
+                            color: Theme.textMuted
+                            elide: Text.ElideRight
+                        }
+                    }
+
+                    // Expanded All Profiles List (when showAllProfiles is true)
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 4
+                        visible: tunedCol.parent.showAllProfiles
+
+                        Repeater {
+                            model: TunedService.profiles
+
+                            delegate: Rectangle {
+                                Layout.fillWidth: true
+                                height: 32
+                                radius: 6
+                                readonly property bool isSelected: TunedService.activeProfile === modelData.id
+                                color: isSelected ? Qt.alpha(modelData.color || Theme.accentCyan, 0.15) : (rowMouse.containsMouse ? Theme.bgHover : Theme.bgSurface)
+                                border.color: isSelected ? (modelData.color || Theme.accentCyan) : "transparent"
+                                border.width: 1
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 8
+                                    anchors.rightMargin: 8
+                                    spacing: 8
+
+                                    Icon {
+                                        name: modelData.icon || "sliders"
+                                        size: 12
+                                        color: modelData.color || Theme.textMuted
+                                    }
+
+                                    Text {
+                                        text: modelData.name || modelData.id
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: 10
+                                        font.bold: isSelected
+                                        color: isSelected ? Theme.textPrimary : Theme.textSecondary
+                                    }
+
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: modelData.summary || modelData.description || ""
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: 8
+                                        color: Theme.textMuted
+                                        elide: Text.ElideRight
+                                    }
+
+                                    Icon {
+                                        name: "check"
+                                        size: 11
+                                        color: modelData.color || Theme.accentEmerald
+                                        visible: isSelected
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: rowMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: TunedService.switchProfile(modelData.id)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Theme Switcher Section
             ColumnLayout {
                 Layout.fillWidth: true

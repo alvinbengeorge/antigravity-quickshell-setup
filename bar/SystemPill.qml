@@ -229,5 +229,49 @@ Rectangle {
                 color: BatteryService.isCharging ? Theme.accentEmerald : (BatteryService.percentage <= 20 ? Theme.accentRose : (BatteryService.percentage <= 40 ? Theme.accentAmber : Theme.textSecondary))
             }
         }
+
+        // Divider (TuneD)
+        Rectangle {
+            width: 1
+            height: 12
+            color: Theme.borderDim
+            visible: TunedService.available
+        }
+
+        // TuneD Profile Metric
+        Item {
+            implicitWidth: tunedPillRow.implicitWidth
+            implicitHeight: 20
+            visible: TunedService.available
+
+            RowLayout {
+                id: tunedPillRow
+                anchors.fill: parent
+                spacing: 4
+
+                Icon {
+                    name: TunedService.activeMeta.icon || "zap"
+                    size: 13
+                    color: TunedService.activeMeta.color || Theme.accentAmber
+                }
+
+                Text {
+                    text: TunedService.activeMeta.name || "TuneD"
+                    font.family: Theme.fontMono
+                    font.pixelSize: 10
+                    font.bold: true
+                    color: TunedService.activeMeta.color || Theme.accentAmber
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    ShellState.controlCenterOpen = !ShellState.controlCenterOpen;
+                }
+            }
+        }
     }
 }
