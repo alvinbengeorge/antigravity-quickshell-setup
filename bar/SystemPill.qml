@@ -14,16 +14,16 @@ Rectangle {
     border.color: Theme.borderDim
     border.width: 1
 
-    implicitWidth: sysRow.implicitWidth + 24
+    implicitWidth: sysRow.implicitWidth + 18
 
     RowLayout {
         id: sysRow
         anchors.centerIn: parent
-        spacing: 10
+        spacing: 6
 
         // CPU Metric
         RowLayout {
-            spacing: 4
+            spacing: 3
             Text {
                 text: "CPU"
                 font.family: Theme.fontMono
@@ -47,7 +47,7 @@ Rectangle {
 
         // Memory Metric
         RowLayout {
-            spacing: 4
+            spacing: 3
             Text {
                 text: "RAM"
                 font.family: Theme.fontMono
@@ -62,16 +62,18 @@ Rectangle {
             }
         }
 
-        // Divider
+        // Divider (SWP - only visible if swap is in use)
         Rectangle {
             width: 1
             height: 12
             color: Theme.borderDim
+            visible: SystemStats.swapPercent > 0
         }
 
-        // SWAP Metric
+        // SWP Metric
         RowLayout {
-            spacing: 4
+            spacing: 3
+            visible: SystemStats.swapPercent > 0
             Text {
                 text: "SWP"
                 font.family: Theme.fontMono
@@ -106,7 +108,7 @@ Rectangle {
             RowLayout {
                 id: agyRow
                 anchors.fill: parent
-                spacing: 4
+                spacing: 3
 
                 Icon {
                     name: "sparkles"
@@ -172,7 +174,7 @@ Rectangle {
             RowLayout {
                 id: volRow
                 anchors.fill: parent
-                spacing: 5
+                spacing: 4
 
                 Icon {
                     name: AudioService.muted ? "volume-x" : (AudioService.volume > 0.5 ? "volume-2" : "volume-1")
@@ -213,7 +215,7 @@ Rectangle {
 
         // Battery Metric
         RowLayout {
-            spacing: 4
+            spacing: 3
             visible: BatteryService.available
 
             Icon {

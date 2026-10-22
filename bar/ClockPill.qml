@@ -22,12 +22,12 @@ Rectangle {
         onTriggered: root.now = new Date()
     }
 
-    implicitWidth: clockRow.implicitWidth + 20
+    implicitWidth: clockRow.implicitWidth + 16
 
     RowLayout {
         id: clockRow
         anchors.centerIn: parent
-        spacing: 10
+        spacing: 8
 
         // Time and Date click area
         Item {
@@ -37,7 +37,7 @@ Rectangle {
             RowLayout {
                 id: timeDateRow
                 anchors.centerIn: parent
-                spacing: 8
+                spacing: 6
 
                 // Time Text
                 Text {

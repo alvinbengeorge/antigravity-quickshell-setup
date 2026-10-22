@@ -63,17 +63,11 @@ PanelWindow {
         }
 
         // Right Island (System Stats, Audio & Clock)
-        RowLayout {
+        Row {
             id: rightRow
             anchors.right: parent.right
-            anchors.left: centerIsland.right
-            anchors.leftMargin: 16
             anchors.verticalCenter: parent.verticalCenter
             spacing: 8
-
-            Item {
-                Layout.fillWidth: true
-            }
 
             SystemPill {}
             ClockPill {}

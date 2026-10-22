@@ -15,7 +15,7 @@ Rectangle {
         : (MediaService.hasMedia ? Theme.accentViolet : ((bgMouse.containsMouse || brandMouse.containsMouse) ? Theme.accentSky : Theme.borderDim))
     border.width: 1
 
-    implicitWidth: contentRow.implicitWidth + 24
+    implicitWidth: Math.min(500, contentRow.implicitWidth + 20)
 
     Behavior on implicitWidth { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
     Behavior on color { ColorAnimation { duration: 150 } }
@@ -92,7 +92,7 @@ Rectangle {
                     color: Theme.textPrimary
                 }
 
-                // Status Badge Pill
+                // Status Badge Pill (Shows active agent or theme, hidden during media playback to keep the bar balanced)
                 Rectangle {
                     height: 18
                     radius: 9
@@ -103,6 +103,7 @@ Rectangle {
                         ? Theme.accentCyan
                         : Qt.rgba(Theme.accentViolet.r, Theme.accentViolet.g, Theme.accentViolet.b, 0.40)
                     border.width: 1
+                    visible: AntigravityService.isActive || !MediaService.hasMedia
                     implicitWidth: statusText.implicitWidth + 12
 
                     Text {
@@ -169,7 +170,7 @@ Rectangle {
 
             // Track Title (Clickable: opens Control Center media player)
             Item {
-                implicitWidth: Math.min(150, trackTitleText.implicitWidth)
+                implicitWidth: Math.min(130, trackTitleText.implicitWidth)
                 implicitHeight: 20
                 Layout.alignment: Qt.AlignVCenter
 
