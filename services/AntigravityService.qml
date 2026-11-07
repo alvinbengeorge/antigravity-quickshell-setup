@@ -23,6 +23,7 @@ Singleton {
     property int geminiWeeklyRemaining: 100
     property string geminiWeeklyDesc: ""
     property int claude5hRemaining: 100
+    property string claude5hDesc: ""
     property int claudeWeeklyRemaining: 100
     property string claudeWeeklyDesc: ""
     property string defaultWorkspace: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/workspace"
@@ -55,6 +56,7 @@ Singleton {
                         root.geminiWeeklyRemaining = data.gemini_weekly_remaining ?? 100;
                         root.geminiWeeklyDesc = data.gemini_weekly_desc ?? "";
                         root.claude5hRemaining = data.claude_5h_remaining ?? 100;
+                        root.claude5hDesc = data.claude_5h_desc ?? "";
                         root.claudeWeeklyRemaining = data.claude_weekly_remaining ?? 100;
                         root.claudeWeeklyDesc = data.claude_weekly_desc ?? "";
                     }
@@ -67,7 +69,7 @@ Singleton {
 
     Timer {
         id: pollTimer
-        interval: 2500
+        interval: ShellState.liteMode ? 10000 : 2500
         running: true
         repeat: true
         triggeredOnStart: true

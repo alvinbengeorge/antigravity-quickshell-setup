@@ -4,3 +4,4 @@ __pycache__/
 *.lock
 .DS_Store
 .playwright-mcp/
+workspace/*.png

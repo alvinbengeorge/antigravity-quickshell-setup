@@ -1,0 +1,176 @@
+# Plymouth Theme: Arythmatic
+# Module: script
+# Cinematic Mathematical Amber Boot Sequence (One-Shot with Final Frame Hold)
+
+# ---------------------------------------------------------
+# 1. Colors & Background Setup
+# ---------------------------------------------------------
+# Obsidian Dark Theme: #080B10 -> (8/255, 11/255, 16/255)
+Window.SetBackgroundTopColor(0.031, 0.043, 0.063);
+Window.SetBackgroundBottomColor(0.031, 0.043, 0.063);
+
+screen_width = Window.GetWidth();
+screen_height = Window.GetHeight();
+
+# ---------------------------------------------------------
+# 2. Pre-load 203 Animation Frames
+# ---------------------------------------------------------
+logo_frames = [];
+for (i = 0; i < 203; i++) {
+  if (i < 10)
+    frame_name = "frame-00" + i + ".png";
+  else if (i < 100)
+    frame_name = "frame-0" + i + ".png";
+  else
+    frame_name = "frame-" + i + ".png";
+  logo_frames[i] = Image(frame_name);
+}
+
+logo_sprite = Sprite();
+frame_index = 0;
+logo_sprite.SetImage(logo_frames[0]);
+logo_x = (screen_width - logo_frames[0].GetWidth()) / 2;
+logo_y = (screen_height - logo_frames[0].GetHeight()) / 2 - 40;
+logo_sprite.SetPosition(logo_x, logo_y, 10);
+
+# ---------------------------------------------------------
+# 3. Subtitle ("FEDORA OS")
+# ---------------------------------------------------------
+sub_image = Image("branding_sub.png");
+sub_sprite = Sprite(sub_image);
+sub_x = (screen_width - sub_image.GetWidth()) / 2;
+sub_y = logo_y + logo_frames[0].GetHeight() + 10;
+sub_sprite.SetPosition(sub_x, sub_y, 10);
+
+# ---------------------------------------------------------
+# 4. Boot Progress Bar
+# ---------------------------------------------------------
+progress_box_image = Image("progress_box.png");
+progress_box_sprite = Sprite(progress_box_image);
+progress_box_x = (screen_width - progress_box_image.GetWidth()) / 2;
+progress_box_y = sub_y + sub_image.GetHeight() + 14;
+progress_box_sprite.SetPosition(progress_box_x, progress_box_y, 10);
+
+progress_bar_image = Image("progress_bar.png");
+progress_bar_sprite = Sprite();
+progress_bar_sprite.SetPosition(progress_box_x, progress_box_y, 11);
+
+# Initial visible sliver
+initial_w = 6;
+progress_bar_sprite.SetImage(progress_bar_image.Crop(0, 0, initial_w, progress_bar_image.GetHeight()));
+
+# ---------------------------------------------------------
+# 5. Dialogs / Password Fallback (LUKS / Questions)
+# ---------------------------------------------------------
+dialog = NULL;
+
+fun dialog_setup () {
+  local.box;
+  local.lock;
+  local.entry;
+  
+  box.image = Image("box.png");
+  lock.image = Image("lock.png");
+  entry.image = Image("entry.png");
+  
+  box.sprite = Sprite(box.image);
+  box.x = screen_width / 2 - box.image.GetWidth() / 2;
+  box.y = screen_height / 2 - box.image.GetHeight() / 2;
+  box.z = 1000;
+  box.sprite.SetPosition(box.x, box.y, box.z);
+  
+  lock.sprite = Sprite(lock.image);
+  lock.x = box.x + 20;
+  lock.y = box.y + (box.image.GetHeight() - lock.image.GetHeight()) / 2;
+  lock.z = 1001;
+  lock.sprite.SetPosition(lock.x, lock.y, lock.z);
+  
+  entry.sprite = Sprite(entry.image);
+  entry.x = lock.x + lock.image.GetWidth() + 15;
+  entry.y = box.y + (box.image.GetHeight() - entry.image.GetHeight()) / 2;
+  entry.z = 1001;
+  entry.sprite.SetPosition(entry.x, entry.y, entry.z);
+  
+  global.dialog.box = box;
+  global.dialog.lock = lock;
+  global.dialog.entry = entry;
+  global.dialog.bullet_image = Image("bullet.png");
+  global.dialog.bullets = [];
+}
+
+fun dialog_opacity (opacity) {
+  dialog.box.sprite.SetOpacity(opacity);
+  dialog.lock.sprite.SetOpacity(opacity);
+  dialog.entry.sprite.SetOpacity(opacity);
+  for (i = 0; dialog.bullets[i]; i++) {
+    dialog.bullets[i].sprite.SetOpacity(opacity);
+  }
+}
+
+fun display_normal_callback () {
+  global.status = "normal";
+  if (global.dialog) dialog_opacity(0);
+}
+
+fun display_password_callback (prompt, bullets) {
+  global.status = "password";
+  if (!global.dialog) dialog_setup();
+  dialog_opacity(1);
+  
+  entry_len = bullets;
+  entry_x = dialog.entry.x + 10;
+  entry_y = dialog.entry.y + (dialog.entry.image.GetHeight() - dialog.bullet_image.GetHeight()) / 2;
+  
+  for (i = 0; i < entry_len; i++) {
+    if (!dialog.bullets[i]) {
+      dialog.bullets[i].sprite = Sprite(dialog.bullet_image);
+    }
+    dialog.bullets[i].sprite.SetPosition(entry_x + i * (dialog.bullet_image.GetWidth() + 4), entry_y, 1002);
+  }
+  for (i = entry_len; dialog.bullets[i]; i++) {
+    dialog.bullets[i].sprite.SetPosition(-100, -100, 0);
+  }
+}
+
+fun display_message_callback (text) {
+}
+
+# ---------------------------------------------------------
+# 6. Main Refresh & Boot Progress Callbacks
+# ---------------------------------------------------------
+# 50 Hz default tick rate
+fun refresh_callback () {
+  if (frame_index < 202) {
+    frame_index++;
+    logo_sprite.SetImage(logo_frames[frame_index]);
+  } else {
+    # Lock on the final resolved, brilliant frame
+    logo_sprite.SetImage(logo_frames[202]);
+  }
+}
+
+fun boot_progress_callback (duration, progress) {
+  # Calculate filled width
+  max_w = progress_bar_image.GetWidth();
+  target_w = Math.Int(progress * max_w);
+  if (target_w < initial_w)
+    target_w = initial_w;
+  if (target_w > max_w)
+    target_w = max_w;
+  
+  progress_bar_sprite.SetImage(progress_bar_image.Crop(0, 0, target_w, progress_bar_image.GetHeight()));
+}
+
+fun quit_callback () {
+  logo_sprite.SetOpacity(0);
+  sub_sprite.SetOpacity(0);
+  progress_box_sprite.SetOpacity(0);
+  progress_bar_sprite.SetOpacity(0);
+}
+
+Plymouth.SetRefreshFunction(refresh_callback);
+Plymouth.SetBootProgressFunction(boot_progress_callback);
+Plymouth.SetDisplayNormalFunction(display_normal_callback);
+Plymouth.SetDisplayPasswordFunction(display_password_callback);
+Plymouth.SetDisplayMessageFunction(display_message_callback);
+Plymouth.SetQuitFunction(quit_callback);

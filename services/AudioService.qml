@@ -57,9 +57,9 @@ Singleton {
         }
     }
 
-    // Fast backup interval (500ms) to ensure volume never lags
+    // Polling interval (throttled to 3000ms in Lite Mode, 500ms in standard)
     Timer {
-        interval: 500
+        interval: ShellState.liteMode ? 3000 : 500
         running: true
         repeat: true
         onTriggered: {
@@ -90,6 +90,17 @@ Singleton {
         } else {
             const arg = delta > 0 ? "5%+" : "5%-";
             Quickshell.execDetached(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", arg]);
+            if (!wpctlProc.running) wpctlProc.running = true;
+        }
+    }
+
+    function setVolume(target) {
+        const next = Math.max(0, Math.min(1.5, target));
+        if (Pipewire.defaultAudioSink?.audio) {
+            Pipewire.defaultAudioSink.audio.volume = next;
+            root.volume = next;
+        } else {
+            Quickshell.execDetached(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", Math.round(next * 100) + "%"]);
             if (!wpctlProc.running) wpctlProc.running = true;
         }
     }

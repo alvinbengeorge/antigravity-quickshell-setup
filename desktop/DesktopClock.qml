@@ -4,22 +4,53 @@ import Quickshell
 import Quickshell.Wayland
 import "../theme"
 import "../services"
+import "../components"
 
 PanelWindow {
     id: root
 
     property bool alignLeft: false
-    property bool use24Hour: true
+    property bool use24Hour: ShellState.use24Hour
     property bool showSeconds: true
-    property bool showCalendar: true
+    property bool showCalendar: ShellState.clockShowCalendar
+
+    onUse24HourChanged: {
+        if (ShellState.use24Hour !== root.use24Hour) {
+            ShellState.use24Hour = root.use24Hour;
+        }
+    }
+
+    onShowCalendarChanged: {
+        if (ShellState.clockShowCalendar !== root.showCalendar) {
+            ShellState.clockShowCalendar = root.showCalendar;
+        }
+    }
+
+    function toggleFormat() {
+        ShellState.use24Hour = !ShellState.use24Hour;
+    }
+
+    function setFormat(is24) {
+        ShellState.use24Hour = is24;
+    }
+
+    function getFormattedHours() {
+        const h = root.now.getHours();
+        if (root.use24Hour) {
+            return h < 10 ? ("0" + h) : h.toString();
+        } else {
+            const h12 = h % 12 || 12;
+            return h12.toString();
+        }
+    }
 
     property var now: new Date()
 
-    visible: ShellState.desktopClockVisible
+    visible: !ShellState.liteMode && ShellState.desktopClockVisible
 
     Timer {
         interval: 1000
-        running: true
+        running: root.visible
         repeat: true
         onTriggered: root.now = new Date()
     }
@@ -74,18 +105,15 @@ PanelWindow {
         width: 360
         implicitHeight: contentCol.implicitHeight + 36
         radius: 20
-        color: Theme.bgSurfaceGlass
-        border.color: Theme.borderGlow
-        border.width: 1
+        color: ShellState.glassEnabled ? "transparent" : Theme.bgSurfaceGlass
+        border.color: ShellState.glassEnabled ? "transparent" : Theme.borderGlow
+        border.width: ShellState.glassEnabled ? 0 : 1
 
-        // Subtle gradient sheen
-        Rectangle {
-            anchors.top: parent.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: 1
-            color: Qt.rgba(Theme.accentSky.r, Theme.accentSky.g, Theme.accentSky.b, 0.4)
-            radius: parent.radius
+        LiquidGlassSurface {
+            radius: 20
+            visible: ShellState.glassEnabled
+            accentColor: Theme.accentCyan
+            showShadow: true
         }
 
         ColumnLayout {
@@ -118,12 +146,7 @@ PanelWindow {
                             height: 6
                             radius: 3
                             color: Theme.accentEmerald
-
-                            SequentialAnimation on opacity {
-                                loops: Animation.Infinite
-                                PropertyAnimation { to: 0.4; duration: 1500 }
-                                PropertyAnimation { to: 1.0; duration: 1500 }
-                            }
+                            opacity: 0.9
                         }
 
                         Text {
@@ -139,31 +162,97 @@ PanelWindow {
                 Item { Layout.fillWidth: true }
 
 
-                // 12H / 24H Toggle Button
+                // 12H / 24H Segmented Toggle
                 Rectangle {
                     height: 26
-                    implicitWidth: modeText.implicitWidth + 12
+                    implicitWidth: toggleRow.implicitWidth + 4
                     radius: 6
-                    color: modeMouse.containsMouse ? Theme.bgHover : Theme.bgPill
+                    color: Theme.bgPill
                     border.color: Theme.borderDim
                     border.width: 1
 
-                    Text {
-                        id: modeText
+                    RowLayout {
+                        id: toggleRow
                         anchors.centerIn: parent
-                        text: root.use24Hour ? "24H" : "12H"
-                        font.family: Theme.fontMono
-                        font.pixelSize: 10
-                        font.bold: true
-                        color: modeMouse.containsMouse ? Theme.accentViolet : Theme.textMuted
-                    }
+                        spacing: 2
 
-                    MouseArea {
-                        id: modeMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.use24Hour = !root.use24Hour
+                        // 12H Pill
+                        Rectangle {
+                            height: 20
+                            implicitWidth: text12.implicitWidth + 10
+                            radius: 4
+                            color: ShellState.plasticEnabled
+                                ? "transparent"
+                                : (!root.use24Hour ? Theme.accentViolet : (mouse12.containsMouse ? Theme.bgHover : "transparent"))
+
+                            LiquidGlassSurface {
+                                radius: 4
+                                visible: ShellState.plasticEnabled && (!root.use24Hour || mouse12.containsMouse)
+                                accentColor: Theme.accentViolet
+                                hovered: mouse12.containsMouse
+                                pressed: mouse12.pressed
+                                showShadow: false
+                            }
+
+                            Behavior on color { ColorAnimation { duration: 150 } }
+
+                            Text {
+                                id: text12
+                                anchors.centerIn: parent
+                                text: "12H"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 10
+                                font.bold: true
+                                color: !root.use24Hour ? (ShellState.plasticEnabled ? Theme.accentViolet : Theme.textOnAccent) : (mouse12.containsMouse ? Theme.textPrimary : Theme.textMuted)
+                            }
+
+                            MouseArea {
+                                id: mouse12
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.setFormat(false)
+                            }
+                        }
+
+                        // 24H Pill
+                        Rectangle {
+                            height: 20
+                            implicitWidth: text24.implicitWidth + 10
+                            radius: 4
+                            color: ShellState.plasticEnabled
+                                ? "transparent"
+                                : (root.use24Hour ? Theme.accentViolet : (mouse24.containsMouse ? Theme.bgHover : "transparent"))
+
+                            LiquidGlassSurface {
+                                radius: 4
+                                visible: ShellState.plasticEnabled && (root.use24Hour || mouse24.containsMouse)
+                                accentColor: Theme.accentViolet
+                                hovered: mouse24.containsMouse
+                                pressed: mouse24.pressed
+                                showShadow: false
+                            }
+
+                            Behavior on color { ColorAnimation { duration: 150 } }
+
+                            Text {
+                                id: text24
+                                anchors.centerIn: parent
+                                text: "24H"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 10
+                                font.bold: true
+                                color: root.use24Hour ? (ShellState.plasticEnabled ? Theme.accentViolet : Theme.textOnAccent) : (mouse24.containsMouse ? Theme.textPrimary : Theme.textMuted)
+                            }
+
+                            MouseArea {
+                                id: mouse24
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.setFormat(true)
+                            }
+                        }
                     }
                 }
 
@@ -172,9 +261,22 @@ PanelWindow {
                     width: 26
                     height: 26
                     radius: 6
-                    color: root.showCalendar ? Theme.accentViolet : (calMouse.containsMouse ? Theme.bgHover : Theme.bgPill)
-                    border.color: root.showCalendar ? Theme.accentViolet : Theme.borderDim
-                    border.width: 1
+                    color: ShellState.plasticEnabled
+                        ? "transparent"
+                        : (root.showCalendar ? Theme.accentViolet : (calMouse.containsMouse ? Theme.bgHover : Theme.bgPill))
+                    border.color: ShellState.plasticEnabled
+                        ? "transparent"
+                        : (root.showCalendar ? Theme.accentViolet : Theme.borderDim)
+                    border.width: ShellState.plasticEnabled ? 0 : 1
+
+                    LiquidGlassSurface {
+                        radius: 6
+                        visible: ShellState.plasticEnabled
+                        accentColor: root.showCalendar ? Theme.accentViolet : Theme.accentCyan
+                        hovered: calMouse.containsMouse
+                        pressed: calMouse.pressed
+                        showShadow: false
+                    }
 
                     Text {
                         anchors.centerIn: parent
@@ -187,7 +289,7 @@ PanelWindow {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.showCalendar = !root.showCalendar
+                        onClicked: ShellState.clockShowCalendar = !ShellState.clockShowCalendar
                     }
                 }
             }
@@ -198,7 +300,7 @@ PanelWindow {
                 implicitHeight: clockHeroRow.implicitHeight
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: root.use24Hour = !root.use24Hour
+                onClicked: root.toggleFormat()
 
                 RowLayout {
                     id: clockHeroRow
@@ -207,7 +309,7 @@ PanelWindow {
 
                     // Hours
                     Text {
-                        text: root.use24Hour ? Qt.formatTime(root.now, "HH") : Qt.formatTime(root.now, "hh")
+                        text: root.use24Hour ? Qt.formatTime(root.now, "HH") : (root.now.getHours() % 12 || 12).toString()
                         font.family: Theme.fontFamily
                         font.pixelSize: 58
                         font.bold: true
@@ -253,7 +355,7 @@ PanelWindow {
                             Text {
                                 id: ampmText
                                 anchors.centerIn: parent
-                                text: Qt.formatTime(root.now, "AP")
+                                text: root.now.getHours() >= 12 ? "PM" : "AM"
                                 font.family: Theme.fontMono
                                 font.pixelSize: 9
                                 font.bold: true

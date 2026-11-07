@@ -16,6 +16,15 @@ def format_tokens(n):
         return f"{n / 1000.0:.1f}k"
     return str(n)
 
+def clean_quota_desc(d):
+    if not d:
+        return ''
+    if '. If on a supported' in d:
+        return d.split('. If on a supported')[0].strip() + '.'
+    if 'If on a supported' in d:
+        return d.split('If on a supported')[0].strip()
+    return d
+
 def read_quota_cache():
     now = time.time()
     cache_data = None
@@ -51,15 +60,16 @@ def read_quota_cache():
     return {
         'gemini_5h_remaining': gemini_5h.get('remaining', 100),
         'gemini_5h_reset': gemini_5h.get('reset_time', ''),
-        'gemini_5h_desc': gemini_5h.get('description', ''),
+        'gemini_5h_desc': clean_quota_desc(gemini_5h.get('description', '')),
         'gemini_weekly_remaining': gemini_wk.get('remaining', 100),
         'gemini_weekly_reset': gemini_wk.get('reset_time', ''),
-        'gemini_weekly_desc': gemini_wk.get('description', ''),
+        'gemini_weekly_desc': clean_quota_desc(gemini_wk.get('description', '')),
         'claude_5h_remaining': claude_5h.get('remaining', 100),
         'claude_5h_reset': claude_5h.get('reset_time', ''),
+        'claude_5h_desc': clean_quota_desc(claude_5h.get('description', '')),
         'claude_weekly_remaining': claude_wk.get('remaining', 100),
         'claude_weekly_reset': claude_wk.get('reset_time', ''),
-        'claude_weekly_desc': claude_wk.get('description', '')
+        'claude_weekly_desc': clean_quota_desc(claude_wk.get('description', ''))
     }
 
 def get_status():
@@ -89,7 +99,13 @@ def get_status():
     if not convos:
         return default_res
 
-    convos.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    def get_conv_mtime(d):
+        tf = os.path.join(d, '.system_generated', 'logs', 'transcript.jsonl')
+        if os.path.exists(tf):
+            return os.path.getmtime(tf)
+        return os.path.getmtime(d)
+
+    convos.sort(key=get_conv_mtime, reverse=True)
     latest_path = None
     for c in convos:
         tf = os.path.join(c, '.system_generated', 'logs', 'transcript.jsonl')
@@ -117,33 +133,39 @@ def get_status():
     transcript_file = os.path.join(latest_path, '.system_generated', 'logs', 'transcript.jsonl')
     if os.path.exists(transcript_file):
         try:
-            with open(transcript_file, 'r', encoding='utf-8', errors='ignore') as f:
-                last_obj = None
-                for line in f:
-                    step_count += 1
-                    try:
-                        obj = json.loads(line)
+            file_size = os.path.getsize(transcript_file)
+            # High-performance reverse seek: read the tail (last 64KB) instead of scanning the full multi-MB file
+            with open(transcript_file, 'rb') as f:
+                seek_pos = max(0, file_size - 65536)
+                f.seek(seek_pos)
+                tail_lines = f.read().decode('utf-8', errors='ignore').strip().split('\n')
+
+            last_obj = None
+            for line in reversed(tail_lines):
+                if not line.strip():
+                    continue
+                try:
+                    obj = json.loads(line)
+                    if last_obj is None:
                         last_obj = obj
-                        if obj.get('type') == 'PLANNER_RESPONSE':
-                            inp = obj.get('input_tokens', 0)
-                            cache = obj.get('cache_read_tokens', 0)
-                            out = obj.get('output_tokens', 0)
-                            total_tokens += (inp + cache + out)
-                            last_inp = inp
-                            last_cache = cache
-                            last_out = out
-                    except Exception:
-                        pass
+                        step_count = obj.get('step_index', 0)
+                    if obj.get('type') == 'PLANNER_RESPONSE' and last_inp == 0:
+                        last_inp = obj.get('input_tokens', 0)
+                        last_cache = obj.get('cache_read_tokens', 0)
+                        last_out = obj.get('output_tokens', 0)
+                        break
+                except Exception:
+                    pass
 
-                if last_obj:
-                    status = last_obj.get('status', 'DONE')
-                    if status == 'RUNNING' or is_active:
-                        status_str = "PROCESSING" if is_active else "IDLE"
+            if last_obj:
+                status = last_obj.get('status', 'DONE')
+                if status == 'RUNNING' or is_active:
+                    status_str = "PROCESSING" if is_active else "IDLE"
 
-                    content = last_obj.get('content', '')
-                    if isinstance(content, str) and content.strip():
-                        clean = content.strip().replace('\n', ' ')
-                        last_text = clean[:80] + ('...' if len(clean) > 80 else '')
+                content = last_obj.get('content', '')
+                if isinstance(content, str) and content.strip():
+                    clean = content.strip().replace('\n', ' ')
+                    last_text = clean[:80] + ('...' if len(clean) > 80 else '')
         except Exception:
             pass
 

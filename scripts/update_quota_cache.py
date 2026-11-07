@@ -26,7 +26,11 @@ def update_cache():
             import shutil
             agy_bin = shutil.which('agy') or 'agy'
 
+        dummy_home = '/tmp/agy_quota_profile'
+        os.makedirs(os.path.join(dummy_home, '.gemini'), exist_ok=True)
         env = os.environ.copy()
+        env['HOME'] = dummy_home
+        env['XDG_CONFIG_HOME'] = os.path.join(dummy_home, '.config')
         env['PATH'] = f"{os.path.expanduser('~/.local/bin')}:{env.get('PATH', '')}"
 
         res = subprocess.run(
@@ -48,13 +52,20 @@ def update_cache():
                     w = b.get('window', '')
                     rem = round(b.get('remaining_fraction', 0.0) * 100.0)
                     key = f"{gname}_{w}"
+                    desc = b.get('description', '')
+                    if desc:
+                        if '. If on a supported' in desc:
+                            desc = desc.split('. If on a supported')[0].strip() + '.'
+                        elif 'If on a supported' in desc:
+                            desc = desc.split('If on a supported')[0].strip()
+
                     parsed[key] = {
                         'group': gname,
                         'window': w,
                         'name': b.get('name', ''),
                         'remaining': rem,
                         'reset_time': b.get('reset_time', ''),
-                        'description': b.get('description', '')
+                        'description': desc
                     }
 
             with open(CACHE_FILE, 'w') as f:

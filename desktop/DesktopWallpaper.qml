@@ -29,6 +29,7 @@ PanelWindow {
     // Procedural Ambient Glow Orbs
     Item {
         anchors.fill: parent
+        visible: !ShellState.liteMode
 
         // Top-left ambient nebula orb
         Rectangle {

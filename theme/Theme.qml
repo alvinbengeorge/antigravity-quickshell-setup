@@ -7,13 +7,21 @@ Singleton {
     id: theme
 
     // Active Theme Management
-    property var themeKeys: ["deepspace", "catppuccin", "tokyonight", "nord", "cyberpunk", "gruvbox"]
+    readonly property var builtInKeys: ["deepspace", "askmeidentity", "arythmatic", "catppuccin", "tokyonight", "nord", "cyberpunk", "gruvbox"]
+    property var customPalettes: ({})
+    property var customThemeKeys: []
+
+    readonly property var themeKeys: {
+        return builtInKeys.concat(customThemeKeys || []);
+    }
+
     property int currentThemeIndex: 0
-    property string currentThemeKey: themeKeys[currentThemeIndex]
+    property string currentThemeKey: (themeKeys && themeKeys.length > currentThemeIndex) ? themeKeys[currentThemeIndex] : "deepspace"
     property bool isLoaded: false
 
     property string stateDir: Quickshell.env("HOME") + "/.local/state/quickshell/user"
     property string stateFile: stateDir + "/antigravity-theme.json"
+    property string customThemesFile: stateDir + "/antigravity-custom-themes.json"
 
     Timer {
         id: fileWriteTimer
@@ -40,12 +48,14 @@ Singleton {
             theme.isLoaded = true;
             theme.syncKitty();
             theme.syncSystemTheme();
+            theme.syncHyprlock();
         }
         onLoadFailed: error => {
             console.log("Antigravity theme state not found or error, creating default:", error);
             theme.isLoaded = true;
             theme.syncKitty();
             theme.syncSystemTheme();
+            theme.syncHyprlock();
             themeAdapter.currentTheme = theme.currentThemeKey;
             fileWriteTimer.restart();
         }
@@ -56,9 +66,51 @@ Singleton {
         }
     }
 
-    // Auto-cycle every 10 seconds
+    // Custom themes file loader
+    Timer {
+        id: customThemesWriteTimer
+        interval: 50
+        repeat: false
+        onTriggered: {
+            customThemesFileView.writeAdapter();
+        }
+    }
+
+    FileView {
+        id: customThemesFileView
+        path: theme.customThemesFile
+        watchChanges: true
+        onAdapterUpdated: customThemesWriteTimer.restart()
+        onLoaded: {
+            try {
+                if (customThemesAdapter.themes) {
+                    theme.customPalettes = customThemesAdapter.themes;
+                    theme.customThemeKeys = Object.keys(customThemesAdapter.themes);
+                    if (themeAdapter.currentTheme) {
+                        const idx = theme.themeKeys.indexOf(themeAdapter.currentTheme);
+                        if (idx !== -1) {
+                            theme.currentThemeIndex = idx;
+                        }
+                    }
+                }
+            } catch(e) {
+                console.log("Error loading custom themes:", e);
+            }
+        }
+        onLoadFailed: error => {
+            theme.customPalettes = {};
+            theme.customThemeKeys = [];
+        }
+
+        adapter: JsonAdapter {
+            id: customThemesAdapter
+            property var themes: ({})
+        }
+    }
+
+    // Auto-cycle every 5 minutes (300,000 ms)
     property bool autoCycle: false
-    property int cycleInterval: 10000
+    property int cycleInterval: 300000
 
     property var cycleTimer: Timer {
         interval: theme.cycleInterval
@@ -72,7 +124,14 @@ Singleton {
     }
 
     function syncSystemTheme() {
+        // apply_system_theme.py internally also runs apply_hyprlock_theme.py
         Quickshell.execDetached(["python3", Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/apply_system_theme.py", theme.currentThemeKey]);
+    }
+
+    // Note: syncHyprlock is NOT called separately; apply_system_theme.py handles it
+    // to avoid double-invocation of apply_hyprlock_theme.py
+    function syncHyprlock() {
+        Quickshell.execDetached(["python3", Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/apply_hyprlock_theme.py", theme.currentThemeKey]);
     }
 
     onCurrentThemeKeyChanged: {
@@ -81,9 +140,8 @@ Singleton {
             fileWriteTimer.restart();
         }
         theme.syncKitty();
-        theme.syncSystemTheme();
+        theme.syncSystemTheme(); // hyprlock is updated inside this
     }
-
     function nextTheme() {
         theme.currentThemeIndex = (theme.currentThemeIndex + 1) % theme.themeKeys.length;
     }
@@ -92,14 +150,219 @@ Singleton {
         theme.currentThemeIndex = (theme.currentThemeIndex - 1 + theme.themeKeys.length) % theme.themeKeys.length;
     }
 
+    property bool fromWallpaperActive: false
+    property var tempWallpaperPalette: null
+    property bool isExtractingWallpaper: false
+
+    onFromWallpaperActiveChanged: {
+        if (theme.fromWallpaperActive) {
+            theme.extractTemporaryWallpaperTheme("");
+        } else {
+            theme.tempWallpaperPalette = null;
+            Quickshell.execDetached(["rm", "-f", theme.stateDir + "/temp-wallpaper-theme.json"]);
+            theme.syncKitty();
+            theme.syncSystemTheme(); // hyprlock updated inside
+            Quickshell.execDetached(["notify-send", "-a", "Antigravity", "Theme Mode", "Reverted to saved theme: " + theme.themeName]);
+        }
+    }
+
+    function toggleFromWallpaper(wallpaperPath) {
+        if (!theme.fromWallpaperActive && wallpaperPath) {
+            theme.fromWallpaperActive = true;
+            theme.extractTemporaryWallpaperTheme(wallpaperPath);
+        } else {
+            theme.fromWallpaperActive = !theme.fromWallpaperActive;
+        }
+    }
+
     function setTheme(name) {
+        if (theme.fromWallpaperActive) {
+            theme.fromWallpaperActive = false;
+        }
         const idx = theme.themeKeys.indexOf(name);
         if (idx !== -1) {
             theme.currentThemeIndex = idx;
         }
     }
 
-    readonly property var palettes: ({
+    function isCustomTheme(key) {
+        return Boolean(theme.customPalettes && theme.customPalettes[key]);
+    }
+
+    function addCustomTheme(themeObj) {
+        if (!themeObj || !themeObj.id) return;
+        const current = Object.assign({}, theme.customPalettes);
+        current[themeObj.id] = themeObj;
+        theme.customPalettes = current;
+        theme.customThemeKeys = Object.keys(current);
+        customThemesAdapter.themes = current;
+        customThemesWriteTimer.restart();
+    }
+
+    function deleteCustomTheme(key) {
+        if (!theme.customPalettes || !theme.customPalettes[key]) return;
+        const current = Object.assign({}, theme.customPalettes);
+        delete current[key];
+        theme.customPalettes = current;
+        theme.customThemeKeys = Object.keys(current);
+        customThemesAdapter.themes = current;
+        customThemesWriteTimer.restart();
+        if (theme.currentThemeKey === key) {
+            theme.setTheme("deepspace");
+        }
+    }
+
+    // Process to extract temporary theme from current wallpaper (not saved)
+    Process {
+        id: wpTempExtractProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                theme.isExtractingWallpaper = false;
+                try {
+                    const newTheme = JSON.parse(text.trim());
+                    if (newTheme && newTheme.id) {
+                        theme.tempWallpaperPalette = newTheme;
+                        Quickshell.execDetached(["python3", Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/apply_kitty_theme.py", "temp_wallpaper"]);
+                        Quickshell.execDetached(["python3", Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/apply_system_theme.py", "temp_wallpaper"]);
+                        // hyprlock sync is handled inside apply_system_theme.py — no separate call needed
+                        Quickshell.execDetached(["notify-send", "-a", "Antigravity", "Wallpaper Theme (Live)", "Adapted temporary palette to wallpaper."]);
+                    }
+                } catch(e) {
+                    console.log("Error extracting temporary wallpaper theme:", e);
+                }
+            }
+        }
+    }
+
+    function extractTemporaryWallpaperTheme(wallpaperPath) {
+        theme.isExtractingWallpaper = true;
+        const wp = wallpaperPath || "";
+        wpTempExtractProc.command = [
+            "python3",
+            Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/extract_wallpaper_theme.py",
+            wp,
+            "--temp"
+        ];
+        wpTempExtractProc.running = true;
+    }
+
+    // Process to extract and permanently save theme from wallpaper
+    Process {
+        id: wpExtractProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                theme.isExtractingWallpaper = false;
+                try {
+                    const newTheme = JSON.parse(text.trim());
+                    if (newTheme && newTheme.id) {
+                        theme.addCustomTheme(newTheme);
+                        theme.setTheme(newTheme.id);
+                        Quickshell.execDetached(["notify-send", "-a", "Antigravity", "Theme Saved", "Saved '" + newTheme.name + "' into custom themes."]);
+                    }
+                } catch(e) {
+                    console.log("Error extracting wallpaper theme:", e);
+                }
+            }
+        }
+    }
+
+    function createThemeFromCurrentWallpaper(wallpaperPath) {
+        theme.isExtractingWallpaper = true;
+        const wp = wallpaperPath || "";
+        wpExtractProc.command = [
+            "python3",
+            Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/extract_wallpaper_theme.py",
+            wp
+        ];
+        wpExtractProc.running = true;
+    }
+
+    // Process to create custom theme
+    Process {
+        id: customCreateProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const newTheme = JSON.parse(text.trim());
+                    if (newTheme && newTheme.id) {
+                        theme.addCustomTheme(newTheme);
+                        theme.setTheme(newTheme.id);
+                        Quickshell.execDetached(["notify-send", "-a", "Antigravity", "Theme Created", "Theme '" + newTheme.name + "' created and applied."]);
+                    }
+                } catch(e) {
+                    console.log("Error creating custom theme:", e);
+                }
+            }
+        }
+    }
+
+    function createCustomTheme(name, primaryHex, secondaryHex, baseDarkHex) {
+        customCreateProc.command = [
+            "python3",
+            Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/create_custom_theme.py",
+            "--name", name || "Custom Theme",
+            "--primary", primaryHex || "#38BDF8",
+            "--secondary", secondaryHex || "#A78BFA",
+            "--base", baseDarkHex || "#090D14"
+        ];
+        customCreateProc.running = true;
+    }
+
+    readonly property var builtInPalettes: ({
+        "arythmatic": {
+            "name": "Arythmatic",
+            "wallpaper": "/home/alvin/Pictures/Wallpapers/arythmatic-obsidian.png",
+            "gtkTheme": "Obsidian-flow-yellow-dark",
+            "bgBase": "#080B10",
+            "bgSurface": "#0E131C",
+            "bgSurfaceGlass": "#F20E131C",
+            "bgModal": "#131926",
+            "bgCard": "#171F2E",
+            "bgPill": "#141B29",
+            "bgHover": "#222C40",
+            "bgActive": "#2D3A54",
+            "borderDim": "#1C2536",
+            "borderGlow": "#45FFAA00",
+            "borderActive": "#FFAA00",
+            "accentViolet": "#FFAA00",
+            "accentIndigo": "#FF8C00",
+            "accentCyan": "#FFC533",
+            "accentSky": "#FFAA00",
+            "accentEmerald": "#00C758",
+            "accentAmber": "#FFAA00",
+            "accentRose": "#F43F5E",
+            "textPrimary": "#F8FAFC",
+            "textSecondary": "#CBD5E1",
+            "textMuted": "#8E9EB5",
+            "textOnAccent": "#000000"
+        },
+        "askmeidentity": {
+            "name": "AskMeIdentity",
+            "wallpaper": "/home/alvin/Pictures/Wallpapers/fedora-neon-blue-black.jpg",
+            "gtkTheme": "Obsidian-flow-blue-dark",
+            "bgBase": "#080B11",
+            "bgSurface": "#0E1522",
+            "bgSurfaceGlass": "#F20E1522",
+            "bgModal": "#131D2E",
+            "bgCard": "#172338",
+            "bgPill": "#141F32",
+            "bgHover": "#223352",
+            "bgActive": "#2E446D",
+            "borderDim": "#1C2B42",
+            "borderGlow": "#452962FF",
+            "borderActive": "#2962FF",
+            "accentViolet": "#60B01C",
+            "accentIndigo": "#1965D8",
+            "accentCyan": "#00F0FF",
+            "accentSky": "#2962FF",
+            "accentEmerald": "#60B01C",
+            "accentAmber": "#F59E0B",
+            "accentRose": "#F43F5E",
+            "textPrimary": "#F8FAFC",
+            "textSecondary": "#CBD5E1",
+            "textMuted": "#8295AD",
+            "textOnAccent": "#FFFFFF"
+        },
         "deepspace": {
             "name": "Deep Space",
             "wallpaper": "/home/alvin/Pictures/Wallpapers/fedora-neon-blue-black.jpg",
@@ -264,7 +527,22 @@ Singleton {
         }
     })
 
-    readonly property var currentPalette: palettes[currentThemeKey] || palettes["deepspace"]
+    readonly property var palettes: {
+        const merged = Object.assign({}, builtInPalettes);
+        if (theme.customPalettes) {
+            for (const k in theme.customPalettes) {
+                merged[k] = theme.customPalettes[k];
+            }
+        }
+        return merged;
+    }
+
+    readonly property var currentPalette: {
+        if (theme.fromWallpaperActive && theme.tempWallpaperPalette) {
+            return theme.tempWallpaperPalette;
+        }
+        return palettes[currentThemeKey] || palettes["deepspace"];
+    }
 
     // Dynamic Reactive Colors
     readonly property color bgBase: currentPalette.bgBase
@@ -308,4 +586,10 @@ Singleton {
     // Theme metadata
     readonly property string themeName: currentPalette.name
     readonly property string currentWallpaper: currentPalette.wallpaper || ""
+
+    // Liquid Glass Design Tokens (Apple Style)
+    readonly property color glassSpecular: Qt.rgba(1, 1, 1, 0.45)
+    readonly property color glassBorder: Qt.rgba(1, 1, 1, 0.28)
+    readonly property color glassFillTop: Qt.rgba(1, 1, 1, 0.12)
+    readonly property color glassFillBottom: Qt.rgba(1, 1, 1, 0.03)
 }

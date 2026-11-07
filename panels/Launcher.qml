@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Wayland
 import "../theme"
 import "../services"
+import "../components"
 
 PanelWindow {
     id: launcherWindow
@@ -55,9 +56,16 @@ PanelWindow {
         height: 520
         anchors.centerIn: parent
         radius: Theme.cardRadius
-        color: Theme.bgModal
-        border.color: Theme.borderGlow
-        border.width: 1
+        color: ShellState.glassEnabled ? "transparent" : Theme.bgModal
+        border.color: ShellState.glassEnabled ? "transparent" : Theme.borderGlow
+        border.width: ShellState.glassEnabled ? 0 : 1
+
+        LiquidGlassSurface {
+            radius: Theme.cardRadius
+            visible: ShellState.glassEnabled
+            accentColor: Theme.accentCyan
+            showShadow: true
+        }
         Keys.forwardTo: [searchInput]
 
         MouseArea {
@@ -75,9 +83,16 @@ PanelWindow {
                 Layout.fillWidth: true
                 height: 48
                 radius: 12
-                color: Theme.bgBase
-                border.color: searchInput.activeFocus ? Theme.accentCyan : Theme.borderDim
-                border.width: 1
+                color: ShellState.glassEnabled ? "transparent" : Theme.bgBase
+                border.color: ShellState.glassEnabled ? "transparent" : (searchInput.activeFocus ? Theme.accentCyan : Theme.borderDim)
+                border.width: ShellState.glassEnabled ? 0 : 1
+
+                LiquidGlassSurface {
+                    radius: 12
+                    visible: ShellState.glassEnabled
+                    accentColor: searchInput.activeFocus ? Theme.accentCyan : Theme.borderDim
+                    showShadow: false
+                }
 
                 RowLayout {
                     anchors.fill: parent
@@ -145,7 +160,7 @@ PanelWindow {
                                 launcherWindow.filteredApps[idx].execute();
                                 ShellState.launcherOpen = false;
                             } else if (searchInput.text.trim().length > 0) {
-                                Quickshell.execDetached(["bash", "-c", searchInput.text.trim()]);
+                                Quickshell.execDetached(["laya-cmd", searchInput.text.trim()]);
                                 ShellState.launcherOpen = false;
                             }
                         }
@@ -156,10 +171,10 @@ PanelWindow {
                     }
 
                     Text {
-                        text: launcherWindow.filteredApps.length + " apps"
+                        text: (launcherWindow.filteredApps.length > 0) ? (launcherWindow.filteredApps.length + " apps") : (searchInput.text.trim().length > 0 ? "command mode" : "0 apps")
                         font.family: Theme.fontMono
                         font.pixelSize: 11
-                        color: Theme.textMuted
+                        color: (launcherWindow.filteredApps.length === 0 && searchInput.text.trim().length > 0) ? Theme.accentCyan : Theme.textMuted
                     }
                 }
             }
@@ -169,10 +184,17 @@ PanelWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 radius: 10
-                color: Theme.bgBase
-                border.color: Theme.borderDim
-                border.width: 1
+                color: ShellState.plasticEnabled ? "transparent" : Theme.bgBase
+                border.color: ShellState.plasticEnabled ? "transparent" : Theme.borderDim
+                border.width: ShellState.plasticEnabled ? 0 : 1
                 clip: true
+
+                LiquidGlassSurface {
+                    radius: 10
+                    visible: ShellState.plasticEnabled
+                    accentColor: Theme.borderDim
+                    showShadow: false
+                }
 
                 ListView {
                     id: appList
@@ -198,9 +220,25 @@ PanelWindow {
                         width: appList.width - 12
                         height: 52
                         radius: 8
-                        color: (appList.currentIndex === appItem.index || itemMouse.containsMouse) ? Theme.bgHover : "transparent"
-                        border.color: (appList.currentIndex === appItem.index) ? Theme.accentCyan : "transparent"
-                        border.width: (appList.currentIndex === appItem.index) ? 1 : 0
+                        readonly property bool isSelected: appList.currentIndex === appItem.index
+                        readonly property bool isHovered: itemMouse.containsMouse
+
+                        color: ShellState.plasticEnabled
+                            ? "transparent"
+                            : ((isSelected || isHovered) ? Theme.bgHover : "transparent")
+                        border.color: ShellState.plasticEnabled
+                            ? "transparent"
+                            : (isSelected ? Theme.accentCyan : "transparent")
+                        border.width: isSelected ? 1 : 0
+
+                        LiquidGlassSurface {
+                            radius: 8
+                            visible: ShellState.plasticEnabled && (appItem.isSelected || appItem.isHovered)
+                            accentColor: Theme.accentCyan
+                            hovered: appItem.isHovered
+                            pressed: itemMouse.pressed
+                            showShadow: false
+                        }
 
                         RowLayout {
                             anchors.fill: parent
@@ -213,7 +251,14 @@ PanelWindow {
                                 width: 36
                                 height: 36
                                 radius: 8
-                                color: Theme.bgCard
+                                color: ShellState.plasticEnabled ? "transparent" : Theme.bgCard
+
+                                LiquidGlassSurface {
+                                    radius: 8
+                                    visible: ShellState.plasticEnabled
+                                    accentColor: Theme.accentViolet
+                                    showShadow: false
+                                }
 
                                 Image {
                                     id: appIcon
@@ -289,26 +334,84 @@ PanelWindow {
                     }
                 }
 
-                // Empty state
+                // Empty state or Natural Language Command Card
                 ColumnLayout {
                     anchors.centerIn: parent
-                    spacing: 8
+                    spacing: 12
                     visible: launcherWindow.filteredApps.length === 0
+                    width: Math.min(parent.width - 40, 480)
 
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: "No applications found"
-                        font.family: Theme.fontFamily
-                        font.pixelSize: 13
-                        color: Theme.textMuted
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 64
+                        radius: 10
+                        color: Theme.bgCard
+                        border.color: Theme.accentCyan
+                        border.width: 1
+                        visible: searchInput.text.trim().length > 0
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 12
+                            spacing: 12
+
+                            Text {
+                                text: "⚡"
+                                font.pixelSize: 22
+                            }
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 2
+
+                                Text {
+                                    text: "Execute Semantic Command"
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 13
+                                    font.bold: true
+                                    color: Theme.accentCyan
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: '"' + searchInput.text.trim() + '"'
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 11
+                                    color: Theme.textPrimary
+                                    elide: Text.ElideRight
+                                }
+                            }
+
+                            Rectangle {
+                                width: 28
+                                height: 28
+                                radius: 6
+                                color: Theme.bgHover
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "↵"
+                                    font.bold: true
+                                    color: Theme.accentCyan
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                Quickshell.execDetached(["laya-cmd", searchInput.text.trim()]);
+                                ShellState.launcherOpen = false;
+                            }
+                        }
                     }
 
                     Text {
                         Layout.alignment: Qt.AlignHCenter
-                        text: "Press Enter to run as terminal command"
-                        font.family: Theme.fontMono
-                        font.pixelSize: 11
-                        color: Theme.accentSky
+                        text: searchInput.text.trim().length > 0 ? "Press Enter to run with Antigravity Engine" : "No applications found"
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 12
+                        color: Theme.textMuted
                     }
                 }
             }

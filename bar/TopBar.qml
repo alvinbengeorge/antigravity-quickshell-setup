@@ -34,7 +34,7 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
         }
 
-        // Left Island (Workspaces & Active Window, constrained before center island)
+        // Left Island (Workspaces, Active Window & Active Apps / System Tray)
         RowLayout {
             id: leftRow
             anchors.left: parent.left
@@ -50,7 +50,19 @@ PanelWindow {
 
             ActiveWindowPill {
                 id: activeWinPill
-                maxAllowedWidth: Math.max(60, leftRow.width - wsPill.width - leftRow.spacing - 12)
+                maxAllowedWidth: Math.max(60, leftRow.width - wsPill.width - (dockerPill.visible ? dockerPill.width + leftRow.spacing : 0) - (waPill.visible ? waPill.width + leftRow.spacing : 0) - (trayPill.visible ? trayPill.width + leftRow.spacing : 0) - leftRow.spacing - 12)
+            }
+
+            DockerPill {
+                id: dockerPill
+            }
+
+            WhatsAppPill {
+                id: waPill
+            }
+
+            SystemTrayPill {
+                id: trayPill
             }
 
             Item {
@@ -59,21 +71,13 @@ PanelWindow {
         }
 
         // Right Island (System Stats, Audio & Clock)
-        RowLayout {
+        Row {
             id: rightRow
             anchors.right: parent.right
-            anchors.left: centerIsland.right
-            anchors.leftMargin: 16
             anchors.verticalCenter: parent.verticalCenter
             spacing: 8
 
-            Item {
-                Layout.fillWidth: true
-            }
-
             SystemPill {}
-            WifiPill {}
-            BatteryPill {}
             ClockPill {}
         }
     }

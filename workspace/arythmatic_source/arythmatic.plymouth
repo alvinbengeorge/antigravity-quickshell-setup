@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Arythmatic
+Description=Arythmatic Obsidian & Glowing Mathematical Amber Boot Theme
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/arythmatic
+ScriptFile=/usr/share/plymouth/themes/arythmatic/arythmatic.script

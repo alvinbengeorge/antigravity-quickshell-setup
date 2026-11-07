@@ -3,18 +3,35 @@ import QtQuick.Layouts
 import Quickshell
 import "../theme"
 import "../services"
+import "../components"
 
 Rectangle {
     id: root
     height: 34
     radius: height / 2
-    color: Theme.bgPill
-    border.color: BatteryService.isCharging ? Theme.accentEmerald : (BatteryService.percentage <= 20 ? Theme.accentRose : Theme.borderDim)
-    border.width: 1
+    color: ShellState.glassEnabled ? "transparent" : Theme.bgPill
+    border.color: ShellState.glassEnabled ? "transparent" : (BatteryService.isCharging ? Theme.accentEmerald : (BatteryService.percentage <= 20 ? Theme.accentRose : Theme.borderDim))
+    border.width: ShellState.glassEnabled ? 0 : 1
+
+    LiquidGlassSurface {
+        radius: root.radius
+        visible: ShellState.glassEnabled
+        accentColor: BatteryService.isCharging ? Theme.accentEmerald : (BatteryService.percentage <= 20 ? Theme.accentRose : Theme.accentCyan)
+        hovered: batPillMouse.containsMouse
+        pressed: batPillMouse.pressed
+    }
 
     visible: BatteryService.available
 
     implicitWidth: batRow.implicitWidth + 20
+
+    MouseArea {
+        id: batPillMouse
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: BatteryService.openPowerStatistics()
+    }
 
     RowLayout {
         id: batRow
