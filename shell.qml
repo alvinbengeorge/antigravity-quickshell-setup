@@ -62,11 +62,39 @@ ShellRoot {
         }
     }
 
+    // Instantiate Desktop Jira Widget on all detected screens
+    Variants {
+        model: Quickshell.screens
+
+        JiraWidget {
+            required property ShellScreen modelData
+            screen: modelData
+        }
+    }
+
     // Centered & Dropdown Overlays
     AntigravityPanel {}
     Launcher {}
+    Omnibar {}
     ClipboardManager {}
     SessionDialog {}
     ControlCenter {}
+    WallpaperThemeDialog {}
+    DockerManager {}
+    TaskRunner {}
+    WindowSwitcher {}
     NotificationToasts {}
+    WhatsAppPanel {}
+    SystemMonitor {}
+    MediaDropdown {}
+
+    // Multi-screen On-Screen Display (OSD) Pill
+    Variants {
+        model: Quickshell.screens
+
+        OsdPill {
+            required property ShellScreen modelData
+            screen: modelData
+        }
+    }
 }

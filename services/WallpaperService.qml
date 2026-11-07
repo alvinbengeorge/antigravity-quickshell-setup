@@ -66,6 +66,13 @@ Singleton {
     onModeChanged: saveState()
     onManualWallpaperChanged: saveState()
 
+    onCurrentWallpaperChanged: {
+        if (Theme.fromWallpaperActive && root.currentWallpaper.length > 0) {
+            Theme.extractTemporaryWallpaperTheme(root.currentWallpaper);
+        }
+        Theme.syncHyprlock();
+    }
+
     readonly property string currentWallpaper: {
         if (root.mode === "theme") {
             return Theme.currentWallpaper;
@@ -84,12 +91,27 @@ Singleton {
 
     function setMode(newMode) {
         if (newMode === "theme" || newMode === "manual" || newMode === "gradient") {
+            if (root.mode !== "gradient" && newMode === "gradient") {
+                root.previousMode = root.mode;
+            }
             root.mode = newMode;
+        }
+    }
+
+    property string previousMode: "manual"
+
+    function toggleGradient() {
+        if (root.mode === "gradient") {
+            root.mode = (root.previousMode && root.previousMode !== "gradient") ? root.previousMode : "manual";
+        } else {
+            root.previousMode = (root.mode !== "gradient") ? root.mode : "manual";
+            root.mode = "gradient";
         }
     }
 
     function setWallpaper(path) {
         root.manualWallpaper = path;
+        root.previousMode = "manual";
         root.mode = "manual";
     }
 

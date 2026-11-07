@@ -5,9 +5,17 @@ import Quickshell
 import Quickshell.Wayland
 import "../theme"
 import "../services"
+import "../components"
 
 PanelWindow {
     id: hudWindow
+
+    function cleanDesc(d) {
+        if (!d) return "";
+        let s = d.split(". If on a supported")[0].split("If on a supported")[0].trim();
+        if (!s.endsWith(".") && s.length > 0) s += ".";
+        return s;
+    }
 
     visible: ShellState.antigravityPanelOpen
     color: "transparent"
@@ -41,12 +49,20 @@ PanelWindow {
     Rectangle {
         id: card
         width: 640
-        implicitHeight: cardContent.implicitHeight + 48
+        height: cardContent.childrenRect.height + 48
+        implicitHeight: height
         anchors.centerIn: parent
         radius: Theme.cardRadius
-        color: Theme.bgModal
-        border.color: Theme.borderGlow
-        border.width: 1
+        color: ShellState.glassEnabled ? "transparent" : Theme.bgModal
+        border.color: ShellState.glassEnabled ? "transparent" : Theme.borderGlow
+        border.width: ShellState.glassEnabled ? 0 : 1
+
+        LiquidGlassSurface {
+            radius: Theme.cardRadius
+            visible: ShellState.glassEnabled
+            accentColor: Theme.accentViolet
+            showShadow: true
+        }
 
         // Consume clicks inside the card so it doesn't dismiss
         MouseArea {
@@ -56,9 +72,10 @@ PanelWindow {
 
         ColumnLayout {
             id: cardContent
-            anchors.fill: parent
-            anchors.margins: 24
-            spacing: 18
+            width: parent.width - 48
+            x: 24
+            y: 24
+            spacing: 14
 
             // Header Row
             RowLayout {
@@ -69,13 +86,20 @@ PanelWindow {
                     width: 38
                     height: 38
                     radius: 19
-                    color: Theme.accentViolet
+                    color: ShellState.plasticEnabled ? "transparent" : Theme.accentViolet
+
+                    LiquidGlassSurface {
+                        radius: 19
+                        visible: ShellState.plasticEnabled
+                        accentColor: Theme.accentViolet
+                        showShadow: false
+                    }
 
                     Text {
                         anchors.centerIn: parent
                         text: "✦"
                         font.pixelSize: 22
-                        color: Theme.textOnAccent
+                        color: ShellState.plasticEnabled ? Theme.accentViolet : Theme.textOnAccent
                     }
                 }
 
@@ -395,20 +419,23 @@ PanelWindow {
             // Session Telemetry Card
             Rectangle {
                 Layout.fillWidth: true
+                height: telemetryCol.childrenRect.height + 24
+                implicitHeight: height
+                Layout.preferredHeight: height
                 radius: 10
                 color: Theme.bgCard
                 border.color: Theme.borderDim
                 border.width: 1
-                implicitHeight: telemetryCol.implicitHeight + 20
 
-                ColumnLayout {
+                Column {
                     id: telemetryCol
-                    anchors.fill: parent
-                    anchors.margins: 12
+                    width: parent.width - 24
+                    x: 12
+                    y: 12
                     spacing: 8
 
                     RowLayout {
-                        Layout.fillWidth: true
+                        width: parent.width
                         Text { text: "ACTIVE CONVERSATION"; font.family: Theme.fontMono; font.pixelSize: 10; color: Theme.textMuted }
                         Item { Layout.fillWidth: true }
                         Text {
@@ -421,7 +448,7 @@ PanelWindow {
                     }
 
                     RowLayout {
-                        Layout.fillWidth: true
+                        width: parent.width
                         Text { text: "TOTAL RECORDED SESSIONS"; font.family: Theme.fontMono; font.pixelSize: 10; color: Theme.textMuted }
                         Item { Layout.fillWidth: true }
                         Text {
@@ -433,7 +460,7 @@ PanelWindow {
                     }
 
                     RowLayout {
-                        Layout.fillWidth: true
+                        width: parent.width
                         Text { text: "CURRENT TRAJECTORY STEPS"; font.family: Theme.fontMono; font.pixelSize: 10; color: Theme.textMuted }
                         Item { Layout.fillWidth: true }
                         Text {
@@ -445,12 +472,12 @@ PanelWindow {
                     }
 
                     // Context Window Usage & Limit
-                    ColumnLayout {
-                        Layout.fillWidth: true
+                    Column {
+                        width: parent.width
                         spacing: 4
 
                         RowLayout {
-                            Layout.fillWidth: true
+                            width: parent.width
                             Text { text: "CONTEXT USAGE (1.0M LIMIT)"; font.family: Theme.fontMono; font.pixelSize: 10; color: Theme.textMuted }
                             Item { Layout.fillWidth: true }
                             Text {
@@ -464,22 +491,22 @@ PanelWindow {
 
                         // Mini progress bar
                         Rectangle {
-                            Layout.fillWidth: true
-                            height: 4
-                            radius: 2
+                            width: parent.width
+                            height: 6
+                            radius: 3
                             color: Theme.bgBase
 
                             Rectangle {
                                 height: parent.height
                                 width: Math.max(4, parent.width * Math.min(1.0, AntigravityService.contextPercent / 100.0))
-                                radius: 2
+                                radius: 3
                                 color: AntigravityService.contextPercent > 80 ? Theme.accentRose : (AntigravityService.contextPercent > 50 ? Theme.accentAmber : Theme.accentCyan)
                             }
                         }
                     }
 
                     RowLayout {
-                        Layout.fillWidth: true
+                        width: parent.width
                         Text { text: "SESSION TOKENS PROCESSED"; font.family: Theme.fontMono; font.pixelSize: 10; color: Theme.textMuted }
                         Item { Layout.fillWidth: true }
                         Text {
@@ -492,7 +519,7 @@ PanelWindow {
 
                     // Quota Limits Section
                     Rectangle {
-                        Layout.fillWidth: true
+                        width: parent.width
                         height: 1
                         color: Theme.borderDim
                     }
@@ -506,12 +533,12 @@ PanelWindow {
                     }
 
                     // Gemini 5-Hour Limit
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 3
+                    Column {
+                        width: parent.width
+                        spacing: 5
 
                         RowLayout {
-                            Layout.fillWidth: true
+                            width: parent.width
                             Text { text: "Gemini 5-Hour Limit Remaining"; font.family: Theme.fontFamily; font.pixelSize: 11; color: Theme.textSecondary }
                             Item { Layout.fillWidth: true }
                             Text {
@@ -524,34 +551,36 @@ PanelWindow {
                         }
 
                         Rectangle {
-                            Layout.fillWidth: true
-                            height: 4
-                            radius: 2
+                            width: parent.width
+                            height: 6
+                            radius: 3
                             color: Theme.bgBase
 
                             Rectangle {
                                 height: parent.height
                                 width: Math.max(4, parent.width * Math.min(1.0, AntigravityService.gemini5hRemaining / 100.0))
-                                radius: 2
+                                radius: 3
                                 color: AntigravityService.gemini5hRemaining < 20 ? Theme.accentRose : (AntigravityService.gemini5hRemaining < 50 ? Theme.accentAmber : Theme.accentCyan)
                             }
                         }
 
                         Text {
-                            text: AntigravityService.gemini5hDesc || "Rolling 5-hour demand window"
+                            width: parent.width
+                            text: hudWindow.cleanDesc(AntigravityService.gemini5hDesc) || "Rolling 5-hour demand window."
                             font.family: Theme.fontFamily
                             font.pixelSize: 10
                             color: Theme.textMuted
+                            wrapMode: Text.Wrap
                         }
                     }
 
                     // Gemini Weekly Limit
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 3
+                    Column {
+                        width: parent.width
+                        spacing: 5
 
                         RowLayout {
-                            Layout.fillWidth: true
+                            width: parent.width
                             Text { text: "Gemini Weekly Limit Remaining"; font.family: Theme.fontFamily; font.pixelSize: 11; color: Theme.textSecondary }
                             Item { Layout.fillWidth: true }
                             Text {
@@ -564,38 +593,40 @@ PanelWindow {
                         }
 
                         Rectangle {
-                            Layout.fillWidth: true
-                            height: 4
-                            radius: 2
+                            width: parent.width
+                            height: 6
+                            radius: 3
                             color: Theme.bgBase
 
                             Rectangle {
                                 height: parent.height
                                 width: Math.max(4, parent.width * Math.min(1.0, AntigravityService.geminiWeeklyRemaining / 100.0))
-                                radius: 2
+                                radius: 3
                                 color: AntigravityService.geminiWeeklyRemaining < 20 ? Theme.accentRose : (AntigravityService.geminiWeeklyRemaining < 50 ? Theme.accentAmber : Theme.accentEmerald)
                             }
                         }
 
                         Text {
-                            text: AntigravityService.geminiWeeklyDesc || "Weekly tier quota"
+                            width: parent.width
+                            text: hudWindow.cleanDesc(AntigravityService.geminiWeeklyDesc) || "Weekly tier quota."
                             font.family: Theme.fontFamily
                             font.pixelSize: 10
                             color: Theme.textMuted
+                            wrapMode: Text.Wrap
                         }
                     }
 
-                    // Claude & GPT Weekly Limit
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 3
+                    // Claude & GPT Quota Limits
+                    Column {
+                        width: parent.width
+                        spacing: 5
 
                         RowLayout {
-                            Layout.fillWidth: true
-                            Text { text: "Claude & GPT Weekly Limit"; font.family: Theme.fontFamily; font.pixelSize: 11; color: Theme.textSecondary }
+                            width: parent.width
+                            Text { text: "Claude & GPT Limit Remaining"; font.family: Theme.fontFamily; font.pixelSize: 11; color: Theme.textSecondary }
                             Item { Layout.fillWidth: true }
                             Text {
-                                text: AntigravityService.claudeWeeklyRemaining + "%"
+                                text: "5h: " + AntigravityService.claude5hRemaining + "% | Wk: " + AntigravityService.claudeWeeklyRemaining + "%"
                                 font.family: Theme.fontMono
                                 font.pixelSize: 11
                                 font.bold: true
@@ -603,31 +634,52 @@ PanelWindow {
                             }
                         }
 
-                        Rectangle {
-                            Layout.fillWidth: true
-                            height: 4
-                            radius: 2
-                            color: Theme.bgBase
+                        RowLayout {
+                            width: parent.width
+                            spacing: 8
 
                             Rectangle {
-                                height: parent.height
-                                width: Math.max(4, parent.width * Math.min(1.0, AntigravityService.claudeWeeklyRemaining / 100.0))
-                                radius: 2
-                                color: AntigravityService.claudeWeeklyRemaining < 20 ? Theme.accentRose : (AntigravityService.claudeWeeklyRemaining < 50 ? Theme.accentAmber : Theme.accentViolet)
+                                Layout.fillWidth: true
+                                height: 6
+                                radius: 3
+                                color: Theme.bgBase
+
+                                Rectangle {
+                                    height: parent.height
+                                    width: Math.max(4, parent.width * Math.min(1.0, AntigravityService.claude5hRemaining / 100.0))
+                                    radius: 3
+                                    color: Theme.accentViolet
+                                }
+                            }
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                height: 6
+                                radius: 3
+                                color: Theme.bgBase
+
+                                Rectangle {
+                                    height: parent.height
+                                    width: Math.max(4, parent.width * Math.min(1.0, AntigravityService.claudeWeeklyRemaining / 100.0))
+                                    radius: 3
+                                    color: AntigravityService.claudeWeeklyRemaining < 20 ? Theme.accentRose : (AntigravityService.claudeWeeklyRemaining < 50 ? Theme.accentAmber : Theme.accentViolet)
+                                }
                             }
                         }
 
                         Text {
-                            text: AntigravityService.claudeWeeklyDesc || "Weekly 3rd party model allocation"
+                            width: parent.width
+                            text: hudWindow.cleanDesc(AntigravityService.claudeWeeklyDesc) || "Weekly 3rd party model allocation."
                             font.family: Theme.fontFamily
                             font.pixelSize: 10
                             color: Theme.textMuted
+                            wrapMode: Text.Wrap
                         }
                     }
 
                     // Activity snippet
                     Rectangle {
-                        Layout.fillWidth: true
+                        width: parent.width
                         height: 28
                         radius: 6
                         color: Theme.bgBase

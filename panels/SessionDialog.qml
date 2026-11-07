@@ -45,9 +45,16 @@ PanelWindow {
         implicitHeight: sessionCol.implicitHeight + 48
         anchors.centerIn: parent
         radius: 20
-        color: Theme.bgModal
-        border.color: Theme.borderGlow
-        border.width: 1
+        color: ShellState.glassEnabled ? "transparent" : Theme.bgModal
+        border.color: ShellState.glassEnabled ? "transparent" : Theme.borderGlow
+        border.width: ShellState.glassEnabled ? 0 : 1
+
+        LiquidGlassSurface {
+            radius: 20
+            visible: ShellState.glassEnabled
+            accentColor: Theme.accentCyan
+            showShadow: true
+        }
 
         scale: ShellState.sessionDialogOpen ? 1.0 : 0.95
         opacity: ShellState.sessionDialogOpen ? 1.0 : 0.0
@@ -81,7 +88,7 @@ PanelWindow {
                     executeAction(["systemctl", "suspend"]);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_E) {
-                    executeAction(["hyprctl", "dispatch", "exit"]);
+                    executeAction(["hyprctl", "eval", "return hl.dispatch(hl.dsp.exit())"]);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_R) {
                     executeAction(["systemctl", "reboot"]);
@@ -164,7 +171,7 @@ PanelWindow {
                         model: [
                             { name: "Lock", key: "L", icon: "lock", cmd: ["hyprlock"], color: Theme.accentSky, desc: "Secure screen" },
                             { name: "Sleep", key: "S", icon: "moon", cmd: ["systemctl", "suspend"], color: Theme.accentViolet, desc: "Suspend system" },
-                            { name: "Logout", key: "E", icon: "log-out", cmd: ["hyprctl", "dispatch", "exit"], color: Theme.accentAmber, desc: "End session" },
+                            { name: "Logout", key: "E", icon: "log-out", cmd: ["hyprctl", "eval", "return hl.dispatch(hl.dsp.exit())"], color: Theme.accentAmber, desc: "End session" },
                             { name: "Reboot", key: "R", icon: "refresh-cw", cmd: ["systemctl", "reboot"], color: Theme.accentCyan, desc: "Restart machine" },
                             { name: "Shut Down", key: "P", icon: "power", cmd: ["systemctl", "poweroff"], color: Theme.accentRose, desc: "Power off" }
                         ]
@@ -177,11 +184,21 @@ PanelWindow {
 
                             readonly property bool isHovered: btnMouse.containsMouse
 
-                            color: isHovered
-                                ? Qt.rgba(modelData.color.r, modelData.color.g, modelData.color.b, 0.14)
-                                : Theme.bgCard
-                            border.color: isHovered ? modelData.color : Theme.borderDim
-                            border.width: 1
+                            color: ShellState.glassEnabled
+                                ? "transparent"
+                                : (isHovered ? Qt.rgba(modelData.color.r, modelData.color.g, modelData.color.b, 0.14) : Theme.bgCard)
+                            border.color: ShellState.glassEnabled
+                                ? "transparent"
+                                : (isHovered ? modelData.color : Theme.borderDim)
+                            border.width: ShellState.glassEnabled ? 0 : 1
+
+                            LiquidGlassSurface {
+                                radius: 14
+                                visible: ShellState.glassEnabled
+                                accentColor: modelData.color
+                                hovered: btnCard.isHovered
+                                showShadow: true
+                            }
 
                             scale: isHovered ? 1.03 : 1.0
 
@@ -193,17 +210,27 @@ PanelWindow {
                                 anchors.centerIn: parent
                                 spacing: 8
 
-                                // Circular Icon Well
+                                // Circular Icon Well (Plastic Gem)
                                 Rectangle {
                                     Layout.alignment: Qt.AlignHCenter
                                     width: 44
                                     height: 44
                                     radius: 22
-                                    color: btnCard.isHovered
-                                        ? Qt.rgba(modelData.color.r, modelData.color.g, modelData.color.b, 0.22)
-                                        : Theme.bgSurface
-                                    border.color: btnCard.isHovered ? modelData.color : Theme.borderDim
-                                    border.width: 1
+                                    color: ShellState.plasticEnabled
+                                        ? "transparent"
+                                        : (btnCard.isHovered ? Qt.rgba(modelData.color.r, modelData.color.g, modelData.color.b, 0.22) : Theme.bgSurface)
+                                    border.color: ShellState.plasticEnabled
+                                        ? "transparent"
+                                        : (btnCard.isHovered ? modelData.color : Theme.borderDim)
+                                    border.width: ShellState.plasticEnabled ? 0 : 1
+
+                                    LiquidGlassSurface {
+                                        radius: 22
+                                        visible: ShellState.plasticEnabled
+                                        accentColor: modelData.color
+                                        hovered: btnCard.isHovered
+                                        showShadow: false
+                                    }
 
                                     Behavior on color { ColorAnimation { duration: 150 } }
                                     Behavior on border.color { ColorAnimation { duration: 150 } }

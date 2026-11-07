@@ -4,14 +4,14 @@ import Quickshell
 import Quickshell.Wayland
 import "../theme"
 import "../services"
+import "../components"
 
 PanelWindow {
     id: root
 
     property bool alignLeft: true
-    property bool showClaude: true
 
-    visible: ShellState.desktopAntigravityVisible
+    visible: !ShellState.liteMode && ShellState.desktopAntigravityVisible
 
     anchors {
         top: true
@@ -25,8 +25,27 @@ PanelWindow {
         right: !root.alignLeft ? 48 : 0
     }
 
-    implicitWidth: 380
+    implicitWidth: 320
     implicitHeight: mainCard.implicitHeight
+
+    onImplicitHeightChanged: {
+        if (implicitHeight > 100) {
+            ShellState.antigravityWidgetHeight = implicitHeight;
+        }
+    }
+
+    function getResetSummary(desc, fallback) {
+        if (!desc || desc.length === 0) return fallback;
+        const match = desc.match(/refresh(?:es)?\s+in\s+([^.]+)/i);
+        if (match && match[1]) {
+            return "Resets in " + match[1].trim();
+        }
+        const timeMatch = desc.match(/(\d+\s*(?:hours?|hrs?|minutes?|mins?)[^.]*)/i);
+        if (timeMatch && timeMatch[1]) {
+            return "Resets in " + timeMatch[1].trim();
+        }
+        return desc;
+    }
 
     color: "transparent"
 
@@ -36,47 +55,56 @@ PanelWindow {
 
     Rectangle {
         id: mainCard
-        width: 380
-        implicitHeight: contentCol.implicitHeight + 36
-        radius: 20
-        color: Theme.bgSurfaceGlass
-        border.color: Theme.borderGlow
-        border.width: 1
+        width: 320
+        implicitHeight: contentCol.implicitHeight + 28
+        height: implicitHeight
+        radius: 18
+        color: ShellState.glassEnabled ? "transparent" : Theme.bgSurfaceGlass
+        border.color: ShellState.glassEnabled ? "transparent" : Theme.borderGlow
+        border.width: ShellState.glassEnabled ? 0 : 1
 
-        // Top gradient sheen accent line
-        Rectangle {
-            anchors.top: parent.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: 1
-            color: Qt.rgba(Theme.accentViolet.r, Theme.accentViolet.g, Theme.accentViolet.b, 0.45)
-            radius: parent.radius
+        LiquidGlassSurface {
+            radius: 18
+            visible: ShellState.glassEnabled
+            accentColor: Theme.accentCyan
+            showShadow: true
         }
 
         ColumnLayout {
             id: contentCol
-            anchors.fill: parent
-            anchors.margins: 18
-            spacing: 14
+            width: parent.width - 28
+            x: 14
+            y: 14
+            spacing: 10
 
-            // Header Bar
+            // ── Header ───────────────────────────────────────────────────────
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 8
 
-                // Star icon with pulsing glow
                 Rectangle {
-                    width: 32
-                    height: 32
-                    radius: 16
-                    color: AntigravityService.isActive ? "#1A06B6D4" : "#1A8B5CF6"
-                    border.color: AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet
-                    border.width: 1
+                    width: 28
+                    height: 28
+                    radius: 14
+                    color: ShellState.plasticEnabled
+                        ? "transparent"
+                        : (AntigravityService.isActive ? "#1A06B6D4" : "#1A8B5CF6")
+                    border.color: ShellState.plasticEnabled
+                        ? "transparent"
+                        : (AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet)
+                    border.width: ShellState.plasticEnabled ? 0 : 1
+
+                    LiquidGlassSurface {
+                        radius: 14
+                        visible: ShellState.plasticEnabled
+                        accentColor: AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet
+                        showShadow: false
+                    }
 
                     Text {
                         anchors.centerIn: parent
                         text: "✦"
-                        font.pixelSize: 16
+                        font.pixelSize: 14
                         color: AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet
                     }
                 }
@@ -86,7 +114,7 @@ PanelWindow {
                     Text {
                         text: "ANTIGRAVITY ENGINE"
                         font.family: Theme.fontFamily
-                        font.pixelSize: 12
+                        font.pixelSize: 11
                         font.bold: true
                         color: Theme.textPrimary
                     }
@@ -102,9 +130,9 @@ PanelWindow {
 
                 // State Badge
                 Rectangle {
-                    height: 22
+                    height: 20
                     implicitWidth: statusRow.implicitWidth + 12
-                    radius: 11
+                    radius: 10
                     color: Theme.bgPill
                     border.color: AntigravityService.isActive ? Theme.accentCyan : Theme.borderDim
                     border.width: 1
@@ -115,13 +143,13 @@ PanelWindow {
                         spacing: 5
 
                         Rectangle {
-                            width: 6
-                            height: 6
+                            width: 5
+                            height: 5
                             radius: 3
                             color: AntigravityService.isActive ? Theme.accentCyan : Theme.textMuted
 
                             SequentialAnimation on opacity {
-                                running: AntigravityService.isActive
+                                running: !ShellState.liteMode && AntigravityService.isActive
                                 loops: Animation.Infinite
                                 PropertyAnimation { to: 0.3; duration: 800 }
                                 PropertyAnimation { to: 1.0; duration: 800 }
@@ -138,17 +166,16 @@ PanelWindow {
                     }
                 }
 
-                // Refresh Button
+                // Refresh
                 Rectangle {
-                    width: 24
-                    height: 24
-                    radius: 12
+                    width: 22
+                    height: 22
+                    radius: 11
                     color: refreshMouse.containsMouse ? Theme.bgHover : Theme.bgPill
                     border.color: Theme.borderDim
                     border.width: 1
 
                     Text {
-                        id: refreshIcon
                         anchors.centerIn: parent
                         text: "↻"
                         font.pixelSize: 12
@@ -160,17 +187,15 @@ PanelWindow {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            AntigravityService.refresh();
-                        }
+                        onClicked: AntigravityService.refresh()
                     }
                 }
 
-                // Expand / HUD Button
+                // HUD
                 Rectangle {
-                    width: 24
-                    height: 24
-                    radius: 12
+                    width: 22
+                    height: 22
+                    radius: 11
                     color: hudMouse.containsMouse ? Theme.bgHover : Theme.bgPill
                     border.color: Theme.borderDim
                     border.width: 1
@@ -187,17 +212,15 @@ PanelWindow {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            ShellState.toggleAntigravityPanel();
-                        }
+                        onClicked: ShellState.toggleAntigravityPanel()
                     }
                 }
             }
 
-            // Session Info Strip
+            // ── Session Info Strip ────────────────────────────────────────────
             Rectangle {
                 Layout.fillWidth: true
-                height: 30
+                height: 28
                 radius: 8
                 color: Theme.bgCard
                 border.color: Theme.borderDim
@@ -207,7 +230,7 @@ PanelWindow {
                     anchors.fill: parent
                     anchors.leftMargin: 10
                     anchors.rightMargin: 10
-                    spacing: 8
+                    spacing: 6
 
                     Text {
                         text: "ID:"
@@ -236,25 +259,27 @@ PanelWindow {
                 }
             }
 
-            // Gemini 5-Hour Demand Quota Card
+            // ── Gemini Models Card (Dual bars + Reset timers) ─────────────────
             Rectangle {
                 Layout.fillWidth: true
-                radius: 12
+                radius: 10
                 color: Theme.bgCard
                 border.color: Theme.borderDim
                 border.width: 1
-                implicitHeight: g5Col.implicitHeight + 18
+                implicitHeight: gmCol.implicitHeight + 20
+                Layout.preferredHeight: implicitHeight
 
                 ColumnLayout {
-                    id: g5Col
-                    anchors.fill: parent
-                    anchors.margins: 12
-                    spacing: 8
+                    id: gmCol
+                    width: parent.width - 20
+                    x: 10
+                    y: 10
+                    spacing: 7
 
                     RowLayout {
                         Layout.fillWidth: true
                         Text {
-                            text: "GEMINI 5-HOUR LIMIT"
+                            text: "GEMINI MODELS"
                             font.family: Theme.fontMono
                             font.pixelSize: 10
                             font.bold: true
@@ -262,127 +287,125 @@ PanelWindow {
                         }
                         Item { Layout.fillWidth: true }
                         Text {
-                            text: AntigravityService.gemini5hRemaining + "% REMAINING"
+                            text: "5h: " + AntigravityService.gemini5hRemaining + "%  |  Wk: " + AntigravityService.geminiWeeklyRemaining + "%"
                             font.family: Theme.fontMono
                             font.pixelSize: 10
                             font.bold: true
-                            color: AntigravityService.gemini5hRemaining < 20 ? Theme.accentRose : (AntigravityService.gemini5hRemaining < 50 ? Theme.accentAmber : Theme.accentCyan)
+                            color: AntigravityService.geminiWeeklyRemaining < 20 ? Theme.accentRose
+                                 : AntigravityService.gemini5hRemaining < 50 ? Theme.accentAmber
+                                 : Theme.accentSky
                         }
                     }
 
-                    // Progress Bar
-                    Rectangle {
-                        Layout.fillWidth: true
-                        height: 8
-                        radius: 4
-                        color: Theme.bgBase
-
-                        Rectangle {
-                            height: parent.height
-                            width: Math.max(6, parent.width * Math.min(1.0, AntigravityService.gemini5hRemaining / 100.0))
-                            radius: 4
-                            color: AntigravityService.gemini5hRemaining < 20 ? Theme.accentRose : (AntigravityService.gemini5hRemaining < 50 ? Theme.accentAmber : Theme.accentCyan)
-
-                            Behavior on width {
-                                NumberAnimation { duration: 300; easing.type: Easing.OutQuad }
-                            }
-                        }
-                    }
-
-                    Text {
-                        Layout.fillWidth: true
-                        text: AntigravityService.gemini5hDesc || "Rolling 5-hour demand window allocation."
-                        font.family: Theme.fontFamily
-                        font.pixelSize: 10
-                        color: Theme.textMuted
-                        wrapMode: Text.Wrap
-                    }
-                }
-            }
-
-            // Gemini Weekly Allocation Card
-            Rectangle {
-                Layout.fillWidth: true
-                radius: 12
-                color: Theme.bgCard
-                border.color: Theme.borderDim
-                border.width: 1
-                implicitHeight: gwCol.implicitHeight + 18
-
-                ColumnLayout {
-                    id: gwCol
-                    anchors.fill: parent
-                    anchors.margins: 12
-                    spacing: 8
-
+                    // Dual side-by-side bars (5h left, Weekly right)
                     RowLayout {
                         Layout.fillWidth: true
-                        Text {
-                            text: "GEMINI WEEKLY LIMIT"
-                            font.family: Theme.fontMono
-                            font.pixelSize: 10
-                            font.bold: true
-                            color: Theme.accentEmerald
-                        }
-                        Item { Layout.fillWidth: true }
-                        Text {
-                            text: AntigravityService.geminiWeeklyRemaining + "% REMAINING"
-                            font.family: Theme.fontMono
-                            font.pixelSize: 10
-                            font.bold: true
-                            color: AntigravityService.geminiWeeklyRemaining < 20 ? Theme.accentRose : (AntigravityService.geminiWeeklyRemaining < 50 ? Theme.accentAmber : Theme.accentEmerald)
-                        }
-                    }
-
-                    // Progress Bar
-                    Rectangle {
-                        Layout.fillWidth: true
-                        height: 8
-                        radius: 4
-                        color: Theme.bgBase
+                        spacing: 8
 
                         Rectangle {
-                            height: parent.height
-                            width: Math.max(6, parent.width * Math.min(1.0, AntigravityService.geminiWeeklyRemaining / 100.0))
-                            radius: 4
-                            color: AntigravityService.geminiWeeklyRemaining < 20 ? Theme.accentRose : (AntigravityService.geminiWeeklyRemaining < 50 ? Theme.accentAmber : Theme.accentEmerald)
+                            Layout.fillWidth: true
+                            height: 6
+                            radius: 3
+                            color: Theme.bgBase
 
-                            Behavior on width {
-                                NumberAnimation { duration: 300; easing.type: Easing.OutQuad }
+                            Rectangle {
+                                height: parent.height
+                                width: Math.max(4, parent.width * Math.min(1.0, AntigravityService.gemini5hRemaining / 100.0))
+                                radius: 3
+                                color: AntigravityService.gemini5hRemaining < 20 ? Theme.accentRose
+                                     : AntigravityService.gemini5hRemaining < 50 ? Theme.accentAmber
+                                     : Theme.accentSky
+                                Behavior on width { NumberAnimation { duration: 300; easing.type: Easing.OutQuad } }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 6
+                            radius: 3
+                            color: Theme.bgBase
+
+                            Rectangle {
+                                height: parent.height
+                                width: Math.max(4, parent.width * Math.min(1.0, AntigravityService.geminiWeeklyRemaining / 100.0))
+                                radius: 3
+                                color: AntigravityService.geminiWeeklyRemaining < 20 ? Theme.accentRose
+                                     : AntigravityService.geminiWeeklyRemaining < 50 ? Theme.accentAmber
+                                     : Theme.accentEmerald
+                                Behavior on width { NumberAnimation { duration: 300; easing.type: Easing.OutQuad } }
                             }
                         }
                     }
 
-                    Text {
+                    // Reset Time Descriptions for both 5h and Weekly
+                    ColumnLayout {
                         Layout.fillWidth: true
-                        text: AntigravityService.geminiWeeklyDesc || "Weekly tier allocation window."
-                        font.family: Theme.fontFamily
-                        font.pixelSize: 10
-                        color: Theme.textMuted
-                        wrapMode: Text.Wrap
+                        spacing: 3
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 5
+                            Text {
+                                text: "5h:"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 9
+                                font.bold: true
+                                color: Theme.accentSky
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: root.getResetSummary(AntigravityService.gemini5hDesc, "Rolling 5-hour window")
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 9
+                                color: Theme.textMuted
+                                elide: Text.ElideRight
+                            }
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 5
+                            Text {
+                                text: "Wk:"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 9
+                                font.bold: true
+                                color: Theme.accentEmerald
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: root.getResetSummary(AntigravityService.geminiWeeklyDesc, "Weekly tier allocation")
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 9
+                                color: Theme.textMuted
+                                elide: Text.ElideRight
+                            }
+                        }
                     }
                 }
             }
 
-            // Claude & Auxiliary Model Quotas Card
+            // ── Claude & GPT Card (Dual bars + Reset timer) ────────────────────
             Rectangle {
                 Layout.fillWidth: true
-                radius: 12
+                radius: 10
                 color: Theme.bgCard
                 border.color: Theme.borderDim
                 border.width: 1
-                implicitHeight: clCol.implicitHeight + 16
+                implicitHeight: clCol.implicitHeight + 20
+                Layout.preferredHeight: implicitHeight
 
                 ColumnLayout {
                     id: clCol
-                    anchors.fill: parent
-                    anchors.margins: 12
-                    spacing: 8
+                    width: parent.width - 20
+                    x: 10
+                    y: 10
+                    spacing: 7
 
                     RowLayout {
                         Layout.fillWidth: true
                         Text {
-                            text: "CLAUDE & GPT MODELS"
+                            text: "CLAUDE & GPT"
                             font.family: Theme.fontMono
                             font.pixelSize: 10
                             font.bold: true
@@ -398,7 +421,6 @@ PanelWindow {
                         }
                     }
 
-                    // Combined Mini Dual Bar
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: 8
@@ -432,36 +454,50 @@ PanelWindow {
                         }
                     }
 
-                    Text {
+                    // Reset info for Claude & GPT
+                    RowLayout {
                         Layout.fillWidth: true
-                        text: AntigravityService.claudeWeeklyDesc || "Auxiliary fallback models quota."
-                        font.family: Theme.fontFamily
-                        font.pixelSize: 10
-                        color: Theme.textMuted
-                        wrapMode: Text.Wrap
+                        spacing: 5
+                        Text {
+                            text: "Reset:"
+                            font.family: Theme.fontMono
+                            font.pixelSize: 9
+                            font.bold: true
+                            color: Theme.accentViolet
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            text: root.getResetSummary(AntigravityService.claudeWeeklyDesc || AntigravityService.claude5hDesc, "Auxiliary fallback models quota.")
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 9
+                            color: Theme.textMuted
+                            elide: Text.ElideRight
+                        }
                     }
                 }
             }
 
-            // Context Window & Session Tokens
+            // ── Context Window Card (compact) ─────────────────────────────────
             Rectangle {
                 Layout.fillWidth: true
-                radius: 12
+                radius: 10
                 color: Theme.bgCard
                 border.color: Theme.borderDim
                 border.width: 1
-                implicitHeight: ctxCol.implicitHeight + 16
+                implicitHeight: ctxCol.implicitHeight + 20
+                Layout.preferredHeight: implicitHeight
 
                 ColumnLayout {
                     id: ctxCol
-                    anchors.fill: parent
-                    anchors.margins: 12
-                    spacing: 8
+                    width: parent.width - 20
+                    x: 10
+                    y: 10
+                    spacing: 7
 
                     RowLayout {
                         Layout.fillWidth: true
                         Text {
-                            text: "ACTIVE CONTEXT WINDOW"
+                            text: "CONTEXT WINDOW"
                             font.family: Theme.fontMono
                             font.pixelSize: 10
                             font.bold: true
@@ -473,11 +509,12 @@ PanelWindow {
                             font.family: Theme.fontMono
                             font.pixelSize: 10
                             font.bold: true
-                            color: AntigravityService.contextPercent > 80 ? Theme.accentRose : (AntigravityService.contextPercent > 50 ? Theme.accentAmber : Theme.accentSky)
+                            color: AntigravityService.contextPercent > 80 ? Theme.accentRose
+                                 : AntigravityService.contextPercent > 50 ? Theme.accentAmber
+                                 : Theme.accentSky
                         }
                     }
 
-                    // Context Bar
                     Rectangle {
                         Layout.fillWidth: true
                         height: 6
@@ -488,23 +525,25 @@ PanelWindow {
                             height: parent.height
                             width: Math.max(4, parent.width * Math.min(1.0, AntigravityService.contextPercent / 100.0))
                             radius: 3
-                            color: AntigravityService.contextPercent > 80 ? Theme.accentRose : (AntigravityService.contextPercent > 50 ? Theme.accentAmber : Theme.accentSky)
+                            color: AntigravityService.contextPercent > 80 ? Theme.accentRose
+                                 : AntigravityService.contextPercent > 50 ? Theme.accentAmber
+                                 : Theme.accentSky
                         }
                     }
 
                     RowLayout {
                         Layout.fillWidth: true
                         Text {
-                            text: "Total Processed Tokens:"
-                            font.family: Theme.fontFamily
-                            font.pixelSize: 10
+                            text: "Total Processed:"
+                            font.family: Theme.fontMono
+                            font.pixelSize: 9
                             color: Theme.textMuted
                         }
                         Item { Layout.fillWidth: true }
                         Text {
                             text: AntigravityService.totalSessionTokensStr + " tokens"
                             font.family: Theme.fontMono
-                            font.pixelSize: 10
+                            font.pixelSize: 9
                             font.bold: true
                             color: Theme.accentViolet
                         }
@@ -512,14 +551,14 @@ PanelWindow {
                 }
             }
 
-            // Quick Actions Bar
+            // ── Quick Actions ─────────────────────────────────────────────────
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 8
+                spacing: 7
 
                 Rectangle {
                     Layout.fillWidth: true
-                    height: 36
+                    height: 30
                     radius: 8
                     color: a1Mouse.containsMouse ? Theme.bgHover : Theme.bgCard
                     border.color: Theme.borderDim
@@ -527,9 +566,9 @@ PanelWindow {
 
                     RowLayout {
                         anchors.centerIn: parent
-                        spacing: 6
-                        Text { text: "↺"; font.pixelSize: 13; color: Theme.accentViolet }
-                        Text { text: "Resume"; font.family: Theme.fontFamily; font.pixelSize: 11; font.bold: true; color: Theme.textPrimary }
+                        spacing: 5
+                        Text { text: "↺"; font.pixelSize: 12; color: Theme.accentViolet }
+                        Text { text: "Resume"; font.family: Theme.fontFamily; font.pixelSize: 10; font.bold: true; color: Theme.textPrimary }
                     }
 
                     MouseArea {
@@ -543,7 +582,7 @@ PanelWindow {
 
                 Rectangle {
                     Layout.fillWidth: true
-                    height: 36
+                    height: 30
                     radius: 8
                     color: a2Mouse.containsMouse ? Theme.bgHover : Theme.bgCard
                     border.color: Theme.borderDim
@@ -551,9 +590,9 @@ PanelWindow {
 
                     RowLayout {
                         anchors.centerIn: parent
-                        spacing: 6
-                        Text { text: "+"; font.pixelSize: 14; font.bold: true; color: Theme.accentCyan }
-                        Text { text: "New CLI"; font.family: Theme.fontFamily; font.pixelSize: 11; font.bold: true; color: Theme.textPrimary }
+                        spacing: 5
+                        Text { text: "+"; font.pixelSize: 13; font.bold: true; color: Theme.accentCyan }
+                        Text { text: "New CLI"; font.family: Theme.fontFamily; font.pixelSize: 10; font.bold: true; color: Theme.textPrimary }
                     }
 
                     MouseArea {
@@ -567,7 +606,7 @@ PanelWindow {
 
                 Rectangle {
                     Layout.fillWidth: true
-                    height: 36
+                    height: 30
                     radius: 8
                     color: a3Mouse.containsMouse ? Theme.bgHover : Theme.bgCard
                     border.color: Theme.borderDim
@@ -575,9 +614,9 @@ PanelWindow {
 
                     RowLayout {
                         anchors.centerIn: parent
-                        spacing: 6
-                        Text { text: "📂"; font.pixelSize: 12 }
-                        Text { text: "Brain"; font.family: Theme.fontFamily; font.pixelSize: 11; font.bold: true; color: Theme.textPrimary }
+                        spacing: 5
+                        Text { text: "📂"; font.pixelSize: 11 }
+                        Text { text: "Brain"; font.family: Theme.fontFamily; font.pixelSize: 10; font.bold: true; color: Theme.textPrimary }
                     }
 
                     MouseArea {

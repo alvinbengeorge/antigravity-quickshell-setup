@@ -52,13 +52,20 @@ def update_cache():
                     w = b.get('window', '')
                     rem = round(b.get('remaining_fraction', 0.0) * 100.0)
                     key = f"{gname}_{w}"
+                    desc = b.get('description', '')
+                    if desc:
+                        if '. If on a supported' in desc:
+                            desc = desc.split('. If on a supported')[0].strip() + '.'
+                        elif 'If on a supported' in desc:
+                            desc = desc.split('If on a supported')[0].strip()
+
                     parsed[key] = {
                         'group': gname,
                         'window': w,
                         'name': b.get('name', ''),
                         'remaining': rem,
                         'reset_time': b.get('reset_time', ''),
-                        'description': b.get('description', '')
+                        'description': desc
                     }
 
             with open(CACHE_FILE, 'w') as f:

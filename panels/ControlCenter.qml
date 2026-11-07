@@ -50,9 +50,16 @@ PanelWindow {
         height: Math.min(mainCol.implicitHeight + 36, controlCenterWindow.height - 76)
         radius: Theme.cardRadius
         clip: true
-        color: Theme.bgModal
-        border.color: Theme.borderGlow
-        border.width: 1
+        color: ShellState.glassEnabled ? "transparent" : Theme.bgModal
+        border.color: ShellState.glassEnabled ? "transparent" : Theme.borderGlow
+        border.width: ShellState.glassEnabled ? 0 : 1
+
+        LiquidGlassSurface {
+            radius: Theme.cardRadius
+            visible: ShellState.glassEnabled
+            accentColor: Theme.accentCyan
+            showShadow: true
+        }
 
         // Consume clicks inside
         MouseArea {
@@ -234,9 +241,17 @@ PanelWindow {
                     Layout.fillWidth: true
                     height: 58
                     radius: 12
-                    color: NetworkService.wifiEnabled ? Theme.bgCard : Theme.bgPill
-                    border.color: NetworkService.wifiEnabled ? Theme.accentCyan : Theme.borderDim
-                    border.width: 1
+                    color: ShellState.glassEnabled ? "transparent" : (NetworkService.wifiEnabled ? Theme.bgCard : Theme.bgPill)
+                    border.color: ShellState.glassEnabled ? "transparent" : (NetworkService.wifiEnabled ? Theme.accentCyan : Theme.borderDim)
+                    border.width: ShellState.glassEnabled ? 0 : 1
+
+                    LiquidGlassSurface {
+                        radius: 12
+                        visible: ShellState.glassEnabled
+                        accentColor: NetworkService.wifiEnabled ? Theme.accentCyan : Theme.textMuted
+                        hovered: wifiMouse.containsMouse
+                        showShadow: true
+                    }
 
                     RowLayout {
                         anchors.fill: parent
@@ -271,6 +286,7 @@ PanelWindow {
                     }
 
                     MouseArea {
+                        id: wifiMouse
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
@@ -283,9 +299,17 @@ PanelWindow {
                     Layout.fillWidth: true
                     height: 58
                     radius: 12
-                    color: NetworkService.btPowered ? Theme.bgCard : Theme.bgPill
-                    border.color: NetworkService.btPowered ? Theme.accentSky : Theme.borderDim
-                    border.width: 1
+                    color: ShellState.glassEnabled ? "transparent" : (NetworkService.btPowered ? Theme.bgCard : Theme.bgPill)
+                    border.color: ShellState.glassEnabled ? "transparent" : (NetworkService.btPowered ? Theme.accentSky : Theme.borderDim)
+                    border.width: ShellState.glassEnabled ? 0 : 1
+
+                    LiquidGlassSurface {
+                        radius: 12
+                        visible: ShellState.glassEnabled
+                        accentColor: NetworkService.btPowered ? Theme.accentSky : Theme.textMuted
+                        hovered: btMouse.containsMouse
+                        showShadow: true
+                    }
 
                     RowLayout {
                         anchors.fill: parent
@@ -318,10 +342,423 @@ PanelWindow {
                     }
 
                     MouseArea {
+                        id: btMouse
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: NetworkService.toggleBluetooth()
+                    }
+                }
+            }
+
+            // System Styling & Performance Toggles (Liquid Glass & Lite Mode)
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                // Liquid Glass Tile
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 54
+                    radius: 12
+                    color: ShellState.glassEnabled ? "transparent" : (glassMouse.containsMouse ? Theme.bgHover : Theme.bgPill)
+                    border.color: ShellState.glassEnabled ? "transparent" : (ShellState.glassButtons ? Theme.accentCyan : Theme.borderDim)
+                    border.width: ShellState.glassEnabled ? 0 : 1
+
+                    LiquidGlassSurface {
+                        radius: 12
+                        visible: ShellState.glassEnabled
+                        accentColor: Theme.accentCyan
+                        hovered: glassMouse.containsMouse
+                        showShadow: true
+                    }
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        spacing: 10
+
+                        Text {
+                            text: "🫧"
+                            font.pixelSize: 18
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 1
+                            Text {
+                                text: "Apple Plastic"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 12
+                                font.bold: true
+                                color: ShellState.plasticMode ? Theme.accentCyan : Theme.textPrimary
+                            }
+                            Text {
+                                text: ShellState.plasticMode ? "Glossy Plastic Mode" : "Flat Interface"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 10
+                                color: Theme.textMuted
+                            }
+                        }
+                    }
+
+                    MouseArea {
+                        id: glassMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: ShellState.togglePlasticMode()
+                    }
+                }
+
+                // Lite Mode Tile
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 54
+                    radius: 12
+                    color: ShellState.glassEnabled ? "transparent" : (ShellState.liteMode ? Qt.rgba(Theme.accentAmber.r, Theme.accentAmber.g, Theme.accentAmber.b, 0.22) : (liteMouse.containsMouse ? Theme.bgHover : Theme.bgPill))
+                    border.color: ShellState.glassEnabled ? "transparent" : (ShellState.liteMode ? Theme.accentAmber : Theme.borderDim)
+                    border.width: ShellState.glassEnabled ? 0 : 1
+
+                    LiquidGlassSurface {
+                        radius: 12
+                        visible: ShellState.glassEnabled
+                        accentColor: ShellState.liteMode ? Theme.accentAmber : Theme.textMuted
+                        hovered: liteMouse.containsMouse
+                        showShadow: true
+                    }
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        spacing: 10
+
+                        Text {
+                            text: ShellState.liteMode ? "⚡" : "✨"
+                            font.pixelSize: 18
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 1
+                            Text {
+                                text: "Lite Mode"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 12
+                                font.bold: true
+                                color: ShellState.liteMode ? Theme.accentAmber : Theme.textPrimary
+                            }
+                            Text {
+                                text: ShellState.liteMode ? "Max GPU FPS" : "Standard Visuals"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 10
+                                color: Theme.textMuted
+                            }
+                        }
+                    }
+
+                    MouseArea {
+                        id: liteMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: ShellState.toggleLiteMode()
+                    }
+                }
+            }
+
+            // Quick Sliders (Volume & Brightness)
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 10
+
+                // Volume Slider Tile
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 52
+                    radius: 12
+                    color: ShellState.glassEnabled ? "transparent" : Theme.bgCard
+                    border.color: ShellState.glassEnabled ? "transparent" : Theme.borderDim
+                    border.width: ShellState.glassEnabled ? 0 : 1
+
+                    LiquidGlassSurface {
+                        radius: 12
+                        visible: ShellState.glassEnabled
+                        accentColor: AudioService.muted ? Theme.accentRose : Theme.accentCyan
+                        showShadow: true
+                    }
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        spacing: 12
+
+                        // Mute/Unmute Icon Gem
+                        Item {
+                            width: 32
+                            height: 32
+
+                            LiquidGlassSurface {
+                                radius: 16
+                                visible: ShellState.glassEnabled
+                                accentColor: AudioService.muted ? Theme.accentRose : Theme.accentCyan
+                                hovered: ccVolIcoMouse.containsMouse
+                                showShadow: false
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: 16
+                                visible: !ShellState.glassEnabled
+                                color: ccVolIcoMouse.containsMouse ? Theme.bgHover : "transparent"
+                                border.color: Theme.borderDim
+                                border.width: 1
+                            }
+
+                            Icon {
+                                anchors.centerIn: parent
+                                name: AudioService.muted ? "volume-x" : (AudioService.volume > 0.5 ? "volume-2" : "volume-1")
+                                size: 16
+                                color: AudioService.muted ? Theme.accentRose : Theme.accentCyan
+                            }
+
+                            MouseArea {
+                                id: ccVolIcoMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: AudioService.toggleMute()
+                            }
+                        }
+
+                        // Slider Track & Label Stack
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 4
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text {
+                                    text: "Volume"
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    color: Theme.textPrimary
+                                }
+                                Item { Layout.fillWidth: true }
+                                Text {
+                                    text: AudioService.muted ? "MUTED" : Math.round(AudioService.volume * 100) + "%"
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    color: AudioService.muted ? Theme.accentRose : Theme.accentCyan
+                                }
+                            }
+
+                            // Slider Bar
+                            Rectangle {
+                                id: ccVolTrack
+                                Layout.fillWidth: true
+                                height: 8
+                                radius: 4
+                                color: ShellState.plasticMode ? Qt.rgba(0.04, 0.07, 0.12, 0.75) : Theme.bgPill
+                                border.color: ShellState.plasticMode ? Qt.rgba(1, 1, 1, 0.12) : "transparent"
+                                border.width: ShellState.plasticMode ? 1 : 0
+                                clip: true
+
+                                Rectangle {
+                                    anchors.left: parent.left
+                                    anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
+                                    width: AudioService.muted ? 0 : Math.max(height, Math.round(parent.width * Math.min(1.0, AudioService.volume)))
+                                    radius: 4
+                                    color: AudioService.muted ? Theme.accentRose : Theme.accentCyan
+
+                                    gradient: Gradient {
+                                        orientation: Gradient.Vertical
+                                        GradientStop { position: 0.0; color: Qt.lighter(AudioService.muted ? Theme.accentRose : Theme.accentCyan, 1.35) }
+                                        GradientStop { position: 0.45; color: AudioService.muted ? Theme.accentRose : Theme.accentCyan }
+                                        GradientStop { position: 1.0; color: Qt.darker(AudioService.muted ? Theme.accentRose : Theme.accentCyan, 1.25) }
+                                    }
+
+                                    Rectangle {
+                                        anchors.top: parent.top
+                                        anchors.left: parent.left
+                                        anchors.right: parent.right
+                                        anchors.margins: 1
+                                        height: 2
+                                        radius: 1
+                                        color: Qt.rgba(1, 1, 1, 0.65)
+                                        visible: ShellState.plasticMode
+                                    }
+
+                                    Behavior on width {
+                                        NumberAnimation { duration: 100; easing.type: Easing.OutQuad }
+                                    }
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    function setFromPos(mouseX) {
+                                        const p = Math.max(0.0, Math.min(1.0, mouseX / ccVolTrack.width));
+                                        AudioService.setVolume(p);
+                                    }
+                                    onClicked: mouse => setFromPos(mouse.x)
+                                    onPositionChanged: mouse => { if (pressed) setFromPos(mouse.x); }
+                                    onWheel: wheel => {
+                                        if (wheel.angleDelta.y > 0) AudioService.changeVolume(0.05);
+                                        else AudioService.changeVolume(-0.05);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Brightness Slider Tile
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 52
+                    radius: 12
+                    color: ShellState.glassEnabled ? "transparent" : Theme.bgCard
+                    border.color: ShellState.glassEnabled ? "transparent" : Theme.borderDim
+                    border.width: ShellState.glassEnabled ? 0 : 1
+
+                    LiquidGlassSurface {
+                        radius: 12
+                        visible: ShellState.glassEnabled
+                        accentColor: Theme.accentAmber
+                        showShadow: true
+                    }
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        spacing: 12
+
+                        // Sun Icon Gem
+                        Item {
+                            width: 32
+                            height: 32
+
+                            LiquidGlassSurface {
+                                radius: 16
+                                visible: ShellState.glassEnabled
+                                accentColor: Theme.accentAmber
+                                hovered: ccBriIcoMouse.containsMouse
+                                showShadow: false
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: 16
+                                visible: !ShellState.glassEnabled
+                                color: ccBriIcoMouse.containsMouse ? Theme.bgHover : "transparent"
+                                border.color: Theme.borderDim
+                                border.width: 1
+                            }
+
+                            Icon {
+                                anchors.centerIn: parent
+                                name: "sun"
+                                size: 16
+                                color: Theme.accentAmber
+                            }
+
+                            MouseArea {
+                                id: ccBriIcoMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: BrightnessService.refresh(true)
+                            }
+                        }
+
+                        // Slider Track & Label Stack
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 4
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text {
+                                    text: "Display Brightness"
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    color: Theme.textPrimary
+                                }
+                                Item { Layout.fillWidth: true }
+                                Text {
+                                    text: BrightnessService.percent + "%"
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    color: Theme.accentAmber
+                                }
+                            }
+
+                            // Slider Bar
+                            Rectangle {
+                                id: ccBriTrack
+                                Layout.fillWidth: true
+                                height: 8
+                                radius: 4
+                                color: ShellState.plasticMode ? Qt.rgba(0.04, 0.07, 0.12, 0.75) : Theme.bgPill
+                                border.color: ShellState.plasticMode ? Qt.rgba(1, 1, 1, 0.12) : "transparent"
+                                border.width: ShellState.plasticMode ? 1 : 0
+                                clip: true
+
+                                Rectangle {
+                                    anchors.left: parent.left
+                                    anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
+                                    width: Math.max(height, Math.round(parent.width * (BrightnessService.percent / 100.0)))
+                                    radius: 4
+                                    color: Theme.accentAmber
+
+                                    gradient: Gradient {
+                                        orientation: Gradient.Vertical
+                                        GradientStop { position: 0.0; color: Qt.lighter(Theme.accentAmber, 1.35) }
+                                        GradientStop { position: 0.45; color: Theme.accentAmber }
+                                        GradientStop { position: 1.0; color: Qt.darker(Theme.accentAmber, 1.25) }
+                                    }
+
+                                    Rectangle {
+                                        anchors.top: parent.top
+                                        anchors.left: parent.left
+                                        anchors.right: parent.right
+                                        anchors.margins: 1
+                                        height: 2
+                                        radius: 1
+                                        color: Qt.rgba(1, 1, 1, 0.65)
+                                        visible: ShellState.plasticMode
+                                    }
+
+                                    Behavior on width {
+                                        NumberAnimation { duration: 100; easing.type: Easing.OutQuad }
+                                    }
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    function setFromPos(mouseX) {
+                                        const p = Math.max(0.01, Math.min(1.0, mouseX / ccBriTrack.width));
+                                        BrightnessService.setPercent(Math.round(p * 100));
+                                    }
+                                    onClicked: mouse => setFromPos(mouse.x)
+                                    onPositionChanged: mouse => { if (pressed) setFromPos(mouse.x); }
+                                    onWheel: wheel => {
+                                        if (wheel.angleDelta.y > 0) BrightnessService.increase();
+                                        else BrightnessService.decrease();
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -761,6 +1198,108 @@ PanelWindow {
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: TunedService.switchProfile(modelData.id)
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Battery & Power Statistics Card
+            Rectangle {
+                Layout.fillWidth: true
+                radius: 12
+                color: Theme.bgCard
+                border.color: Theme.borderDim
+                border.width: 1
+                visible: BatteryService.available
+                implicitHeight: batCol.implicitHeight + 20
+
+                ColumnLayout {
+                    id: batCol
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 8
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Icon {
+                            name: BatteryService.isCharging ? "battery-charging" : (BatteryService.percentage <= 20 ? "battery-warning" : "battery")
+                            size: 14
+                            color: BatteryService.isCharging ? Theme.accentEmerald : (BatteryService.percentage <= 20 ? Theme.accentRose : Theme.accentAmber)
+                        }
+
+                        Text {
+                            text: "BATTERY & POWER"
+                            font.family: Theme.fontMono
+                            font.pixelSize: 10
+                            font.bold: true
+                            color: Theme.textMuted
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        Text {
+                            text: BatteryService.percentage + "% (" + BatteryService.status + ")"
+                            font.family: Theme.fontMono
+                            font.pixelSize: 11
+                            font.bold: true
+                            color: BatteryService.isCharging ? Theme.accentEmerald : Theme.textPrimary
+                        }
+                    }
+
+                    // Progress bar
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 5
+                        radius: 2.5
+                        color: Theme.bgSurface
+                        clip: true
+
+                        Rectangle {
+                            width: parent.width * Math.max(0.02, Math.min(1.0, BatteryService.percentage / 100))
+                            height: parent.height
+                            color: BatteryService.isCharging ? Theme.accentEmerald : (BatteryService.percentage <= 20 ? Theme.accentRose : Theme.accentAmber)
+                        }
+                    }
+
+                    // Action Button: Open Power Statistics
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 30
+                        radius: 6
+                        color: openStatsBtnMouse.containsMouse ? Theme.bgHover : Theme.bgPill
+                        border.color: openStatsBtnMouse.containsMouse ? Theme.accentSky : Theme.borderDim
+                        border.width: 1
+
+                        RowLayout {
+                            anchors.centerIn: parent
+                            spacing: 6
+
+                            Icon {
+                                name: "activity"
+                                size: 12
+                                color: openStatsBtnMouse.containsMouse ? Theme.accentSky : Theme.textSecondary
+                            }
+
+                            Text {
+                                text: "Open Power Statistics (Graphs & History)"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 10
+                                font.bold: true
+                                color: openStatsBtnMouse.containsMouse ? Theme.textPrimary : Theme.textSecondary
+                            }
+                        }
+
+                        MouseArea {
+                            id: openStatsBtnMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                ShellState.controlCenterOpen = false;
+                                BatteryService.openPowerStatistics();
                             }
                         }
                     }

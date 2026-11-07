@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Wayland
 import "../theme"
 import "../services"
+import "../components"
 
 PanelWindow {
     id: root
@@ -11,11 +12,17 @@ PanelWindow {
     property bool alignLeft: false
     property bool use24Hour: ShellState.use24Hour
     property bool showSeconds: true
-    property bool showCalendar: true
+    property bool showCalendar: ShellState.clockShowCalendar
 
     onUse24HourChanged: {
         if (ShellState.use24Hour !== root.use24Hour) {
             ShellState.use24Hour = root.use24Hour;
+        }
+    }
+
+    onShowCalendarChanged: {
+        if (ShellState.clockShowCalendar !== root.showCalendar) {
+            ShellState.clockShowCalendar = root.showCalendar;
         }
     }
 
@@ -39,11 +46,11 @@ PanelWindow {
 
     property var now: new Date()
 
-    visible: ShellState.desktopClockVisible
+    visible: !ShellState.liteMode && ShellState.desktopClockVisible
 
     Timer {
         interval: 1000
-        running: true
+        running: root.visible
         repeat: true
         onTriggered: root.now = new Date()
     }
@@ -98,18 +105,15 @@ PanelWindow {
         width: 360
         implicitHeight: contentCol.implicitHeight + 36
         radius: 20
-        color: Theme.bgSurfaceGlass
-        border.color: Theme.borderGlow
-        border.width: 1
+        color: ShellState.glassEnabled ? "transparent" : Theme.bgSurfaceGlass
+        border.color: ShellState.glassEnabled ? "transparent" : Theme.borderGlow
+        border.width: ShellState.glassEnabled ? 0 : 1
 
-        // Subtle gradient sheen
-        Rectangle {
-            anchors.top: parent.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: 1
-            color: Qt.rgba(Theme.accentSky.r, Theme.accentSky.g, Theme.accentSky.b, 0.4)
-            radius: parent.radius
+        LiquidGlassSurface {
+            radius: 20
+            visible: ShellState.glassEnabled
+            accentColor: Theme.accentCyan
+            showShadow: true
         }
 
         ColumnLayout {
@@ -142,12 +146,7 @@ PanelWindow {
                             height: 6
                             radius: 3
                             color: Theme.accentEmerald
-
-                            SequentialAnimation on opacity {
-                                loops: Animation.Infinite
-                                PropertyAnimation { to: 0.4; duration: 1500 }
-                                PropertyAnimation { to: 1.0; duration: 1500 }
-                            }
+                            opacity: 0.9
                         }
 
                         Text {
@@ -182,7 +181,18 @@ PanelWindow {
                             height: 20
                             implicitWidth: text12.implicitWidth + 10
                             radius: 4
-                            color: !root.use24Hour ? Theme.accentViolet : (mouse12.containsMouse ? Theme.bgHover : "transparent")
+                            color: ShellState.plasticEnabled
+                                ? "transparent"
+                                : (!root.use24Hour ? Theme.accentViolet : (mouse12.containsMouse ? Theme.bgHover : "transparent"))
+
+                            LiquidGlassSurface {
+                                radius: 4
+                                visible: ShellState.plasticEnabled && (!root.use24Hour || mouse12.containsMouse)
+                                accentColor: Theme.accentViolet
+                                hovered: mouse12.containsMouse
+                                pressed: mouse12.pressed
+                                showShadow: false
+                            }
 
                             Behavior on color { ColorAnimation { duration: 150 } }
 
@@ -193,7 +203,7 @@ PanelWindow {
                                 font.family: Theme.fontMono
                                 font.pixelSize: 10
                                 font.bold: true
-                                color: !root.use24Hour ? Theme.textOnAccent : (mouse12.containsMouse ? Theme.textPrimary : Theme.textMuted)
+                                color: !root.use24Hour ? (ShellState.plasticEnabled ? Theme.accentViolet : Theme.textOnAccent) : (mouse12.containsMouse ? Theme.textPrimary : Theme.textMuted)
                             }
 
                             MouseArea {
@@ -210,7 +220,18 @@ PanelWindow {
                             height: 20
                             implicitWidth: text24.implicitWidth + 10
                             radius: 4
-                            color: root.use24Hour ? Theme.accentViolet : (mouse24.containsMouse ? Theme.bgHover : "transparent")
+                            color: ShellState.plasticEnabled
+                                ? "transparent"
+                                : (root.use24Hour ? Theme.accentViolet : (mouse24.containsMouse ? Theme.bgHover : "transparent"))
+
+                            LiquidGlassSurface {
+                                radius: 4
+                                visible: ShellState.plasticEnabled && (root.use24Hour || mouse24.containsMouse)
+                                accentColor: Theme.accentViolet
+                                hovered: mouse24.containsMouse
+                                pressed: mouse24.pressed
+                                showShadow: false
+                            }
 
                             Behavior on color { ColorAnimation { duration: 150 } }
 
@@ -221,7 +242,7 @@ PanelWindow {
                                 font.family: Theme.fontMono
                                 font.pixelSize: 10
                                 font.bold: true
-                                color: root.use24Hour ? Theme.textOnAccent : (mouse24.containsMouse ? Theme.textPrimary : Theme.textMuted)
+                                color: root.use24Hour ? (ShellState.plasticEnabled ? Theme.accentViolet : Theme.textOnAccent) : (mouse24.containsMouse ? Theme.textPrimary : Theme.textMuted)
                             }
 
                             MouseArea {
@@ -240,9 +261,22 @@ PanelWindow {
                     width: 26
                     height: 26
                     radius: 6
-                    color: root.showCalendar ? Theme.accentViolet : (calMouse.containsMouse ? Theme.bgHover : Theme.bgPill)
-                    border.color: root.showCalendar ? Theme.accentViolet : Theme.borderDim
-                    border.width: 1
+                    color: ShellState.plasticEnabled
+                        ? "transparent"
+                        : (root.showCalendar ? Theme.accentViolet : (calMouse.containsMouse ? Theme.bgHover : Theme.bgPill))
+                    border.color: ShellState.plasticEnabled
+                        ? "transparent"
+                        : (root.showCalendar ? Theme.accentViolet : Theme.borderDim)
+                    border.width: ShellState.plasticEnabled ? 0 : 1
+
+                    LiquidGlassSurface {
+                        radius: 6
+                        visible: ShellState.plasticEnabled
+                        accentColor: root.showCalendar ? Theme.accentViolet : Theme.accentCyan
+                        hovered: calMouse.containsMouse
+                        pressed: calMouse.pressed
+                        showShadow: false
+                    }
 
                     Text {
                         anchors.centerIn: parent
@@ -255,7 +289,7 @@ PanelWindow {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.showCalendar = !root.showCalendar
+                        onClicked: ShellState.clockShowCalendar = !ShellState.clockShowCalendar
                     }
                 }
             }

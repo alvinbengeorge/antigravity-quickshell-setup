@@ -4,14 +4,22 @@ import Quickshell
 import Quickshell.Widgets
 import Quickshell.Services.SystemTray
 import "../theme"
+import "../services"
+import "../components"
 
 Rectangle {
     id: root
     height: 34
     radius: height / 2
-    color: Theme.bgPill
-    border.color: Theme.borderDim
-    border.width: 1
+    color: ShellState.glassEnabled ? "transparent" : Theme.bgPill
+    border.color: ShellState.glassEnabled ? "transparent" : Theme.borderDim
+    border.width: ShellState.glassEnabled ? 0 : 1
+
+    LiquidGlassSurface {
+        radius: root.radius
+        visible: ShellState.glassEnabled
+        accentColor: Theme.accentCyan
+    }
 
     visible: SystemTray.items.values.length > 0
     implicitWidth: trayRow.implicitWidth + 16
@@ -24,11 +32,25 @@ Rectangle {
         Repeater {
             model: SystemTray.items.values
 
-            delegate: Rectangle {
+            delegate: Item {
                 width: 22
                 height: 22
-                radius: 6
-                color: itemMouse.containsMouse ? Theme.bgHover : "transparent"
+
+                LiquidGlassSurface {
+                    radius: 6
+                    visible: ShellState.plasticEnabled && itemMouse.containsMouse
+                    accentColor: Theme.accentCyan
+                    hovered: itemMouse.containsMouse
+                    pressed: itemMouse.pressed
+                    showShadow: false
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 6
+                    visible: !ShellState.plasticEnabled
+                    color: itemMouse.containsMouse ? Theme.bgHover : "transparent"
+                }
 
                 MouseArea {
                     id: itemMouse

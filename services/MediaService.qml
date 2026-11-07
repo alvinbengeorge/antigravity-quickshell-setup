@@ -26,9 +26,11 @@ Singleton {
     readonly property string trackAlbum: activePlayer ? (activePlayer.trackAlbum || "") : ""
     readonly property string trackArtUrl: activePlayer ? (activePlayer.trackArtUrl || "") : ""
 
-    readonly property real position: activePlayer ? (activePlayer.position || 0) : 0
+    property real currentPosition: 0.0
+
+    readonly property real position: currentPosition
     readonly property real length: activePlayer ? (activePlayer.length || 0) : 0
-    readonly property real progress: length > 0 ? Math.min(1.0, Math.max(0.0, position / length)) : 0.0
+    readonly property real progress: length > 0 ? Math.min(1.0, Math.max(0.0, currentPosition / length)) : 0.0
 
     readonly property bool canGoNext: activePlayer ? activePlayer.canGoNext : false
     readonly property bool canGoPrevious: activePlayer ? activePlayer.canGoPrevious : false
@@ -43,8 +45,80 @@ Singleton {
         return mins + ":" + (secs < 10 ? "0" : "") + secs;
     }
 
-    readonly property string positionStr: formatTime(position)
+    readonly property string positionStr: formatTime(currentPosition)
     readonly property string lengthStr: formatTime(length)
+
+    // Live position query from playerctl
+    Process {
+        id: posQueryProc
+        running: false
+        command: ["playerctl", "position"]
+        stdout: SplitParser {
+            onRead: data => {
+                const val = parseFloat(data.trim());
+                if (!isNaN(val) && val >= 0) {
+                    root.currentPosition = val;
+                }
+            }
+        }
+    }
+
+    // Smooth second-by-second ticking when playing
+    Timer {
+        id: posTickTimer
+        interval: 1000
+        running: root.isPlaying
+        repeat: true
+        onTriggered: {
+            root.currentPosition += 1.0;
+            // Every 3 seconds resync with actual playerctl to eliminate any drift
+            if (Math.round(root.currentPosition) % 3 === 0) {
+                if (!posQueryProc.running) {
+                    posQueryProc.running = true;
+                }
+            }
+        }
+    }
+
+    function syncPosition() {
+        if (!posQueryProc.running) {
+            posQueryProc.running = true;
+        }
+    }
+
+    onActivePlayerChanged: syncPosition()
+    onIsPlayingChanged: syncPosition()
+    onTrackTitleChanged: syncPosition()
+
+    property string artColor: ""
+    property string trackArtLocal: "/tmp/quickshell_media_art.jpg"
+
+    Process {
+        id: colorExtractorProc
+        running: false
+        stdout: SplitParser {
+            onRead: data => {
+                try {
+                    const res = JSON.parse(data.trim());
+                    if (res && res.color) {
+                        root.artColor = res.color;
+                    }
+                } catch(e) {}
+            }
+        }
+    }
+
+    onTrackArtUrlChanged: {
+        if (trackArtUrl && trackArtUrl.length > 0) {
+            colorExtractorProc.command = [
+                Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/extract_media_color.py",
+                trackArtUrl
+            ];
+            colorExtractorProc.running = true;
+        } else {
+            artColor = "";
+        }
+    }
 
     Process {
         id: cmdProc
@@ -109,6 +183,7 @@ Singleton {
     function seekFraction(fraction) {
         if (length > 0) {
             const target = fraction * length;
+            currentPosition = target;
             if (activePlayer) {
                 try {
                     activePlayer.position = target;
@@ -119,5 +194,19 @@ Singleton {
             }
             runCmd(["playerctl", "position", target.toString()]);
         }
+    }
+
+    function seekRelative(offsetSeconds) {
+        currentPosition = Math.max(0, Math.min(length, currentPosition + offsetSeconds));
+        if (activePlayer) {
+            try {
+                if (typeof activePlayer.position !== "undefined" && length > 0) {
+                    activePlayer.position = currentPosition;
+                    return;
+                }
+            } catch (e) {}
+        }
+        const sign = offsetSeconds >= 0 ? "+" : "-";
+        runCmd(["playerctl", "position", Math.abs(offsetSeconds).toString() + sign]);
     }
 }

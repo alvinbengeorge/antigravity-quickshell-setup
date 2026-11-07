@@ -9,11 +9,40 @@ Rectangle {
     id: root
     height: 36
     radius: height / 2
-    color: (bgMouse.containsMouse || brandMouse.containsMouse) ? Theme.bgHover : Theme.bgPill
-    border.color: AntigravityService.isActive
-        ? Theme.accentCyan
-        : (MediaService.hasMedia ? Theme.accentViolet : ((bgMouse.containsMouse || brandMouse.containsMouse) ? Theme.accentSky : Theme.borderDim))
-    border.width: 1
+    color: ShellState.glassEnabled ? "transparent" : ((bgMouse.containsMouse || brandMouse.containsMouse) ? Theme.bgHover : Theme.bgPill)
+    border.color: ShellState.glassEnabled ? "transparent" : (AntigravityService.isActive ? Theme.accentCyan : (MediaService.hasMedia ? Theme.accentViolet : ((bgMouse.containsMouse || brandMouse.containsMouse) ? Theme.accentSky : Theme.borderDim)))
+    border.width: ShellState.glassEnabled ? 0 : 1
+
+    // Live audio reactive bindings
+    readonly property real liveB0: AudioVisualizerService.b0
+    readonly property real liveB1: AudioVisualizerService.b1
+    readonly property real liveB2: AudioVisualizerService.b2
+    readonly property real liveB3: AudioVisualizerService.b3
+
+    readonly property color activeMediaAccent: (MediaService.hasMedia && MediaService.isPlaying && MediaService.artColor !== "")
+        ? MediaService.artColor
+        : (AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet)
+
+    // Subtle living bass-pulse ambient glow
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: -1
+        radius: root.radius + 1
+        z: -2
+        color: "transparent"
+        border.color: root.activeMediaAccent
+        border.width: 1
+        opacity: MediaService.isPlaying ? (0.18 + root.liveB0 * 0.42) : 0.0
+        Behavior on opacity { NumberAnimation { duration: 40; easing.type: Easing.OutCubic } }
+        Behavior on border.color { ColorAnimation { duration: 250 } }
+    }
+
+    LiquidGlassSurface {
+        radius: root.radius
+        visible: ShellState.glassEnabled
+        accentColor: MediaService.isPlaying ? root.activeMediaAccent : (AntigravityService.isActive ? Theme.accentCyan : (MediaService.hasMedia ? Theme.accentViolet : Theme.accentSky))
+        hovered: bgMouse.containsMouse || brandMouse.containsMouse
+    }
 
     implicitWidth: Math.min(500, contentRow.implicitWidth + 20)
 
@@ -28,10 +57,12 @@ Rectangle {
         z: -1
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         onClicked: (mouse) => {
             if (mouse.button === Qt.RightButton) {
                 Theme.nextTheme();
+            } else if (mouse.button === Qt.MiddleButton) {
+                ShellState.toggleOmnibar();
             } else {
                 ShellState.toggleAntigravityPanel();
             }
@@ -55,32 +86,131 @@ Rectangle {
                 anchors.fill: parent
                 spacing: 9
 
-                // Pulsing Antigravity Star Icon
+                // Reactive Audio Spectrum Visualizer / Antigravity Gem
                 Item {
-                    width: 18
-                    height: 18
+                    id: gemContainer
+                    width: 22
+                    height: 22
 
+                    // Quick volume control by scrolling wheel over the gem
+                    MouseArea {
+                        anchors.fill: parent
+                        z: 10
+                        acceptedButtons: Qt.NoButton
+                        hoverEnabled: true
+                        onWheel: wheel => {
+                            if (wheel.angleDelta.y > 0) {
+                                AudioService.changeVolume(0.05);
+                            } else if (wheel.angleDelta.y < 0) {
+                                AudioService.changeVolume(-0.05);
+                            }
+                        }
+                    }
+
+                    LiquidGlassSurface {
+                        radius: 11
+                        visible: ShellState.plasticEnabled
+                        accentColor: MediaService.isPlaying ? root.activeMediaAccent : (AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet)
+                        hovered: brandMouse.containsMouse
+                        showShadow: false
+                    }
+
+                    // Background soft glow
                     Rectangle {
                         id: pulseGlow
                         anchors.centerIn: parent
                         width: 18
                         height: 18
                         radius: 9
-                        color: AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet
-                        opacity: 0.2
+                        visible: !ShellState.plasticEnabled
+                        color: MediaService.isPlaying ? root.activeMediaAccent : (AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet)
+                        opacity: MediaService.isPlaying ? (0.15 + (root.liveB0 + root.liveB1) * 0.15) : (AntigravityService.isActive ? 0.25 : 0.15)
+                        scale: MediaService.isPlaying ? (1.0 + root.liveB0 * 0.08) : 1.0
 
-                        SequentialAnimation on scale {
-                            running: AntigravityService.isActive || MediaService.isPlaying
-                            loops: Animation.Infinite
-                            PropertyAnimation { to: 1.5; duration: 900; easing.type: Easing.InOutQuad }
-                            PropertyAnimation { to: 1.0; duration: 900; easing.type: Easing.InOutQuad }
+                        Behavior on opacity { NumberAnimation { duration: 80 } }
+                        Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutCubic } }
+                        Behavior on color { ColorAnimation { duration: 250 } }
+                    }
+
+                    // 4-Band Live Spectrum Equalizer Visualizer (Active during playback)
+                    Item {
+                        anchors.centerIn: parent
+                        width: 16
+                        height: 14
+                        visible: MediaService.isPlaying
+
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 1.8
+
+                            // Band 0: Sub-bass & kick drum
+                            Item {
+                                width: 2.2
+                                height: 14
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: 2.2
+                                    height: Math.min(13.0, Math.max(2.5, 2.5 + root.liveB0 * 10.5))
+                                    radius: 1.1
+                                    color: root.activeMediaAccent
+                                    Behavior on height { NumberAnimation { duration: 40; easing.type: Easing.OutCubic } }
+                                    Behavior on color { ColorAnimation { duration: 250 } }
+                                }
+                            }
+
+                            // Band 1: Bass & low-mids
+                            Item {
+                                width: 2.2
+                                height: 14
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: 2.2
+                                    height: Math.min(13.0, Math.max(2.5, 2.5 + root.liveB1 * 10.5))
+                                    radius: 1.1
+                                    color: root.activeMediaAccent
+                                    Behavior on height { NumberAnimation { duration: 40; easing.type: Easing.OutCubic } }
+                                    Behavior on color { ColorAnimation { duration: 250 } }
+                                }
+                            }
+
+                            // Band 2: Midrange / Vocals
+                            Item {
+                                width: 2.2
+                                height: 14
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: 2.2
+                                    height: Math.min(13.0, Math.max(2.5, 2.5 + root.liveB2 * 10.5))
+                                    radius: 1.1
+                                    color: root.activeMediaAccent
+                                    Behavior on height { NumberAnimation { duration: 40; easing.type: Easing.OutCubic } }
+                                    Behavior on color { ColorAnimation { duration: 250 } }
+                                }
+                            }
+
+                            // Band 3: Treble / Hi-hats
+                            Item {
+                                width: 2.2
+                                height: 14
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: 2.2
+                                    height: Math.min(13.0, Math.max(2.5, 2.5 + root.liveB3 * 10.5))
+                                    radius: 1.1
+                                    color: root.activeMediaAccent
+                                    Behavior on height { NumberAnimation { duration: 40; easing.type: Easing.OutCubic } }
+                                    Behavior on color { ColorAnimation { duration: 250 } }
+                                }
+                            }
                         }
                     }
 
+                    // Clean Static Icon (Shown when paused / no media)
                     Icon {
                         anchors.centerIn: parent
-                        name: MediaService.isPlaying ? "music" : "sparkles"
-                        size: 13
+                        visible: !MediaService.isPlaying
+                        name: MediaService.hasMedia ? "music" : (AntigravityService.isActive ? "sparkles" : "sparkles")
+                        size: 12
                         color: AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet
                     }
                 }
@@ -93,18 +223,29 @@ Rectangle {
                 }
 
                 // Status Badge Pill (Shows active agent or theme, hidden during media playback to keep the bar balanced)
-                Rectangle {
+                Item {
                     height: 18
-                    radius: 9
-                    color: AntigravityService.isActive
-                        ? Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.18)
-                        : Qt.rgba(Theme.accentViolet.r, Theme.accentViolet.g, Theme.accentViolet.b, 0.16)
-                    border.color: AntigravityService.isActive
-                        ? Theme.accentCyan
-                        : Qt.rgba(Theme.accentViolet.r, Theme.accentViolet.g, Theme.accentViolet.b, 0.40)
-                    border.width: 1
+                    implicitWidth: statusText.implicitWidth + 14
                     visible: AntigravityService.isActive || !MediaService.hasMedia
-                    implicitWidth: statusText.implicitWidth + 12
+
+                    LiquidGlassSurface {
+                        radius: 9
+                        visible: ShellState.glassEnabled
+                        accentColor: AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet
+                    }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 9
+                        visible: !ShellState.glassEnabled
+                        color: AntigravityService.isActive
+                            ? Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.18)
+                            : Qt.rgba(Theme.accentViolet.r, Theme.accentViolet.g, Theme.accentViolet.b, 0.16)
+                        border.color: AntigravityService.isActive
+                            ? Theme.accentCyan
+                            : Qt.rgba(Theme.accentViolet.r, Theme.accentViolet.g, Theme.accentViolet.b, 0.40)
+                        border.width: 1
+                    }
 
                     Text {
                         id: statusText
@@ -118,14 +259,25 @@ Rectangle {
                 }
 
                 // Steps badge if any
-                Rectangle {
+                Item {
                     height: 18
-                    radius: 9
-                    color: Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.18)
-                    border.color: Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.40)
-                    border.width: 1
+                    implicitWidth: stepText.implicitWidth + 14
                     visible: AntigravityService.stepCount > 0
-                    implicitWidth: stepText.implicitWidth + 12
+
+                    LiquidGlassSurface {
+                        radius: 9
+                        visible: ShellState.glassEnabled
+                        accentColor: Theme.accentEmerald
+                    }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 9
+                        visible: !ShellState.glassEnabled
+                        color: Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.18)
+                        border.color: Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.40)
+                        border.width: 1
+                    }
 
                     Text {
                         id: stepText
@@ -135,6 +287,49 @@ Rectangle {
                         font.pixelSize: 9
                         font.bold: true
                         color: Theme.accentEmerald
+                    }
+                }
+
+                // Omnibar Shortcut Trigger Pill
+                Item {
+                    height: 18
+                    implicitWidth: omniTriggerText.implicitWidth + 12
+                    visible: !MediaService.hasMedia
+
+                    LiquidGlassSurface {
+                        radius: 6
+                        visible: ShellState.plasticEnabled
+                        accentColor: Theme.accentCyan
+                        hovered: omniTriggerMouse.containsMouse
+                        pressed: omniTriggerMouse.pressed
+                        showShadow: false
+                    }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 5
+                        visible: !ShellState.plasticEnabled
+                        color: omniTriggerMouse.containsMouse ? Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.25) : Qt.rgba(Theme.borderDim.r, Theme.borderDim.g, Theme.borderDim.b, 0.4)
+                        border.color: omniTriggerMouse.containsMouse ? Theme.accentCyan : Theme.borderDim
+                        border.width: 1
+                    }
+
+                    Text {
+                        id: omniTriggerText
+                        anchors.centerIn: parent
+                        text: "⌘K"
+                        font.family: Theme.fontMono
+                        font.pixelSize: 9
+                        font.bold: true
+                        color: omniTriggerMouse.containsMouse ? Theme.accentCyan : Theme.textMuted
+                    }
+
+                    MouseArea {
+                        id: omniTriggerMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: ShellState.toggleOmnibar()
                     }
                 }
             }
@@ -180,9 +375,10 @@ Rectangle {
                     text: MediaService.trackTitle || "Playing"
                     font.family: Theme.fontFamily
                     font.pixelSize: 11
-                    color: titleMouse.containsMouse ? Theme.accentCyan : Theme.accentSky
+                    color: titleMouse.containsMouse ? root.activeMediaAccent : Theme.textPrimary
                     elide: Text.ElideRight
                     width: parent.width
+                    Behavior on color { ColorAnimation { duration: 150 } }
                 }
 
                 MouseArea {
@@ -190,7 +386,14 @@ Rectangle {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: ShellState.toggleControlCenter()
+                    onClicked: ShellState.toggleMediaCard()
+                    onWheel: wheel => {
+                        if (wheel.angleDelta.y > 0) {
+                            MediaService.seekRelative(5);
+                        } else if (wheel.angleDelta.y < 0) {
+                            MediaService.seekRelative(-5);
+                        }
+                    }
                 }
             }
 
@@ -199,11 +402,25 @@ Rectangle {
                 spacing: 4
 
                 // Prev Button
-                Rectangle {
+                Item {
                     width: 22
                     height: 22
-                    radius: 11
-                    color: prevMouse.containsMouse ? Theme.bgHover : "transparent"
+
+                    LiquidGlassSurface {
+                        radius: 11
+                        visible: ShellState.plasticEnabled && prevMouse.containsMouse
+                        accentColor: Theme.accentCyan
+                        hovered: prevMouse.containsMouse
+                        pressed: prevMouse.pressed
+                        showShadow: false
+                    }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 11
+                        visible: !ShellState.plasticEnabled
+                        color: prevMouse.containsMouse ? Theme.bgHover : "transparent"
+                    }
 
                     Icon {
                         anchors.centerIn: parent
@@ -222,26 +439,41 @@ Rectangle {
                     }
                 }
 
-                // Play / Pause Button
-                Rectangle {
+                // Play / Pause Button (Plastic Gem)
+                Item {
                     width: 24
                     height: 24
-                    radius: 12
-                    color: playMouse.containsMouse ? Theme.bgHover : Theme.bgCard
-                    border.color: playMouse.containsMouse ? Theme.accentCyan : Theme.accentViolet
-                    border.width: 1
+
+                    LiquidGlassSurface {
+                        radius: 12
+                        visible: ShellState.plasticEnabled
+                        accentColor: MediaService.isPlaying ? Theme.accentEmerald : Theme.accentViolet
+                        hovered: playMouse.containsMouse
+                        pressed: playMouse.pressed
+                        showShadow: false
+                    }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 12
+                        visible: !ShellState.plasticEnabled
+                        color: playMouse.containsMouse ? Theme.bgHover : Theme.bgCard
+                        border.color: playMouse.containsMouse ? Theme.accentCyan : Theme.accentViolet
+                        border.width: 1
+                    }
 
                     Icon {
                         anchors.centerIn: parent
                         name: MediaService.isPlaying ? "pause" : "play"
                         size: 11
-                        color: playMouse.containsMouse ? Theme.accentCyan : Theme.accentViolet
+                        color: ShellState.plasticEnabled
+                            ? (MediaService.isPlaying ? Theme.accentEmerald : Theme.accentViolet)
+                            : (playMouse.containsMouse ? Theme.accentCyan : Theme.accentViolet)
                     }
 
                     MouseArea {
                         id: playMouse
                         anchors.fill: parent
-                        anchors.margins: -2
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: MediaService.playPause()
@@ -249,11 +481,25 @@ Rectangle {
                 }
 
                 // Next Button
-                Rectangle {
+                Item {
                     width: 22
                     height: 22
-                    radius: 11
-                    color: nextMouse.containsMouse ? Theme.bgHover : "transparent"
+
+                    LiquidGlassSurface {
+                        radius: 11
+                        visible: ShellState.plasticEnabled && nextMouse.containsMouse
+                        accentColor: Theme.accentCyan
+                        hovered: nextMouse.containsMouse
+                        pressed: nextMouse.pressed
+                        showShadow: false
+                    }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 11
+                        visible: !ShellState.plasticEnabled
+                        color: nextMouse.containsMouse ? Theme.bgHover : "transparent"
+                    }
 
                     Icon {
                         anchors.centerIn: parent

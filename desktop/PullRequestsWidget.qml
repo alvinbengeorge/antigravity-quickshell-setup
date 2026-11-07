@@ -5,12 +5,13 @@ import Quickshell
 import Quickshell.Wayland
 import "../theme"
 import "../services"
+import "../components"
 
 PanelWindow {
     id: root
 
     property bool alignLeft: false
-    visible: ShellState.desktopPullRequestsVisible
+    visible: !ShellState.liteMode && ShellState.desktopPullRequestsVisible
 
     anchors {
         top: true
@@ -40,18 +41,15 @@ PanelWindow {
         width: 300
         implicitHeight: contentCol.implicitHeight + 24
         radius: 14
-        color: Theme.bgSurfaceGlass
-        border.color: Theme.borderGlow
-        border.width: 1
+        color: ShellState.glassEnabled ? "transparent" : Theme.bgSurfaceGlass
+        border.color: ShellState.glassEnabled ? "transparent" : Theme.borderGlow
+        border.width: ShellState.glassEnabled ? 0 : 1
 
-        // Top gradient sheen accent line
-        Rectangle {
-            anchors.top: parent.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: 1
-            color: Qt.rgba(Theme.accentSky.r, Theme.accentSky.g, Theme.accentSky.b, 0.45)
-            radius: parent.radius
+        LiquidGlassSurface {
+            radius: 14
+            visible: ShellState.glassEnabled
+            accentColor: Theme.accentViolet
+            showShadow: true
         }
 
         ColumnLayout {
@@ -65,14 +63,21 @@ PanelWindow {
                 Layout.fillWidth: true
                 spacing: 6
 
-                // PR Branch Icon
+                // PR Branch Icon (Plastic Gem)
                 Rectangle {
                     width: 24
                     height: 24
                     radius: 12
-                    color: Qt.rgba(Theme.accentSky.r, Theme.accentSky.g, Theme.accentSky.b, 0.12)
-                    border.color: Theme.accentSky
-                    border.width: 1
+                    color: ShellState.plasticEnabled ? "transparent" : Qt.rgba(Theme.accentSky.r, Theme.accentSky.g, Theme.accentSky.b, 0.12)
+                    border.color: ShellState.plasticEnabled ? "transparent" : Theme.accentSky
+                    border.width: ShellState.plasticEnabled ? 0 : 1
+
+                    LiquidGlassSurface {
+                        radius: 12
+                        visible: ShellState.plasticEnabled
+                        accentColor: Theme.accentSky
+                        showShadow: false
+                    }
 
                     Text {
                         anchors.centerIn: parent

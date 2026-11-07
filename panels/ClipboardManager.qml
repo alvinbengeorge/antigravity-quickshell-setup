@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Wayland
 import "../theme"
 import "../services"
+import "../components"
 
 PanelWindow {
     id: clipWindow
@@ -53,9 +54,16 @@ PanelWindow {
         height: 560
         anchors.centerIn: parent
         radius: Theme.cardRadius
-        color: Theme.bgModal
-        border.color: Theme.borderGlow
-        border.width: 1
+        color: ShellState.glassEnabled ? "transparent" : Theme.bgModal
+        border.color: ShellState.glassEnabled ? "transparent" : Theme.borderGlow
+        border.width: ShellState.glassEnabled ? 0 : 1
+
+        LiquidGlassSurface {
+            radius: Theme.cardRadius
+            visible: ShellState.glassEnabled
+            accentColor: Theme.accentViolet
+            showShadow: true
+        }
 
         MouseArea {
             anchors.fill: parent
@@ -72,9 +80,16 @@ PanelWindow {
                 Layout.fillWidth: true
                 height: 46
                 radius: 10
-                color: Theme.bgBase
-                border.color: searchInput.activeFocus ? Theme.accentCyan : Theme.borderDim
-                border.width: 1
+                color: ShellState.plasticEnabled ? "transparent" : Theme.bgBase
+                border.color: ShellState.plasticEnabled ? "transparent" : (searchInput.activeFocus ? Theme.accentCyan : Theme.borderDim)
+                border.width: ShellState.plasticEnabled ? 0 : 1
+
+                LiquidGlassSurface {
+                    radius: 10
+                    visible: ShellState.plasticEnabled
+                    accentColor: searchInput.activeFocus ? Theme.accentCyan : Theme.borderDim
+                    showShadow: false
+                }
 
                 RowLayout {
                     anchors.fill: parent
@@ -193,7 +208,18 @@ PanelWindow {
                             height: 52
                             radius: 8
                             readonly property bool isCurrent: clipList.currentIndex === index || ClipboardService.selectedId === modelData.id
-                            color: isCurrent ? Theme.bgActive : (itemMouse.containsMouse ? Theme.bgHover : "transparent")
+                            color: ShellState.plasticEnabled
+                                ? "transparent"
+                                : (isCurrent ? Theme.bgActive : (itemMouse.containsMouse ? Theme.bgHover : "transparent"))
+
+                            LiquidGlassSurface {
+                                radius: 8
+                                visible: ShellState.plasticEnabled && (itemDelegate.isCurrent || itemMouse.containsMouse)
+                                accentColor: itemDelegate.isCurrent ? Theme.accentViolet : Theme.accentCyan
+                                hovered: itemMouse.containsMouse
+                                pressed: itemMouse.pressed
+                                showShadow: false
+                            }
 
                             Behavior on color { ColorAnimation { duration: 100 } }
 

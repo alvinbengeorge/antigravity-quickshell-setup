@@ -50,7 +50,15 @@ PanelWindow {
 
             ActiveWindowPill {
                 id: activeWinPill
-                maxAllowedWidth: Math.max(60, leftRow.width - wsPill.width - (trayPill.visible ? trayPill.width + leftRow.spacing : 0) - leftRow.spacing - 12)
+                maxAllowedWidth: Math.max(60, leftRow.width - wsPill.width - (dockerPill.visible ? dockerPill.width + leftRow.spacing : 0) - (waPill.visible ? waPill.width + leftRow.spacing : 0) - (trayPill.visible ? trayPill.width + leftRow.spacing : 0) - leftRow.spacing - 12)
+            }
+
+            DockerPill {
+                id: dockerPill
+            }
+
+            WhatsAppPill {
+                id: waPill
             }
 
             SystemTrayPill {

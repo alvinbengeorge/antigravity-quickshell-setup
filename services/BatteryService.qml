@@ -43,6 +43,18 @@ Singleton {
         }
     }
 
+    Process {
+        id: openStatsProc
+        running: false
+        command: ["bash", "-c", "python3 -c \"\nimport subprocess, json\ntry:\n    clients = json.loads(subprocess.check_output(['hyprctl', 'clients', '-j']))\n    p = next((c for c in clients if 'org.gnome.PowerStats' in c.get('class', '')), None)\n    if p:\n        subprocess.run(['hyprctl', 'repl', f\\\"hl.dispatch(hl.dsp.focus({{ window = '{p['address']}' }}))\\\"], capture_output=True)\n    else:\n        subprocess.Popen(['setsid', 'gnome-power-statistics'])\nexcept Exception:\n    subprocess.Popen(['setsid', 'gnome-power-statistics'])\n\""]
+    }
+
+    function openPowerStatistics() {
+        if (!openStatsProc.running) {
+            openStatsProc.running = true;
+        }
+    }
+
     Timer {
         id: batTimer
         interval: 4000

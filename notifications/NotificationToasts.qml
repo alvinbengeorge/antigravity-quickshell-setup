@@ -41,9 +41,16 @@ PanelWindow {
                 id: toastCard
                 Layout.fillWidth: true
                 radius: Theme.cardRadius
-                color: Theme.bgSurfaceGlass
-                border.color: modelData.urgency === 2 ? Theme.accentRose : Theme.borderGlow
-                border.width: 1
+                color: ShellState.glassEnabled ? "transparent" : Theme.bgSurfaceGlass
+                border.color: ShellState.glassEnabled ? "transparent" : (modelData.urgency === 2 ? Theme.accentRose : Theme.borderGlow)
+                border.width: ShellState.glassEnabled ? 0 : 1
+
+                LiquidGlassSurface {
+                    radius: Theme.cardRadius
+                    visible: ShellState.glassEnabled
+                    accentColor: modelData.urgency === 2 ? Theme.accentRose : Theme.accentCyan
+                    showShadow: true
+                }
 
                 implicitHeight: contentCol.implicitHeight + 24
 

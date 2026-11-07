@@ -9,19 +9,28 @@ Singleton {
     property int cpuPercent: 0
     property int memPercent: 0
     property int swapPercent: 0
+    property string netDown: "0B"
+    property string netUp: "0B"
 
     Process {
         id: statProc
         running: false
-        command: ["python3", "-c", "import psutil; print(f'{int(psutil.cpu_percent(interval=0.1))} {int(psutil.virtual_memory().percent)} {int(psutil.swap_memory().percent)}')"]
+        command: ["python3", Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/fast_system_stats.py"]
         stdout: StdioCollector {
             id: collector
             onStreamFinished: {
-                const parts = collector.text.trim().split(" ");
-                if (parts.length >= 3) {
-                    root.cpuPercent = parseInt(parts[0]) || 0;
-                    root.memPercent = parseInt(parts[1]) || 0;
-                    root.swapPercent = parseInt(parts[2]) || 0;
+                try {
+                    const text = collector.text.trim();
+                    if (text.length > 0) {
+                        const data = JSON.parse(text);
+                        root.cpuPercent = data.cpu ?? 0;
+                        root.memPercent = data.mem ?? 0;
+                        root.swapPercent = data.swap ?? 0;
+                        root.netDown = data.down ?? "0B";
+                        root.netUp = data.up ?? "0B";
+                    }
+                } catch (e) {
+                    console.log("SystemStats parse error:", e);
                 }
             }
         }
