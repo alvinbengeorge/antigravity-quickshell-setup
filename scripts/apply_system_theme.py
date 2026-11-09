@@ -138,6 +138,15 @@ def apply_theme(theme_key):
     except Exception:
         pass
 
+    # 7. Synchronize Hyprland active window borders & shadow glow
+    try:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        hyprland_script = os.path.join(script_dir, "apply_hyprland_theme.py")
+        if os.path.exists(hyprland_script):
+            subprocess.run(["python3", hyprland_script, theme_key], capture_output=True)
+    except Exception:
+        pass
+
 def main():
     theme_key = sys.argv[1] if len(sys.argv) > 1 else "deepspace"
     apply_theme(theme_key)

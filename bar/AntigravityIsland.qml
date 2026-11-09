@@ -9,9 +9,17 @@ Rectangle {
     id: root
     height: 36
     radius: height / 2
-    color: ShellState.glassEnabled ? "transparent" : ((bgMouse.containsMouse || brandMouse.containsMouse) ? Theme.bgHover : Theme.bgPill)
-    border.color: ShellState.glassEnabled ? "transparent" : (AntigravityService.isActive ? Theme.accentCyan : (MediaService.hasMedia ? Theme.accentViolet : ((bgMouse.containsMouse || brandMouse.containsMouse) ? Theme.accentSky : Theme.borderDim)))
-    border.width: ShellState.glassEnabled ? 0 : 1
+    color: ShellState.glassEnabled ? "transparent" : (
+        MediaService.isPlaying
+            ? Qt.tint(Theme.bgPill, Qt.alpha(root.currentMediaAccent, 0.12 + root.liveB0 * 0.10))
+            : ((bgMouse.containsMouse || brandMouse.containsMouse) ? Theme.bgHover : Theme.bgPill)
+    )
+    border.color: ShellState.glassEnabled ? "transparent" : (
+        MediaService.isPlaying
+            ? root.currentMediaAccent
+            : (AntigravityService.isActive ? Theme.accentCyan : (MediaService.hasMedia ? Theme.accentViolet : ((bgMouse.containsMouse || brandMouse.containsMouse) ? Theme.accentSky : Theme.borderDim)))
+    )
+    border.width: ShellState.glassEnabled ? 0 : (MediaService.isPlaying ? (1.0 + root.liveB0 * 1.2) : 1)
 
     // Live audio reactive bindings
     readonly property real liveB0: AudioVisualizerService.b0
@@ -19,28 +27,62 @@ Rectangle {
     readonly property real liveB2: AudioVisualizerService.b2
     readonly property real liveB3: AudioVisualizerService.b3
 
-    readonly property color activeMediaAccent: (MediaService.hasMedia && MediaService.isPlaying && MediaService.artColor !== "")
+    // Target accent color (dynamic album art color when playing, else Antigravity or Theme accent)
+    readonly property color targetMediaAccent: (MediaService.hasMedia && MediaService.isPlaying && MediaService.artColor !== "")
         ? MediaService.artColor
-        : (AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet)
+        : (AntigravityService.isActive ? Theme.accentCyan : (MediaService.hasMedia ? Theme.accentViolet : Theme.accentSky))
 
-    // Subtle living bass-pulse ambient glow
+    // Silky liquid color fade in/out
+    property color currentMediaAccent: targetMediaAccent
+    Behavior on currentMediaAccent {
+        ColorAnimation {
+            duration: 750
+            easing.type: Easing.OutCubic
+        }
+    }
+
+    readonly property alias activeMediaAccent: root.currentMediaAccent
+
+    // Evident living bass-pulse outer aura bloom (expands and shines outward with sub-bass/kick)
     Rectangle {
+        id: bassAura
+        anchors.fill: parent
+        anchors.margins: MediaService.isPlaying ? (-2.0 - root.liveB0 * 5.0) : -1.0
+        radius: root.radius + (MediaService.isPlaying ? (2.0 + root.liveB0 * 5.0) : 1.0)
+        z: -3
+        color: Qt.alpha(root.currentMediaAccent, MediaService.isPlaying ? (0.10 + root.liveB0 * 0.28) : 0.0)
+        border.color: Qt.alpha(root.currentMediaAccent, MediaService.isPlaying ? (0.35 + root.liveB0 * 0.55) : 0.0)
+        border.width: MediaService.isPlaying ? (1.5 + root.liveB0 * 2.0) : 0.0
+        visible: MediaService.isPlaying
+
+        Behavior on anchors.margins { NumberAnimation { duration: 45; easing.type: Easing.OutQuad } }
+        Behavior on radius { NumberAnimation { duration: 45; easing.type: Easing.OutQuad } }
+        Behavior on border.width { NumberAnimation { duration: 45; easing.type: Easing.OutQuad } }
+        Behavior on color { ColorAnimation { duration: 80 } }
+        Behavior on border.color { ColorAnimation { duration: 80 } }
+    }
+
+    // Direct perimeter bass rim
+    Rectangle {
+        id: bassRim
         anchors.fill: parent
         anchors.margins: -1
         radius: root.radius + 1
         z: -2
         color: "transparent"
-        border.color: root.activeMediaAccent
-        border.width: 1
-        opacity: MediaService.isPlaying ? (0.18 + root.liveB0 * 0.42) : 0.0
-        Behavior on opacity { NumberAnimation { duration: 40; easing.type: Easing.OutCubic } }
+        border.color: root.currentMediaAccent
+        border.width: MediaService.isPlaying ? (1.5 + root.liveB0 * 1.5) : 1.0
+        opacity: MediaService.isPlaying ? (0.45 + root.liveB0 * 0.50) : 0.0
+
+        Behavior on border.width { NumberAnimation { duration: 45; easing.type: Easing.OutQuad } }
+        Behavior on opacity { NumberAnimation { duration: 45; easing.type: Easing.OutQuad } }
         Behavior on border.color { ColorAnimation { duration: 250 } }
     }
 
     LiquidGlassSurface {
         radius: root.radius
         visible: ShellState.glassEnabled
-        accentColor: MediaService.isPlaying ? root.activeMediaAccent : (AntigravityService.isActive ? Theme.accentCyan : (MediaService.hasMedia ? Theme.accentViolet : Theme.accentSky))
+        accentColor: root.currentMediaAccent
         hovered: bgMouse.containsMouse || brandMouse.containsMouse
     }
 
@@ -110,7 +152,7 @@ Rectangle {
                     LiquidGlassSurface {
                         radius: 11
                         visible: ShellState.plasticEnabled
-                        accentColor: MediaService.isPlaying ? root.activeMediaAccent : (AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet)
+                        accentColor: MediaService.isPlaying ? root.currentMediaAccent : (AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet)
                         hovered: brandMouse.containsMouse
                         showShadow: false
                     }
@@ -123,12 +165,12 @@ Rectangle {
                         height: 18
                         radius: 9
                         visible: !ShellState.plasticEnabled
-                        color: MediaService.isPlaying ? root.activeMediaAccent : (AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet)
-                        opacity: MediaService.isPlaying ? (0.15 + (root.liveB0 + root.liveB1) * 0.15) : (AntigravityService.isActive ? 0.25 : 0.15)
-                        scale: MediaService.isPlaying ? (1.0 + root.liveB0 * 0.08) : 1.0
+                        color: MediaService.isPlaying ? root.currentMediaAccent : (AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet)
+                        opacity: MediaService.isPlaying ? (0.25 + (root.liveB0 + root.liveB1) * 0.35) : (AntigravityService.isActive ? 0.25 : 0.15)
+                        scale: MediaService.isPlaying ? (1.0 + root.liveB0 * 0.20) : 1.0
 
-                        Behavior on opacity { NumberAnimation { duration: 80 } }
-                        Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutCubic } }
+                        Behavior on opacity { NumberAnimation { duration: 50 } }
+                        Behavior on scale { NumberAnimation { duration: 50; easing.type: Easing.OutCubic } }
                         Behavior on color { ColorAnimation { duration: 250 } }
                     }
 

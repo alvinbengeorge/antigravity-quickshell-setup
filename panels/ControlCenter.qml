@@ -467,6 +467,248 @@ PanelWindow {
                 }
             }
 
+            // ── Mobile Remote (PWA) Card ─────────────────────────────────────
+            Rectangle {
+                Layout.fillWidth: true
+                radius: 12
+                color: ShellState.glassEnabled ? "transparent" : Theme.bgCard
+                border.color: ShellState.glassEnabled ? "transparent" : (RemoteService.isOnline ? Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.4) : Theme.borderDim)
+                border.width: ShellState.glassEnabled ? 0 : 1
+                implicitHeight: remoteCol.implicitHeight + 20
+
+                LiquidGlassSurface {
+                    radius: 12
+                    visible: ShellState.glassEnabled
+                    accentColor: RemoteService.isOnline ? Theme.accentCyan : Theme.textMuted
+                    showShadow: true
+                }
+
+                ColumnLayout {
+                    id: remoteCol
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 8
+
+                    // Header Row: Icon, Title, Status Pill, Refresh
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Icon {
+                            name: "smartphone"
+                            size: 14
+                            color: RemoteService.isOnline ? Theme.accentCyan : Theme.textMuted
+                        }
+
+                        Text {
+                            text: "ANTIGRAVITY REMOTE"
+                            font.family: Theme.fontMono
+                            font.pixelSize: 10
+                            font.bold: true
+                            color: Theme.textMuted
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        // Online / Offline Status Badge
+                        Rectangle {
+                            height: 20
+                            implicitWidth: rBadgeRow.implicitWidth + 12
+                            radius: 10
+                            color: RemoteService.isOnline ? Qt.rgba(0.06, 0.72, 0.51, 0.15) : Qt.rgba(0.94, 0.27, 0.27, 0.15)
+                            border.color: RemoteService.isOnline ? "#10B981" : "#EF4444"
+                            border.width: 1
+
+                            RowLayout {
+                                id: rBadgeRow
+                                anchors.centerIn: parent
+                                spacing: 4
+
+                                Rectangle {
+                                    width: 6
+                                    height: 6
+                                    radius: 3
+                                    color: RemoteService.isOnline ? "#10B981" : "#EF4444"
+                                }
+
+                                Text {
+                                    text: RemoteService.isOnline ? "ONLINE" : "OFFLINE"
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 9
+                                    font.bold: true
+                                    color: RemoteService.isOnline ? "#10B981" : "#EF4444"
+                                }
+                            }
+                        }
+
+                        // Restart Button
+                        Rectangle {
+                            width: 22
+                            height: 22
+                            radius: 11
+                            color: rRstMouse.containsMouse ? Theme.bgHover : "transparent"
+                            border.color: Theme.borderDim
+                            border.width: 1
+
+                            Icon {
+                                anchors.centerIn: parent
+                                name: "rotate-cw"
+                                size: 11
+                                color: rRstMouse.containsMouse ? Theme.accentCyan : Theme.textMuted
+                            }
+
+                            MouseArea {
+                                id: rRstMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: RemoteService.restartDaemon()
+                            }
+                        }
+                    }
+
+                    // Content Row: QR Code thumbnail + Connection info
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 12
+
+                        // QR Code Image (Click to open full view)
+                        Rectangle {
+                            width: 62
+                            height: 62
+                            radius: 8
+                            color: "#FFFFFF"
+                            clip: true
+                            border.color: Theme.borderDim
+                            border.width: 1
+
+                            Image {
+                                anchors.fill: parent
+                                anchors.margins: 2
+                                source: "file://" + RemoteService.qrPath
+                                fillMode: Image.PreserveAspectFit
+                                cache: false
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    Quickshell.execDetached(["xdg-open", RemoteService.qrPath]);
+                                }
+                            }
+                        }
+
+                        // Info Column: URL + IP + Copy button
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 3
+
+                            Text {
+                                text: RemoteService.remoteUrl || "Starting daemon..."
+                                font.family: Theme.fontMono
+                                font.pixelSize: 11
+                                font.bold: true
+                                color: Theme.accentCyan
+                                elide: Text.ElideRight
+                                Layout.maximumWidth: 240
+                            }
+
+                            Text {
+                                text: "LAN: " + RemoteService.ip + ":" + RemoteService.port + " • SSL Universal"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 9
+                                color: Theme.textMuted
+                            }
+
+                            RowLayout {
+                                spacing: 6
+                                Layout.topMargin: 2
+
+                                // Copy Link Button
+                                Rectangle {
+                                    height: 22
+                                    implicitWidth: copyRow.implicitWidth + 12
+                                    radius: 6
+                                    color: copyMouse.containsMouse ? Theme.bgHover : Theme.bgPill
+                                    border.color: Theme.borderDim
+                                    border.width: 1
+
+                                    RowLayout {
+                                        id: copyRow
+                                        anchors.centerIn: parent
+                                        spacing: 4
+                                        Icon {
+                                            name: "copy"
+                                            size: 10
+                                            color: Theme.textPrimary
+                                        }
+                                        Text {
+                                            text: copyFeedback.running ? "Copied!" : "Copy URL"
+                                            font.family: Theme.fontFamily
+                                            font.pixelSize: 9
+                                            color: copyFeedback.running ? Theme.accentCyan : Theme.textPrimary
+                                        }
+                                    }
+
+                                    Timer {
+                                        id: copyFeedback
+                                        interval: 1500
+                                        repeat: false
+                                    }
+
+                                    MouseArea {
+                                        id: copyMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            Quickshell.execDetached(["wl-copy", RemoteService.remoteUrl]);
+                                            copyFeedback.start();
+                                        }
+                                    }
+                                }
+
+                                // Toggle Service Button
+                                Rectangle {
+                                    height: 22
+                                    implicitWidth: tglRow.implicitWidth + 12
+                                    radius: 6
+                                    color: tglMouse.containsMouse ? Theme.bgHover : Theme.bgPill
+                                    border.color: Theme.borderDim
+                                    border.width: 1
+
+                                    RowLayout {
+                                        id: tglRow
+                                        anchors.centerIn: parent
+                                        spacing: 4
+                                        Icon {
+                                            name: RemoteService.isOnline ? "power" : "play"
+                                            size: 10
+                                            color: RemoteService.isOnline ? Theme.accentRose : Theme.accentEmerald
+                                        }
+                                        Text {
+                                            text: RemoteService.isOnline ? "Stop" : "Start"
+                                            font.family: Theme.fontFamily
+                                            font.pixelSize: 9
+                                            color: RemoteService.isOnline ? Theme.accentRose : Theme.accentEmerald
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        id: tglMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: RemoteService.toggleDaemon()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Quick Sliders (Volume & Brightness)
             ColumnLayout {
                 Layout.fillWidth: true
@@ -1367,75 +1609,119 @@ PanelWindow {
                     }
                 }
 
-                // Theme Chips Grid (2 columns x 3 rows)
-                GridLayout {
+                // Theme Chips Scrollable Container
+                Rectangle {
+                    id: themeScrollContainer
                     Layout.fillWidth: true
-                    columns: 2
-                    columnSpacing: 6
-                    rowSpacing: 6
+                    height: Math.min(themeGrid.implicitHeight + 8, 148)
+                    radius: 8
+                    color: ShellState.glassEnabled ? Qt.rgba(0, 0, 0, 0.15) : Qt.rgba(0, 0, 0, 0.20)
+                    border.color: Theme.borderDim
+                    border.width: 1
+                    clip: true
 
-                    Repeater {
-                        model: Theme.themeKeys
+                    MouseArea {
+                        anchors.fill: parent
+                        z: -1
+                        onWheel: wheel => {
+                            const step = (wheel.angleDelta.y / 120.0) * 38.0;
+                            themeFlick.contentY = Math.max(0, Math.min(themeFlick.contentHeight - themeFlick.height, themeFlick.contentY - step));
+                        }
+                    }
 
-                        Rectangle {
-                            Layout.fillWidth: true
-                            height: 32
-                            radius: 8
-                            readonly property bool isSelected: Theme.currentThemeKey === modelData
-                            readonly property var pal: Theme.palettes[modelData]
+                    Flickable {
+                        id: themeFlick
+                        anchors.fill: parent
+                        anchors.topMargin: 4
+                        anchors.bottomMargin: 4
+                        anchors.leftMargin: 4
+                        anchors.rightMargin: 8
+                        contentWidth: width
+                        contentHeight: themeGrid.implicitHeight
+                        clip: true
+                        boundsBehavior: Flickable.StopAtBounds
 
-                            color: isSelected ? Theme.bgCard : (chipMouse.containsMouse ? Theme.bgHover : Theme.bgPill)
-                            border.color: isSelected ? pal.accentViolet : Theme.borderDim
-                            border.width: isSelected ? 1.5 : 1
+                        ScrollBar.vertical: ScrollBar {
+                            id: themeScrollBar
+                            active: true
+                            policy: themeFlick.contentHeight > themeFlick.height ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
+                        }
 
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 8
-                                anchors.rightMargin: 8
-                                spacing: 8
+                        GridLayout {
+                            id: themeGrid
+                            width: themeFlick.width
+                            columns: 2
+                            columnSpacing: 6
+                            rowSpacing: 6
 
-                                // Color preview dots
-                                Row {
-                                    spacing: 3
-                                    Rectangle {
-                                        width: 8
-                                        height: 8
-                                        radius: 4
-                                        color: pal.accentViolet
-                                    }
-                                    Rectangle {
-                                        width: 8
-                                        height: 8
-                                        radius: 4
-                                        color: pal.accentSky
-                                    }
-                                }
+                            Repeater {
+                                model: Theme.themeKeys
 
-                                Text {
+                                Rectangle {
                                     Layout.fillWidth: true
-                                    text: pal.name
-                                    font.family: Theme.fontFamily
-                                    font.pixelSize: 10
-                                    font.bold: isSelected
-                                    color: isSelected ? pal.accentViolet : Theme.textPrimary
-                                    elide: Text.ElideRight
-                                }
+                                    height: 32
+                                    radius: 8
+                                    readonly property bool isSelected: Theme.currentThemeKey === modelData
+                                    readonly property var pal: (Theme.palettes && Theme.palettes[modelData]) || ({ "name": modelData, "accentViolet": "#A78BFA", "accentSky": "#38BDF8" })
 
-                                Icon {
-                                    visible: isSelected
-                                    name: "check"
-                                    size: 11
-                                    color: pal.accentViolet
-                                }
-                            }
+                                    color: isSelected ? Theme.bgCard : (chipMouse.containsMouse ? Theme.bgHover : Theme.bgPill)
+                                    border.color: isSelected ? (pal.accentViolet || Theme.accentViolet) : Theme.borderDim
+                                    border.width: isSelected ? 1.5 : 1
 
-                            MouseArea {
-                                id: chipMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    Theme.setTheme(modelData);
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 8
+                                        anchors.rightMargin: 8
+                                        spacing: 8
+
+                                        // Color preview dots
+                                        Row {
+                                            spacing: 3
+                                            Rectangle {
+                                                width: 8
+                                                height: 8
+                                                radius: 4
+                                                color: pal.accentViolet || Theme.accentViolet
+                                            }
+                                            Rectangle {
+                                                width: 8
+                                                height: 8
+                                                radius: 4
+                                                color: pal.accentSky || Theme.accentSky
+                                            }
+                                        }
+
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: pal.name || modelData
+                                            font.family: Theme.fontFamily
+                                            font.pixelSize: 10
+                                            font.bold: isSelected
+                                            color: isSelected ? (pal.accentViolet || Theme.accentViolet) : Theme.textPrimary
+                                            elide: Text.ElideRight
+                                        }
+
+                                        Icon {
+                                            visible: isSelected
+                                            name: "check"
+                                            size: 11
+                                            color: pal.accentViolet || Theme.accentViolet
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        id: chipMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            Theme.setTheme(modelData);
+                                        }
+                                        onWheel: wheel => {
+                                            const step = (wheel.angleDelta.y / 120.0) * 38.0;
+                                            themeFlick.contentY = Math.max(0, Math.min(themeFlick.contentHeight - themeFlick.height, themeFlick.contentY - step));
+                                        }
+                                    }
                                 }
                             }
                         }

@@ -20,6 +20,10 @@ Singleton {
     property bool whatsappOpen: false
     property bool systemMonitorOpen: false
     property bool mediaCardOpen: false
+    property bool workspacePreviewOpen: false
+    property bool workspacePreviewHovered: false
+    property int hoveredWorkspace: 0
+    property real hoveredWorkspaceGlobalX: 16
     property string systemMonitorInitialTab: "ram"
     property bool desktopClockVisible: true
     property bool desktopAntigravityVisible: true
@@ -422,6 +426,25 @@ Singleton {
         function toggle(): void { root.toggleMediaCard(); }
         function show(): void { root.mediaCardOpen = true; }
         function hide(): void { root.mediaCardOpen = false; }
+    }
+
+    IpcHandler {
+        target: "workspacePreview"
+        function openWs1(): void {
+            root.hoveredWorkspace = 1;
+            root.hoveredWorkspaceGlobalX = 80;
+            root.workspacePreviewOpen = true;
+            WindowService.refresh();
+        }
+        function openWs2(): void {
+            root.hoveredWorkspace = 2;
+            root.hoveredWorkspaceGlobalX = 100;
+            root.workspacePreviewOpen = true;
+            WindowService.refresh();
+        }
+        function close(): void {
+            root.workspacePreviewOpen = false;
+        }
     }
 
     IpcHandler {

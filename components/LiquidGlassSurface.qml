@@ -42,6 +42,8 @@ Item {
 
         Behavior on uHover { NumberAnimation { duration: 160 } }
         Behavior on uPressed { NumberAnimation { duration: 100 } }
+        Behavior on uAccentColor { ColorAnimation { duration: 750; easing.type: Easing.OutCubic } }
+        Behavior on uBaseColor { ColorAnimation { duration: 500; easing.type: Easing.OutCubic } }
 
         fragmentShader: Qt.resolvedUrl("liquid_glass.frag.qsb")
     }

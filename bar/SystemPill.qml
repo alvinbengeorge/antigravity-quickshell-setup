@@ -512,7 +512,7 @@ Rectangle {
                 }
 
                 Text {
-                    text: BatteryService.percentage + "%"
+                    text: BatteryService.displayText
                     font.family: Theme.fontMono
                     font.pixelSize: 11
                     color: BatteryService.isCharging ? Theme.accentEmerald : (BatteryService.percentage <= 20 ? Theme.accentRose : (BatteryService.percentage <= 40 ? Theme.accentAmber : Theme.textSecondary))
@@ -524,7 +524,14 @@ Rectangle {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: BatteryService.openPowerStatistics()
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                onClicked: (mouse) => {
+                    if (mouse.button === Qt.RightButton) {
+                        BatteryService.openPowerStatistics();
+                    } else {
+                        BatteryService.cycleDisplayMode();
+                    }
+                }
             }
         }
     }

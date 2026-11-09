@@ -30,7 +30,9 @@ PanelWindow {
         }
     }
 
-    readonly property color accent: MediaService.artColor !== "" ? MediaService.artColor : Theme.accentCyan
+    readonly property color targetAccent: MediaService.artColor !== "" ? MediaService.artColor : Theme.accentCyan
+    property color accent: targetAccent
+    Behavior on accent { ColorAnimation { duration: 750; easing.type: Easing.OutCubic } }
 
     // Close when clicking outside the card
     MouseArea {

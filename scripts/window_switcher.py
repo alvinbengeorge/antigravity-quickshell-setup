@@ -49,8 +49,11 @@ def get_windows():
         cls_name = c.get("class") or c.get("initialClass") or "Application"
         title = c.get("title") or c.get("initialTitle") or cls_name
         ws = c.get("workspace", {})
-        ws_id = ws.get("id", 1)
-        ws_name = ws.get("name", str(ws_id))
+        ws_name = ws.get("name", "")
+        if ws.get("type") == "special" or ws_name.startswith("special:"):
+            ws_id = -1
+        else:
+            ws_id = ws.get("id", 1)
         monitor = c.get("monitor", 0)
 
         meta = get_icon_and_color(cls_name)

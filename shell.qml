@@ -87,6 +87,7 @@ ShellRoot {
     WhatsAppPanel {}
     SystemMonitor {}
     MediaDropdown {}
+    WorkspacePreview {}
 
     // Multi-screen On-Screen Display (OSD) Pill
     Variants {
