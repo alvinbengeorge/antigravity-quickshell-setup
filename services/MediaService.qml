@@ -98,6 +98,10 @@ Singleton {
         running: false
         stdout: SplitParser {
             onRead: data => {
+                if (ShellState.liteMode) {
+                    root.artColor = "";
+                    return;
+                }
                 try {
                     const res = JSON.parse(data.trim());
                     if (res && res.color) {
@@ -108,7 +112,11 @@ Singleton {
         }
     }
 
-    onTrackArtUrlChanged: {
+    function extractArtColor() {
+        if (ShellState.liteMode) {
+            root.artColor = "";
+            return;
+        }
         if (trackArtUrl && trackArtUrl.length > 0) {
             colorExtractorProc.command = [
                 Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/extract_media_color.py",
@@ -116,7 +124,21 @@ Singleton {
             ];
             colorExtractorProc.running = true;
         } else {
-            artColor = "";
+            root.artColor = "";
+        }
+    }
+
+    onTrackArtUrlChanged: extractArtColor()
+
+    Connections {
+        target: ShellState
+        function onLiteModeChanged() {
+            if (ShellState.liteMode) {
+                root.artColor = "";
+                if (colorExtractorProc.running) colorExtractorProc.running = false;
+            } else {
+                root.extractArtColor();
+            }
         }
     }
 

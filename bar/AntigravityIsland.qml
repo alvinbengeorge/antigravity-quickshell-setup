@@ -10,25 +10,25 @@ Rectangle {
     height: 36
     radius: height / 2
     color: ShellState.glassEnabled ? "transparent" : (
-        MediaService.isPlaying
+        (!ShellState.liteMode && MediaService.isPlaying)
             ? Qt.tint(Theme.bgPill, Qt.alpha(root.currentMediaAccent, 0.12 + root.liveB0 * 0.10))
             : ((bgMouse.containsMouse || brandMouse.containsMouse) ? Theme.bgHover : Theme.bgPill)
     )
     border.color: ShellState.glassEnabled ? "transparent" : (
-        MediaService.isPlaying
+        (!ShellState.liteMode && MediaService.isPlaying)
             ? root.currentMediaAccent
             : (AntigravityService.isActive ? Theme.accentCyan : (MediaService.hasMedia ? Theme.accentViolet : ((bgMouse.containsMouse || brandMouse.containsMouse) ? Theme.accentSky : Theme.borderDim)))
     )
-    border.width: ShellState.glassEnabled ? 0 : (MediaService.isPlaying ? (1.0 + root.liveB0 * 1.2) : 1)
+    border.width: ShellState.glassEnabled ? 0 : ((!ShellState.liteMode && MediaService.isPlaying) ? (1.0 + root.liveB0 * 1.2) : 1)
 
     // Live audio reactive bindings
-    readonly property real liveB0: AudioVisualizerService.b0
-    readonly property real liveB1: AudioVisualizerService.b1
-    readonly property real liveB2: AudioVisualizerService.b2
-    readonly property real liveB3: AudioVisualizerService.b3
+    readonly property real liveB0: ShellState.liteMode ? 0.0 : AudioVisualizerService.b0
+    readonly property real liveB1: ShellState.liteMode ? 0.0 : AudioVisualizerService.b1
+    readonly property real liveB2: ShellState.liteMode ? 0.0 : AudioVisualizerService.b2
+    readonly property real liveB3: ShellState.liteMode ? 0.0 : AudioVisualizerService.b3
 
     // Target accent color (dynamic album art color when playing, else Antigravity or Theme accent)
-    readonly property color targetMediaAccent: (MediaService.hasMedia && MediaService.isPlaying && MediaService.artColor !== "")
+    readonly property color targetMediaAccent: (!ShellState.liteMode && MediaService.hasMedia && MediaService.isPlaying && MediaService.artColor !== "")
         ? MediaService.artColor
         : (AntigravityService.isActive ? Theme.accentCyan : (MediaService.hasMedia ? Theme.accentViolet : Theme.accentSky))
 
@@ -47,13 +47,13 @@ Rectangle {
     Rectangle {
         id: bassAura
         anchors.fill: parent
-        anchors.margins: MediaService.isPlaying ? (-2.0 - root.liveB0 * 5.0) : -1.0
-        radius: root.radius + (MediaService.isPlaying ? (2.0 + root.liveB0 * 5.0) : 1.0)
+        anchors.margins: (!ShellState.liteMode && MediaService.isPlaying) ? (-2.0 - root.liveB0 * 5.0) : -1.0
+        radius: root.radius + ((!ShellState.liteMode && MediaService.isPlaying) ? (2.0 + root.liveB0 * 5.0) : 1.0)
         z: -3
-        color: Qt.alpha(root.currentMediaAccent, MediaService.isPlaying ? (0.10 + root.liveB0 * 0.28) : 0.0)
-        border.color: Qt.alpha(root.currentMediaAccent, MediaService.isPlaying ? (0.35 + root.liveB0 * 0.55) : 0.0)
-        border.width: MediaService.isPlaying ? (1.5 + root.liveB0 * 2.0) : 0.0
-        visible: MediaService.isPlaying
+        color: Qt.alpha(root.currentMediaAccent, (!ShellState.liteMode && MediaService.isPlaying) ? (0.10 + root.liveB0 * 0.28) : 0.0)
+        border.color: Qt.alpha(root.currentMediaAccent, (!ShellState.liteMode && MediaService.isPlaying) ? (0.35 + root.liveB0 * 0.55) : 0.0)
+        border.width: (!ShellState.liteMode && MediaService.isPlaying) ? (1.5 + root.liveB0 * 2.0) : 0.0
+        visible: !ShellState.liteMode && MediaService.isPlaying
 
         Behavior on anchors.margins { NumberAnimation { duration: 45; easing.type: Easing.OutQuad } }
         Behavior on radius { NumberAnimation { duration: 45; easing.type: Easing.OutQuad } }
@@ -71,8 +71,9 @@ Rectangle {
         z: -2
         color: "transparent"
         border.color: root.currentMediaAccent
-        border.width: MediaService.isPlaying ? (1.5 + root.liveB0 * 1.5) : 1.0
-        opacity: MediaService.isPlaying ? (0.45 + root.liveB0 * 0.50) : 0.0
+        border.width: (!ShellState.liteMode && MediaService.isPlaying) ? (1.5 + root.liveB0 * 1.5) : 1.0
+        opacity: (!ShellState.liteMode && MediaService.isPlaying) ? (0.45 + root.liveB0 * 0.50) : 0.0
+        visible: !ShellState.liteMode
 
         Behavior on border.width { NumberAnimation { duration: 45; easing.type: Easing.OutQuad } }
         Behavior on opacity { NumberAnimation { duration: 45; easing.type: Easing.OutQuad } }
@@ -164,22 +165,22 @@ Rectangle {
                         width: 18
                         height: 18
                         radius: 9
-                        visible: !ShellState.plasticEnabled
-                        color: MediaService.isPlaying ? root.currentMediaAccent : (AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet)
-                        opacity: MediaService.isPlaying ? (0.25 + (root.liveB0 + root.liveB1) * 0.35) : (AntigravityService.isActive ? 0.25 : 0.15)
-                        scale: MediaService.isPlaying ? (1.0 + root.liveB0 * 0.20) : 1.0
+                        visible: !ShellState.liteMode && !ShellState.plasticEnabled
+                        color: (!ShellState.liteMode && MediaService.isPlaying) ? root.currentMediaAccent : (AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet)
+                        opacity: (!ShellState.liteMode && MediaService.isPlaying) ? (0.25 + (root.liveB0 + root.liveB1) * 0.35) : (AntigravityService.isActive ? 0.25 : 0.15)
+                        scale: (!ShellState.liteMode && MediaService.isPlaying) ? (1.0 + root.liveB0 * 0.20) : 1.0
 
                         Behavior on opacity { NumberAnimation { duration: 50 } }
                         Behavior on scale { NumberAnimation { duration: 50; easing.type: Easing.OutCubic } }
                         Behavior on color { ColorAnimation { duration: 250 } }
                     }
 
-                    // 4-Band Live Spectrum Equalizer Visualizer (Active during playback)
+                    // 4-Band Live Spectrum Equalizer Visualizer (Active during playback in standard mode)
                     Item {
                         anchors.centerIn: parent
                         width: 16
                         height: 14
-                        visible: MediaService.isPlaying
+                        visible: !ShellState.liteMode && MediaService.isPlaying
 
                         Row {
                             anchors.centerIn: parent
@@ -247,10 +248,10 @@ Rectangle {
                         }
                     }
 
-                    // Clean Static Icon (Shown when paused / no media)
+                    // Clean Static Icon (Shown when paused / no media, or in Lite Mode)
                     Icon {
                         anchors.centerIn: parent
-                        visible: !MediaService.isPlaying
+                        visible: ShellState.liteMode || !MediaService.isPlaying
                         name: MediaService.hasMedia ? "music" : (AntigravityService.isActive ? "sparkles" : "sparkles")
                         size: 12
                         color: AntigravityService.isActive ? Theme.accentCyan : Theme.accentViolet

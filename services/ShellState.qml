@@ -45,6 +45,7 @@ Singleton {
     onLiteModeChanged: {
         if (root.liteMode) {
             Quickshell.execDetached(["systemctl", "--user", "stop", "antigravity-remote"]);
+            Quickshell.execDetached(["pkill", "-f", "audio_beat_tracker.py"]);
         } else {
             Quickshell.execDetached(["systemctl", "--user", "start", "antigravity-remote"]);
         }

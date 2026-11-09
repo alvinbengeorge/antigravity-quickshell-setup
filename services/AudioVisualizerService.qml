@@ -15,12 +15,17 @@ Singleton {
 
     Process {
         id: trackerProc
-        running: true
+        running: !ShellState.liteMode
         command: ["python3", "-u", root.scriptPath]
-        onExited: restartTimer.start()
+        onExited: {
+            if (!ShellState.liteMode) {
+                restartTimer.start();
+            }
+        }
         stdout: SplitParser {
             splitMarker: "\n"
             onRead: data => {
+                if (ShellState.liteMode) return;
                 try {
                     const parsed = JSON.parse(data.trim());
                     root.b0 = parsed.b0;
@@ -36,6 +41,27 @@ Singleton {
         id: restartTimer
         interval: 1000
         repeat: false
-        onTriggered: trackerProc.running = true
+        onTriggered: {
+            if (!ShellState.liteMode) {
+                trackerProc.running = true;
+            }
+        }
+    }
+
+    Connections {
+        target: ShellState
+        function onLiteModeChanged() {
+            if (ShellState.liteMode) {
+                trackerProc.running = false;
+                restartTimer.stop();
+                root.b0 = 0.0;
+                root.b1 = 0.0;
+                root.b2 = 0.0;
+                root.b3 = 0.0;
+                Quickshell.execDetached(["pkill", "-f", "audio_beat_tracker.py"]);
+            } else {
+                trackerProc.running = true;
+            }
+        }
     }
 }
