@@ -17,10 +17,12 @@ WALLPAPER_FILE = os.path.join(STATE_DIR, "antigravity-wallpaper.json")
 HYPR_DIR = os.path.expanduser("~/.config/hypr")
 HYPRLOCK_COLORS_CONF = os.path.join(HYPR_DIR, "hyprlock-colors.conf")
 
+HOME_DIR = os.path.expanduser("~")
+
 BUILT_IN_PALETTES = {
     "arythmatic": {
         "name": "Arythmatic",
-        "wallpaper": "/home/alvin/Pictures/Wallpapers/arythmatic-obsidian.png",
+        "wallpaper": os.path.join(HOME_DIR, "Pictures/Wallpapers/arythmatic-obsidian.png"),
         "bgBase": "#080B10",
         "bgCard": "#171F2E",
         "bgHover": "#222C40",
@@ -35,7 +37,7 @@ BUILT_IN_PALETTES = {
     },
     "askmeidentity": {
         "name": "AskMeIdentity",
-        "wallpaper": "/home/alvin/Pictures/Wallpapers/fedora-neon-blue-black.jpg",
+        "wallpaper": os.path.join(HOME_DIR, "Pictures/Wallpapers/fedora-neon-blue-black.jpg"),
         "bgBase": "#080B11",
         "bgCard": "#172338",
         "bgHover": "#223352",
@@ -50,7 +52,7 @@ BUILT_IN_PALETTES = {
     },
     "deepspace": {
         "name": "Deep Space",
-        "wallpaper": "/home/alvin/Pictures/Wallpapers/fedora-neon-blue-black.jpg",
+        "wallpaper": os.path.join(HOME_DIR, "Pictures/Wallpapers/fedora-neon-blue-black.jpg"),
         "bgBase": "#090D14",
         "bgCard": "#131C2E",
         "bgHover": "#1E2B43",
@@ -65,7 +67,7 @@ BUILT_IN_PALETTES = {
     },
     "catppuccin": {
         "name": "Catppuccin Mocha",
-        "wallpaper": "/home/alvin/Pictures/Wallpapers/wallhaven-rqyoo1.png",
+        "wallpaper": os.path.join(HOME_DIR, "Pictures/Wallpapers/wallhaven-rqyoo1.png"),
         "bgBase": "#11111B",
         "bgCard": "#24273A",
         "bgHover": "#363A4F",
@@ -80,7 +82,7 @@ BUILT_IN_PALETTES = {
     },
     "tokyonight": {
         "name": "Tokyo Night",
-        "wallpaper": "/home/alvin/Pictures/Wallpapers/fedora-neon.jpg",
+        "wallpaper": os.path.join(HOME_DIR, "Pictures/Wallpapers/fedora-neon.jpg"),
         "bgBase": "#16161E",
         "bgCard": "#24283B",
         "bgHover": "#2F3549",
@@ -95,7 +97,7 @@ BUILT_IN_PALETTES = {
     },
     "nord": {
         "name": "Nord Frost",
-        "wallpaper": "/home/alvin/Pictures/Wallpapers/wallhaven-nrd9oj.jpg",
+        "wallpaper": os.path.join(HOME_DIR, "Pictures/Wallpapers/wallhaven-nrd9oj.jpg"),
         "bgBase": "#242933",
         "bgCard": "#383F4D",
         "bgHover": "#434C5E",
@@ -110,7 +112,7 @@ BUILT_IN_PALETTES = {
     },
     "cyberpunk": {
         "name": "Cyberpunk Neon",
-        "wallpaper": "/home/alvin/Pictures/Wallpapers/wallhaven-95kpwx.jpg",
+        "wallpaper": os.path.join(HOME_DIR, "Pictures/Wallpapers/wallhaven-95kpwx.jpg"),
         "bgBase": "#08040C",
         "bgCard": "#1E1035",
         "bgHover": "#2C174D",
@@ -125,7 +127,7 @@ BUILT_IN_PALETTES = {
     },
     "gruvbox": {
         "name": "Gruvbox Warm",
-        "wallpaper": "/home/alvin/Pictures/Wallpapers/wallhaven-1353qg.jpg",
+        "wallpaper": os.path.join(HOME_DIR, "Pictures/Wallpapers/wallhaven-1353qg.jpg"),
         "bgBase": "#1D2021",
         "bgCard": "#32302F",
         "bgHover": "#3C3836",
