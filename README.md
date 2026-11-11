@@ -100,7 +100,15 @@ ln -s ~/custom_quickshell ~/.config/quickshell/antigravity
 
 ### Step 2: Configure Hyprland
 
-Add the following autostart entry, layer rules, and keybinds to your Hyprland configuration (either `~/.config/hypr/hyprland.lua` or `~/.config/hypr/hyprland.conf`):
+This repository includes the complete, production-tested Hyprland setup under [`hypr/`](hypr/) (including Lua config, standard `.conf`, lock screen configs, shaders, and helper scripts).
+
+You can either copy the bundled setup directly:
+```bash
+# Optional: Copy the bundled complete Hyprland setup
+cp -r ~/custom_quickshell/hypr/* ~/.config/hypr/
+```
+
+Or add the autostart entry, layer rules, and keybinds to your existing config:
 
 #### If using `hyprland.lua`:
 ```lua
@@ -239,6 +247,13 @@ custom_quickshell/
 │   ├── BatteryService.qml            # D-Bus & sysfs tri-state power manager
 │   ├── ShellState.qml                # Global UI state, IPC handlers, and persistent settings
 │   └── AntigravityService.qml        # Real-time Antigravity trajectory telemetry
+├── hypr/                             # Complete Hyprland compositor setup
+│   ├── hyprland.lua                  # Primary modern Lua compositor config
+│   ├── hyprland.conf                 # Alternative standard .conf provider
+│   ├── hyprlock.conf                 # Lock screen configuration
+│   ├── hyprlock-colors.conf          # Dynamic lock screen theme colors
+│   ├── shaders/                      # Hardware GLSL 300 ES shaders (CRT, Night Light, Vibrance)
+│   └── scripts/                      # Window rules, scratchpad, and shell launch helpers
 └── scripts/
     ├── apply_hyprland_theme.py       # Live compositor border & shadow syncer (Lua eval)
     ├── apply_system_theme.py         # Master theme pipeline (GTK, Hyprland, Hyprlock)
