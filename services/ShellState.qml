@@ -32,6 +32,7 @@ Singleton {
     property real antigravityWidgetHeight: 496
     property bool use24Hour: false
     property bool clockShowCalendar: true
+    property string fontPreset: "cupertino"
     property bool liteMode: false
     property bool plasticMode: true
     property alias glassButtons: root.plasticMode
@@ -54,13 +55,18 @@ Singleton {
     onUse24HourChanged:         Qt.callLater(root.saveShellSettings)
     onClockShowCalendarChanged: Qt.callLater(root.saveShellSettings)
     onGlassButtonsChanged:      Qt.callLater(root.saveShellSettings)
+    onFontPresetChanged: {
+        Theme.fontPreset = root.fontPreset;
+        Qt.callLater(root.saveShellSettings);
+    }
 
     function saveShellSettings() {
         const payload = JSON.stringify({
             liteMode: root.liteMode,
             use24Hour: root.use24Hour,
             showCalendar: root.clockShowCalendar,
-            glassButtons: root.glassButtons
+            glassButtons: root.glassButtons,
+            fontPreset: root.fontPreset
         }, null, 2);
         Quickshell.execDetached([
             "python3",
@@ -86,6 +92,7 @@ Singleton {
                         if (typeof data.use24Hour === "boolean")    root.use24Hour = data.use24Hour;
                         if (typeof data.showCalendar === "boolean") root.clockShowCalendar = data.showCalendar;
                         if (typeof data.glassButtons === "boolean") root.glassButtons = data.glassButtons;
+                        if (typeof data.fontPreset === "string")   root.fontPreset = data.fontPreset;
                     }
                 } catch (e) { /* first run or corrupt – use defaults */ }
             }
@@ -586,5 +593,18 @@ Singleton {
         target: "osd"
         function volume(val: string): void { OsdService.showVolume(parseFloat(val), false); }
         function brightness(val: string): void { OsdService.showBrightness(parseInt(val)); }
+    }
+
+    IpcHandler {
+        target: "font"
+        function cupertino(): void { Theme.fontPreset = "cupertino"; }
+        function nordic(): void { Theme.fontPreset = "nordic"; }
+        function google(): void { Theme.fontPreset = "google"; }
+        function set(name: string): void { Theme.fontPreset = name; }
+        function next(): void {
+            const list = ["cupertino", "nordic", "google"];
+            const idx = list.indexOf(Theme.fontPreset);
+            Theme.fontPreset = list[(idx + 1) % list.length];
+        }
     }
 }

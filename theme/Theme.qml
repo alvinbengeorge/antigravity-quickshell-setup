@@ -579,7 +579,7 @@ Singleton {
     readonly property int cardRadius: 16
     readonly property int smallRadius: 8
 
-    // Fonts (resolved dynamically to actual installed font families)
+    // Fonts (resolved dynamically to actual installed font families and presets)
     function _resolveFont(candidates, fallback) {
         var available = Qt.fontFamilies();
         for (var i = 0; i < candidates.length; i++) {
@@ -588,8 +588,32 @@ Singleton {
         return fallback;
     }
 
-    readonly property string fontFamily: _resolveFont(["Google Sans", "Inter", "Adwaita Sans"], "sans-serif")
-    readonly property string fontMono: _resolveFont(["Adwaita Mono", "JetBrains Mono", "Source Code Pro", "Noto Sans Mono"], "monospace")
+    readonly property var fontPresets: ({
+        "cupertino": {
+            ui: ["SF Pro Display", "SF Pro Text", "system-ui", "sans-serif"],
+            mono: ["JetBrainsMono Nerd Font", "JetBrainsMono Nerd Font Mono", "monospace"]
+        },
+        "nordic": {
+            ui: ["Plus Jakarta Sans", "Inter", "sans-serif"],
+            mono: ["FiraCode Nerd Font", "Fira Code", "monospace"]
+        },
+        "google": {
+            ui: ["Google Sans", "Adwaita Sans", "sans-serif"],
+            mono: ["Adwaita Mono", "Noto Sans Mono", "monospace"]
+        }
+    })
+
+    property string fontPreset: "cupertino"
+
+    readonly property string fontFamily: {
+        var p = fontPresets[theme.fontPreset] || fontPresets["cupertino"];
+        return _resolveFont(p.ui, "sans-serif");
+    }
+
+    readonly property string fontMono: {
+        var p = fontPresets[theme.fontPreset] || fontPresets["cupertino"];
+        return _resolveFont(p.mono, "monospace");
+    }
 
     // Theme metadata
     readonly property string themeName: currentPalette.name
