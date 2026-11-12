@@ -38,8 +38,6 @@ Singleton {
     property bool clockShowCalendar: true
     property string fontPreset: "cupertino"
     property bool skyboxEnabled: false
-    property bool dockEnabled: true
-    property bool dockAutoHide: false
     property bool liteMode: false
     property bool plasticMode: true
     property alias glassButtons: root.plasticMode
@@ -63,8 +61,6 @@ Singleton {
     onClockShowCalendarChanged: Qt.callLater(root.saveShellSettings)
     onGlassButtonsChanged:      Qt.callLater(root.saveShellSettings)
     onSkyboxEnabledChanged:     Qt.callLater(root.saveShellSettings)
-    onDockEnabledChanged:       Qt.callLater(root.saveShellSettings)
-    onDockAutoHideChanged:      Qt.callLater(root.saveShellSettings)
     onFontPresetChanged: {
         Theme.fontPreset = root.fontPreset;
         Qt.callLater(root.saveShellSettings);
@@ -77,9 +73,7 @@ Singleton {
             showCalendar: root.clockShowCalendar,
             glassButtons: root.glassButtons,
             fontPreset: root.fontPreset,
-            skyboxEnabled: root.skyboxEnabled,
-            dockEnabled: root.dockEnabled,
-            dockAutoHide: root.dockAutoHide
+            skyboxEnabled: root.skyboxEnabled
         }, null, 2);
         Quickshell.execDetached([
             "python3",
@@ -107,8 +101,6 @@ Singleton {
                         if (typeof data.glassButtons === "boolean") root.glassButtons = data.glassButtons;
                         if (typeof data.fontPreset === "string")   root.fontPreset = data.fontPreset;
                         if (typeof data.skyboxEnabled === "boolean") root.skyboxEnabled = data.skyboxEnabled;
-                        if (typeof data.dockEnabled === "boolean")   root.dockEnabled = data.dockEnabled;
-                        if (typeof data.dockAutoHide === "boolean")  root.dockAutoHide = data.dockAutoHide;
                     }
                 } catch (e) { /* first run or corrupt – use defaults */ }
             }
@@ -384,18 +376,7 @@ Singleton {
         }
     }
 
-    function toggleDock() {
-        root.dockEnabled = !root.dockEnabled;
-    }
-
     // Hyprland / CLI IPC Handlers
-    IpcHandler {
-        target: "dock"
-        function toggle(): void { root.toggleDock(); }
-        function enable(): void { root.dockEnabled = true; }
-        function disable(): void { root.dockEnabled = false; }
-        function status(): string { return root.dockEnabled ? "enabled" : "disabled"; }
-    }
     IpcHandler {
         target: "plastic"
         function toggle(): void { root.togglePlasticMode(); }
