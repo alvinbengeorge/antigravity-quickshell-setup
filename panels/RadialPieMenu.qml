@@ -56,7 +56,7 @@ PanelWindow {
         {
             id: "throw_mon",
             num: "1",
-            char: "🖥️",
+            icon: "monitor",
             label: "THROW TO OTHER DISPLAY",
             shortLabel: "THROW MON",
             desc: "Move window to next screen",
@@ -68,7 +68,7 @@ PanelWindow {
         {
             id: "tile_right",
             num: "2",
-            char: "🪟",
+            icon: "layers",
             label: "SPLIT TILE RIGHT",
             shortLabel: "TILE RIGHT",
             desc: "Swap window layout to right",
@@ -80,7 +80,7 @@ PanelWindow {
         {
             id: "clipboard",
             num: "3",
-            char: "📋",
+            icon: "copy",
             label: "CLIPBOARD MANAGER",
             shortLabel: "CLIPBOARD",
             desc: "Recent snips, pins & history",
@@ -92,7 +92,7 @@ PanelWindow {
         {
             id: "theme",
             num: "4",
-            char: "🎨",
+            icon: "palette",
             label: "CYCLE THEME PALETTE",
             shortLabel: "THEME",
             desc: "Rotate desktop accents & vibes",
@@ -104,7 +104,7 @@ PanelWindow {
         {
             id: "screenshot",
             num: "5",
-            char: "📸",
+            icon: "image",
             label: "SNIP AREA SCREENSHOT",
             shortLabel: "SNIP AREA",
             desc: "Interactive area to clipboard",
@@ -116,7 +116,7 @@ PanelWindow {
         {
             id: "lock",
             num: "6",
-            char: "🔒",
+            icon: "lock",
             label: "LOCK WORKSTATION",
             shortLabel: "LOCK SCREEN",
             desc: "Secure with Hyprlock",
@@ -128,7 +128,7 @@ PanelWindow {
         {
             id: "tile_left",
             num: "7",
-            char: "🪟",
+            icon: "layers",
             label: "SPLIT TILE LEFT",
             shortLabel: "TILE LEFT",
             desc: "Swap window layout to left",
@@ -140,7 +140,7 @@ PanelWindow {
         {
             id: "omnibar",
             num: "8",
-            char: "⚡",
+            icon: "zap",
             label: "SPOTLIGHT OMNIBAR",
             shortLabel: "OMNIBAR",
             desc: "Universal math & conversions",
@@ -414,9 +414,10 @@ PanelWindow {
                             }
                         }
 
-                        Text {
-                            text: modelData.char
-                            font.pixelSize: isActive ? 22 : 18
+                        Icon {
+                            name: modelData.icon
+                            size: isActive ? 20 : 18
+                            color: isActive ? modelData.color : Theme.textPrimary
                             scale: isActive ? 1.15 : 1.0
 
                             Behavior on scale { NumberAnimation { duration: 120 } }
@@ -478,13 +479,14 @@ PanelWindow {
                 Item {
                     visible: pieWindow.activeSlice >= 0
                     Layout.alignment: Qt.AlignHCenter
-                    width: 32
-                    height: 32
+                    width: 30
+                    height: 30
 
-                    Text {
+                    Icon {
                         anchors.centerIn: parent
-                        text: (pieWindow.activeSlice >= 0) ? pieWindow.slices[pieWindow.activeSlice].char : ""
-                        font.pixelSize: 28
+                        name: (pieWindow.activeSlice >= 0) ? pieWindow.slices[pieWindow.activeSlice].icon : ""
+                        size: 26
+                        color: (pieWindow.activeSlice >= 0) ? pieWindow.slices[pieWindow.activeSlice].color : Theme.accentCyan
                     }
                 }
 
@@ -530,11 +532,11 @@ PanelWindow {
                 }
 
                 // ── State B: Idle Singularity State ──
-                Text {
+                Icon {
                     visible: pieWindow.activeSlice < 0
                     Layout.alignment: Qt.AlignHCenter
-                    text: "⚡"
-                    font.pixelSize: 24
+                    name: "zap"
+                    size: 26
                     color: Theme.accentCyan
                 }
 

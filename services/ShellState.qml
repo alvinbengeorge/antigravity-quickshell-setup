@@ -33,6 +33,7 @@ Singleton {
     property bool desktopAntigravityVisible: true
     property bool desktopPullRequestsVisible: true
     property bool desktopJiraVisible: true
+    property bool desktopWordleVisible: true
     property real antigravityWidgetHeight: 496
     property bool use24Hour: false
     property bool clockShowCalendar: true
@@ -61,6 +62,7 @@ Singleton {
     onClockShowCalendarChanged: Qt.callLater(root.saveShellSettings)
     onGlassButtonsChanged:      Qt.callLater(root.saveShellSettings)
     onSkyboxEnabledChanged:     Qt.callLater(root.saveShellSettings)
+    onDesktopWordleVisibleChanged: Qt.callLater(root.saveShellSettings)
     onFontPresetChanged: {
         Theme.fontPreset = root.fontPreset;
         Qt.callLater(root.saveShellSettings);
@@ -73,7 +75,8 @@ Singleton {
             showCalendar: root.clockShowCalendar,
             glassButtons: root.glassButtons,
             fontPreset: root.fontPreset,
-            skyboxEnabled: root.skyboxEnabled
+            skyboxEnabled: root.skyboxEnabled,
+            wordleVisible: root.desktopWordleVisible
         }, null, 2);
         Quickshell.execDetached([
             "python3",
@@ -101,6 +104,7 @@ Singleton {
                         if (typeof data.glassButtons === "boolean") root.glassButtons = data.glassButtons;
                         if (typeof data.fontPreset === "string")   root.fontPreset = data.fontPreset;
                         if (typeof data.skyboxEnabled === "boolean") root.skyboxEnabled = data.skyboxEnabled;
+                        if (typeof data.wordleVisible === "boolean") root.desktopWordleVisible = data.wordleVisible;
                     }
                 } catch (e) { /* first run or corrupt – use defaults */ }
             }
@@ -376,7 +380,18 @@ Singleton {
         }
     }
 
+    function toggleWordle() {
+        root.desktopWordleVisible = !root.desktopWordleVisible;
+    }
+
     // Hyprland / CLI IPC Handlers
+    IpcHandler {
+        target: "wordle"
+        function toggle(): void { root.toggleWordle(); }
+        function show(): void { root.desktopWordleVisible = true; }
+        function hide(): void { root.desktopWordleVisible = false; }
+        function status(): string { return root.desktopWordleVisible ? "visible" : "hidden"; }
+    }
     IpcHandler {
         target: "plastic"
         function toggle(): void { root.togglePlasticMode(); }
