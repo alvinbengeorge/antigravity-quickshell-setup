@@ -306,6 +306,47 @@ PanelWindow {
                                         color: Theme.accentAmber
                                     }
                                 }
+
+                                // CI Status Indicator: tick (green ✓), orange circle (●), or red X (✕)
+                                Rectangle {
+                                    id: ciBadge
+                                    visible: prCard.modelData.ci_status && prCard.modelData.ci_status !== "none"
+                                    width: 14
+                                    height: 14
+                                    radius: 7
+                                    color: {
+                                        const s = prCard.modelData.ci_status;
+                                        if (s === "success") return Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.16);
+                                        if (s === "failure") return Qt.rgba(Theme.accentRose.r, Theme.accentRose.g, Theme.accentRose.b, 0.18);
+                                        return Qt.rgba(Theme.accentAmber.r, Theme.accentAmber.g, Theme.accentAmber.b, 0.18);
+                                    }
+                                    border.color: {
+                                        const s = prCard.modelData.ci_status;
+                                        if (s === "success") return Theme.accentEmerald;
+                                        if (s === "failure") return Theme.accentRose;
+                                        return Theme.accentAmber;
+                                    }
+                                    border.width: 1
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        anchors.verticalCenterOffset: prCard.modelData.ci_status === "pending" ? -0.5 : 0
+                                        text: {
+                                            const s = prCard.modelData.ci_status;
+                                            if (s === "success") return "✓";
+                                            if (s === "failure") return "✕";
+                                            return "●";
+                                        }
+                                        font.pixelSize: prCard.modelData.ci_status === "pending" ? 6 : 8
+                                        font.bold: true
+                                        color: {
+                                            const s = prCard.modelData.ci_status;
+                                            if (s === "success") return Theme.accentEmerald;
+                                            if (s === "failure") return Theme.accentRose;
+                                            return Theme.accentAmber;
+                                        }
+                                    }
+                                }
                             }
 
                             // 2. Repository & Metadata Second

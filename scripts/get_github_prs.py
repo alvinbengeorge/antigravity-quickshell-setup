@@ -36,7 +36,81 @@ def format_relative_time(iso_str):
     except Exception:
         return iso_str
 
-def fetch_prs():
+def fetch_prs_graphql():
+    query = """
+query {
+  viewer {
+    pullRequests(first: 30, states: OPEN, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      nodes {
+        number
+        title
+        url
+        updatedAt
+        isDraft
+        comments {
+          totalCount
+        }
+        repository {
+          name
+          nameWithOwner
+        }
+        commits(last: 1) {
+          nodes {
+            commit {
+              statusCheckRollup {
+                state
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+"""
+    cmd = ["gh", "api", "graphql", "-f", f"query={query}"]
+    res = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+    if res.returncode != 0:
+        raise RuntimeError(res.stderr.strip() or f"gh exited with {res.returncode}")
+
+    data = json.loads(res.stdout)
+    nodes = data.get("data", {}).get("viewer", {}).get("pullRequests", {}).get("nodes", [])
+    prs = []
+    for item in nodes:
+        repo_data = item.get("repository") or {}
+        repo_name = repo_data.get("name", "repo")
+        full_repo = repo_data.get("nameWithOwner", repo_name)
+
+        ci_status = "none"
+        commits_nodes = (item.get("commits") or {}).get("nodes") or []
+        if commits_nodes:
+            last_commit = commits_nodes[0].get("commit") or {}
+            rollup = last_commit.get("statusCheckRollup") or {}
+            raw_state = rollup.get("state")
+            if raw_state == "SUCCESS":
+                ci_status = "success"
+            elif raw_state in ("PENDING", "EXPECTED"):
+                ci_status = "pending"
+            elif raw_state in ("FAILURE", "ERROR"):
+                ci_status = "failure"
+
+        comments_count = (item.get("comments") or {}).get("totalCount", 0)
+
+        prs.append({
+            "number": item.get("number", 0),
+            "title": item.get("title", ""),
+            "repo": repo_name,
+            "full_repo": full_repo,
+            "url": item.get("url", ""),
+            "is_draft": bool(item.get("isDraft", False)),
+            "comments": comments_count,
+            "ci_status": ci_status,
+            "updated_at": item.get("updatedAt", ""),
+            "updated_ago": format_relative_time(item.get("updatedAt", ""))
+        })
+    return prs
+
+def fetch_prs_search_fallback():
     cmd = [
         "gh", "search", "prs",
         "--state=open",
@@ -53,8 +127,7 @@ def fetch_prs():
         repo_data = item.get("repository", {})
         repo_name = repo_data.get("name", "repo")
         full_repo = repo_data.get("nameWithOwner", repo_name)
-        labels = [l.get("name") for l in item.get("labels", []) if isinstance(l, dict) and l.get("name")]
-        
+
         prs.append({
             "number": item.get("number", 0),
             "title": item.get("title", ""),
@@ -63,10 +136,17 @@ def fetch_prs():
             "url": item.get("url", ""),
             "is_draft": bool(item.get("isDraft", False)),
             "comments": item.get("commentsCount", 0),
-            "labels": labels[:3],
+            "ci_status": "none",
             "updated_at": item.get("updatedAt", ""),
             "updated_ago": format_relative_time(item.get("updatedAt", ""))
         })
+    return prs
+
+def fetch_prs():
+    try:
+        prs = fetch_prs_graphql()
+    except Exception:
+        prs = fetch_prs_search_fallback()
 
     return {
         "status": "ok",

@@ -478,6 +478,7 @@ Singleton {
         function toggle(): void { root.toggleDesktopPullRequests(); }
         function show(): void { root.desktopPullRequestsVisible = true; }
         function hide(): void { root.desktopPullRequestsVisible = false; }
+        function refresh(): void { GithubService.refresh(true); }
     }
 
     IpcHandler {
