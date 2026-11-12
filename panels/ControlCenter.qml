@@ -552,7 +552,7 @@ PanelWindow {
 
                             Icon {
                                 anchors.centerIn: parent
-                                name: "rotate-cw"
+                                name: "refresh-cw"
                                 size: 11
                                 color: rRstMouse.containsMouse ? Theme.accentCyan : Theme.textMuted
                             }
@@ -1722,6 +1722,108 @@ PanelWindow {
                                             themeFlick.contentY = Math.max(0, Math.min(themeFlick.contentHeight - themeFlick.height, themeFlick.contentY - step));
                                         }
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Typography Preset Switcher
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 6
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+
+                    Icon {
+                        name: "type"
+                        size: 12
+                        color: Theme.textMuted
+                    }
+
+                    Text {
+                        text: "TYPOGRAPHY & FONTS"
+                        font.family: Theme.fontMono
+                        font.pixelSize: 10
+                        font.bold: true
+                        color: Theme.textMuted
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    Text {
+                        text: ShellState.fontPreset === "cupertino" ? "Cupertino Glass" : (ShellState.fontPreset === "nordic" ? "Cyber Nordic" : "Google Material")
+                        font.family: Theme.fontMono
+                        font.pixelSize: 9
+                        font.bold: true
+                        color: Theme.accentViolet
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+
+                    Repeater {
+                        model: [
+                            { id: "cupertino", name: "Cupertino", font: "SF Pro Display", sub: "SF Pro + JetBrains" },
+                            { id: "nordic", name: "Cyber Nordic", font: "Plus Jakarta Sans", sub: "Jakarta + Fira" },
+                            { id: "google", name: "Material", font: "Google Sans", sub: "Google + Adwaita" }
+                        ]
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 32
+                            radius: 8
+                            readonly property bool isSelected: ShellState.fontPreset === modelData.id
+                            color: isSelected ? Theme.bgCard : (ccfMouse.containsMouse ? Theme.bgHover : Theme.bgPill)
+                            border.color: isSelected ? Theme.accentViolet : Theme.borderDim
+                            border.width: isSelected ? 1.5 : 1
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 8
+                                anchors.rightMargin: 8
+                                spacing: 6
+
+                                Text {
+                                    text: "Aa"
+                                    font.family: modelData.font
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    color: isSelected ? Theme.accentViolet : Theme.textMuted
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: modelData.name
+                                    font.family: modelData.font
+                                    font.pixelSize: 10
+                                    font.bold: isSelected
+                                    color: isSelected ? Theme.accentViolet : Theme.textPrimary
+                                    elide: Text.ElideRight
+                                }
+
+                                Icon {
+                                    visible: isSelected
+                                    name: "check"
+                                    size: 10
+                                    color: Theme.accentViolet
+                                }
+                            }
+
+                            MouseArea {
+                                id: ccfMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    ShellState.fontPreset = modelData.id;
+                                    Theme.fontPreset = modelData.id;
+                                    Quickshell.execDetached(["notify-send", "-a", "Antigravity", "Font Changed", "Switched typography to " + modelData.name]);
                                 }
                             }
                         }

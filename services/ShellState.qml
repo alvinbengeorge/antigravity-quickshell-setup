@@ -14,6 +14,7 @@ Singleton {
     property bool clipboardOpen: false
     property bool controlCenterOpen: false
     property bool wallpaperThemeDialogOpen: false
+    property string wallpaperThemeTab: "wallpapers"
     property bool dockerOpen: false
     property bool runnerOpen: false
     property bool windowSwitcherOpen: false
@@ -511,6 +512,14 @@ Singleton {
         function toggle(): void { root.toggleWallpaperThemeDialog(); }
         function show(): void { root.wallpaperThemeDialogOpen = true; }
         function hide(): void { root.wallpaperThemeDialogOpen = false; }
+        function themes(): void {
+            root.wallpaperThemeTab = "themes";
+            root.wallpaperThemeDialogOpen = true;
+        }
+        function wallpapers(): void {
+            root.wallpaperThemeTab = "wallpapers";
+            root.wallpaperThemeDialogOpen = true;
+        }
     }
 
     IpcHandler {
@@ -597,14 +606,16 @@ Singleton {
 
     IpcHandler {
         target: "font"
-        function cupertino(): void { Theme.fontPreset = "cupertino"; }
-        function nordic(): void { Theme.fontPreset = "nordic"; }
-        function google(): void { Theme.fontPreset = "google"; }
-        function set(name: string): void { Theme.fontPreset = name; }
+        function cupertino(): void { root.fontPreset = "cupertino"; Theme.fontPreset = "cupertino"; }
+        function nordic(): void { root.fontPreset = "nordic"; Theme.fontPreset = "nordic"; }
+        function google(): void { root.fontPreset = "google"; Theme.fontPreset = "google"; }
+        function set(name: string): void { root.fontPreset = name; Theme.fontPreset = name; }
         function next(): void {
             const list = ["cupertino", "nordic", "google"];
-            const idx = list.indexOf(Theme.fontPreset);
-            Theme.fontPreset = list[(idx + 1) % list.length];
+            const idx = list.indexOf(root.fontPreset);
+            const nxt = list[(idx + 1) % list.length];
+            root.fontPreset = nxt;
+            Theme.fontPreset = nxt;
         }
     }
 }

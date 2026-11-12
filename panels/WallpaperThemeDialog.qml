@@ -25,7 +25,12 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: ShellState.wallpaperThemeDialogOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-    property string activeTab: "wallpapers" // "wallpapers" or "themes"
+    property string activeTab: ShellState.wallpaperThemeTab || "wallpapers"
+    onActiveTabChanged: {
+        if (ShellState.wallpaperThemeTab !== activeTab) {
+            ShellState.wallpaperThemeTab = activeTab;
+        }
+    }
     property bool showThemeCreator: false
     property string customThemeName: ""
     property string selectedPrimaryAccent: "#38BDF8"
@@ -47,8 +52,8 @@ PanelWindow {
     // Modal Card
     Rectangle {
         id: card
-        width: 780
-        height: 560
+        width: 800
+        height: 580
         anchors.centerIn: parent
         radius: Theme.cardRadius
         color: ShellState.glassEnabled ? "transparent" : Theme.bgModal
@@ -907,6 +912,163 @@ PanelWindow {
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
                                         Theme.setTheme(modelData);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // ==========================================
+                    // TYPOGRAPHY & FONT PRESETS
+                    // ==========================================
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 74
+                        radius: 8
+                        color: ShellState.glassEnabled ? Qt.rgba(0, 0, 0, 0.20) : Theme.bgCard
+                        border.color: Theme.borderDim
+                        border.width: 1
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 8
+                            spacing: 6
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 6
+
+                                Icon {
+                                    name: "type"
+                                    size: 11
+                                    color: Theme.accentSky
+                                }
+
+                                Text {
+                                    text: "TYPOGRAPHY & SYSTEM FONTS"
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 9
+                                    font.bold: true
+                                    color: Theme.textMuted
+                                }
+
+                                Item { Layout.fillWidth: true }
+
+                                Text {
+                                    text: "Active: " + (ShellState.fontPreset === "cupertino" ? "Cupertino Glass" : (ShellState.fontPreset === "nordic" ? "Cyber Nordic" : "Google Material"))
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 9
+                                    font.bold: true
+                                    color: Theme.accentSky
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 8
+
+                                Repeater {
+                                    model: [
+                                        {
+                                            id: "cupertino",
+                                            name: "Cupertino Glass",
+                                            fontDisplay: "SF Pro Display",
+                                            fontMono: "JetBrains Mono",
+                                            accent: Theme.accentSky,
+                                            sub: "SF Pro + JetBrains"
+                                        },
+                                        {
+                                            id: "nordic",
+                                            name: "Cyber Nordic",
+                                            fontDisplay: "Plus Jakarta Sans",
+                                            fontMono: "Fira Code",
+                                            accent: Theme.accentViolet,
+                                            sub: "Plus Jakarta + Fira"
+                                        },
+                                        {
+                                            id: "google",
+                                            name: "Google Material",
+                                            fontDisplay: "Google Sans",
+                                            fontMono: "Adwaita Mono",
+                                            accent: Theme.accentEmerald,
+                                            sub: "Google Sans + Adwaita"
+                                        }
+                                    ]
+
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 36
+                                        radius: 6
+                                        readonly property bool isSelected: ShellState.fontPreset === modelData.id
+                                        color: isSelected ? Qt.rgba(Theme.accentViolet.r, Theme.accentViolet.g, Theme.accentViolet.b, 0.15) : (fMouse.containsMouse ? Theme.bgHover : Theme.bgPill)
+                                        border.color: isSelected ? (modelData.accent || Theme.accentViolet) : Theme.borderDim
+                                        border.width: isSelected ? 1.5 : 1
+
+                                        RowLayout {
+                                            anchors.fill: parent
+                                            anchors.leftMargin: 8
+                                            anchors.rightMargin: 8
+                                            spacing: 6
+
+                                            Rectangle {
+                                                width: 22
+                                                height: 22
+                                                radius: 4
+                                                color: isSelected ? Qt.rgba(modelData.accent.r, modelData.accent.g, modelData.accent.b, 0.25) : Theme.bgCard
+                                                border.color: isSelected ? modelData.accent : Theme.borderDim
+                                                border.width: 1
+
+                                                Text {
+                                                    anchors.centerIn: parent
+                                                    text: "Aa"
+                                                    font.family: modelData.fontDisplay
+                                                    font.pixelSize: 11
+                                                    font.bold: true
+                                                    color: isSelected ? modelData.accent : Theme.textPrimary
+                                                }
+                                            }
+
+                                            ColumnLayout {
+                                                Layout.fillWidth: true
+                                                spacing: 0
+
+                                                Text {
+                                                    text: modelData.name
+                                                    font.family: modelData.fontDisplay
+                                                    font.pixelSize: 10
+                                                    font.bold: true
+                                                    color: isSelected ? Theme.textPrimary : Theme.textSecondary
+                                                }
+
+                                                Text {
+                                                    text: modelData.sub
+                                                    font.family: Theme.fontMono
+                                                    font.pixelSize: 8
+                                                    color: Theme.textMuted
+                                                    elide: Text.ElideRight
+                                                    Layout.fillWidth: true
+                                                }
+                                            }
+
+                                            Icon {
+                                                visible: isSelected
+                                                name: "check"
+                                                size: 11
+                                                color: modelData.accent || Theme.accentViolet
+                                            }
+                                        }
+
+                                        MouseArea {
+                                            id: fMouse
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                ShellState.fontPreset = modelData.id;
+                                                Theme.fontPreset = modelData.id;
+                                                Quickshell.execDetached(["notify-send", "-a", "Antigravity", "Typography Preset", "Switched to " + modelData.name]);
+                                            }
+                                        }
                                     }
                                 }
                             }
