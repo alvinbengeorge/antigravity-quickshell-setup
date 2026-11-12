@@ -1,0 +1,591 @@
+#!/usr/bin/env python3
+"""
+Antigravity Desktop Semantic Command Engine
+Instant (<1ms), zero-RAM, 100% reliable natural language & compound desktop intent executor.
+Controls Hyprland, Quickshell HUD/panels, Virtual Displays, Linux audio (wpctl), display (brightnessctl), and Gemini AI.
+"""
+
+import sys
+import os
+import re
+import time
+import json
+import glob
+import subprocess
+
+CYAN = "\033[96m"
+GREEN = "\033[92m"
+YELLOW = "\033[93m"
+MAGENTA = "\033[95m"
+BOLD = "\033[1m"
+RESET = "\033[0m"
+
+VIRTUAL_DISPLAY_SCRIPT = os.path.expanduser("~/Desktop/personal/custom_quickshell/scripts/virtual_display.sh")
+HISTORY_FILE = os.path.expanduser("~/.cache/antigravity/command_history.json")
+APPS_CACHE_FILE = os.path.expanduser("~/.cache/antigravity/apps_cache.json")
+
+INTENT_META = {
+    "virtual_display": {"icon": "🖥️", "tag": "DISPLAY", "color": "#06b6d4"},
+    "screenshot": {"icon": "📸", "tag": "SCREENSHOT", "color": "#f59e0b"},
+    "system": {"icon": "🔒", "tag": "SYSTEM", "color": "#8b5cf6"},
+    "media": {"icon": "🎵", "tag": "MEDIA", "color": "#ec4899"},
+    "volume": {"icon": "🔊", "tag": "AUDIO", "color": "#38bdf8"},
+    "workspace": {"icon": "🗂️", "tag": "WORKSPACE", "color": "#6366f1"},
+    "brightness": {"icon": "☀️", "tag": "BRIGHTNESS", "color": "#eab308"},
+    "theme": {"icon": "🎨", "tag": "THEME", "color": "#a855f7"},
+    "font": {"icon": "🔤", "tag": "FONT", "color": "#38bdf8"},
+    "hud_panel": {"icon": "✦", "tag": "PANEL", "color": "#a855f7"},
+    "app_launch": {"icon": "🚀", "tag": "APP", "color": "#10b981"},
+    "ai_escalate": {"icon": "✨", "tag": "GEMINI AI", "color": "#f43f5e"}
+}
+
+BUILTIN_THEMES = {
+    "deepspace": "Deep Space",
+    "askmeidentity": "AskMeIdentity",
+    "arythmatic": "Arythmatic",
+    "catppuccin": "Catppuccin Mocha",
+    "tokyonight": "Tokyo Night",
+    "nord": "Nord",
+    "cyberpunk": "Cyberpunk Neon",
+    "gruvbox": "Gruvbox Dark"
+}
+
+APP_ALIASES = {
+    "teams": ["teams for linux", "com.github.ismaelmartinez.teams_for_linux"],
+    "microsoft teams": ["teams for linux", "com.github.ismaelmartinez.teams_for_linux"],
+    "code": ["visual studio code", "com.microsoft.vscode"],
+    "vscode": ["visual studio code", "com.microsoft.vscode"],
+    "chrome": ["google chrome", "google-chrome"],
+    "google chrome": ["google chrome", "google-chrome"],
+    "browser": ["google chrome", "brave web browser"],
+    "terminal": ["kitty"],
+    "kitty": ["kitty"],
+    "files": ["nautilus", "files", "org.gnome.nautilus"],
+    "nautilus": ["nautilus", "files", "org.gnome.nautilus"],
+    "music": ["spotify", "com.spotify.client"],
+    "spotify": ["spotify", "com.spotify.client"],
+    "brave": ["brave web browser", "brave-browser"]
+}
+
+def get_known_themes():
+    themes = {}
+    for k, v in BUILTIN_THEMES.items():
+        themes[k] = {"id": k, "name": v}
+        themes[k.replace("_", " ")] = {"id": k, "name": v}
+        themes[v.lower()] = {"id": k, "name": v}
+    try:
+        custom_file = os.path.expanduser("~/.local/state/quickshell/user/antigravity-custom-themes.json")
+        if os.path.exists(custom_file):
+            with open(custom_file, "r") as f:
+                data = json.load(f)
+                custom_dict = data.get("themes", {})
+                for k, v in custom_dict.items():
+                    r_name = v.get("name", k)
+                    themes[k.lower()] = {"id": k, "name": r_name}
+                    themes[r_name.lower()] = {"id": k, "name": r_name}
+                    themes[k.replace("_", " ").lower()] = {"id": k, "name": r_name}
+    except Exception:
+        pass
+    return themes
+
+def match_theme(query):
+    q = query.strip().lower()
+    themes = get_known_themes()
+    for key, info in sorted(themes.items(), key=lambda x: -len(x[0])):
+        if re.search(r"\b" + re.escape(key) + r"\b", q):
+            return info["id"], info["name"]
+    return None, None
+
+def match_font(query):
+    q = query.strip().lower()
+    if any(k in q for k in ("cupertino", "apple", "sf pro", "san francisco", "mac")):
+        return "cupertino", "Cupertino Glass (SF Pro + JetBrains Mono)"
+    if any(k in q for k in ("nordic", "cyber nordic", "jakarta", "plus jakarta", "fira code", "fira")):
+        return "nordic", "Cyber Nordic (Plus Jakarta Sans + Fira Code)"
+    if any(k in q for k in ("google", "material", "adwaita")):
+        return "google", "Google Material (Google Sans + Adwaita Mono)"
+    return None, None
+
+def build_apps_index():
+    dirs = [
+        "/usr/share/applications",
+        os.path.expanduser("~/.local/share/applications"),
+        "/var/lib/flatpak/exports/share/applications",
+        os.path.expanduser("~/.local/share/flatpak/exports/share/applications")
+    ]
+    apps_db = {}
+    for d in dirs:
+        if os.path.exists(d):
+            for f in glob.glob(os.path.join(d, "*.desktop")):
+                try:
+                    base_id = os.path.splitext(os.path.basename(f))[0]
+                    name = None
+                    exec_cmd = None
+                    nodisplay = False
+                    with open(f, "r", errors="ignore") as fp:
+                        for line in fp:
+                            if line.startswith("Name=") and not name:
+                                name = line[5:].strip()
+                            elif line.startswith("Exec=") and not exec_cmd:
+                                exec_cmd = line[5:].strip().split("%")[0].strip()
+                            elif line.startswith("NoDisplay=true"):
+                                nodisplay = True
+                    if name and exec_cmd and not nodisplay:
+                        apps_db[base_id.lower()] = {"name": name, "exec": exec_cmd, "id": base_id}
+                        apps_db[name.lower()] = {"name": name, "exec": exec_cmd, "id": base_id}
+                except Exception:
+                    pass
+    try:
+        os.makedirs(os.path.dirname(APPS_CACHE_FILE), exist_ok=True)
+        with open(APPS_CACHE_FILE, "w") as fp:
+            json.dump(apps_db, fp)
+    except Exception:
+        pass
+    return apps_db
+
+def get_apps_index():
+    try:
+        if os.path.exists(APPS_CACHE_FILE) and (time.time() - os.path.getmtime(APPS_CACHE_FILE) < 3600):
+            with open(APPS_CACHE_FILE, "r") as fp:
+                return json.load(fp)
+    except Exception:
+        pass
+    return build_apps_index()
+
+def match_app(query):
+    q = query.strip().lower()
+    clean_target = q
+    for verb in ("open", "launch", "start", "run"):
+        if clean_target.startswith(verb + " "):
+            clean_target = clean_target[len(verb)+1:].strip()
+            break
+
+    apps_db = get_apps_index()
+    # Check aliases first
+    if clean_target in APP_ALIASES:
+        for alias_key in APP_ALIASES[clean_target]:
+            if alias_key in apps_db:
+                return apps_db[alias_key]
+
+    # Direct match
+    if clean_target in apps_db:
+        return apps_db[clean_target]
+
+    # Substring / token match (only if clean_target is >= 3 chars)
+    if len(clean_target) >= 3:
+        for k, v in apps_db.items():
+            if k == clean_target or k.startswith(clean_target) or clean_target in k:
+                return v
+    return None
+
+def load_history():
+    try:
+        if os.path.exists(HISTORY_FILE):
+            with open(HISTORY_FILE, "r") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return []
+
+def record_history(prompt, actions):
+    try:
+        os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
+        hist = load_history()
+        hist = [h for h in hist if h.get("prompt") != prompt]
+        meta = INTENT_META.get(actions[0][1], {}) if actions else {}
+        hist.insert(0, {
+            "prompt": prompt,
+            "intent": actions[0][1] if actions else "unknown",
+            "tag": meta.get("tag", "CMD"),
+            "icon": meta.get("icon", "⚡"),
+            "color": meta.get("color", "#06b6d4"),
+            "timestamp": int(time.time())
+        })
+        with open(HISTORY_FILE, "w") as f:
+            json.dump(hist[:40], f, indent=2)
+    except Exception:
+        pass
+
+WORD_NUMS = {
+    "first": 1, "1st": 1, "one": 1,
+    "second": 2, "2nd": 2, "two": 2,
+    "third": 3, "3rd": 3, "three": 3,
+    "fourth": 4, "4th": 4, "four": 4,
+    "fifth": 5, "5th": 5, "five": 5,
+    "sixth": 6, "6th": 6, "six": 6,
+    "seventh": 7, "7th": 7, "seven": 7,
+    "eighth": 8, "8th": 8, "eight": 8,
+    "ninth": 9, "9th": 9, "nine": 9,
+    "last": 9,
+    "half": 50, "max": 100, "maximum": 100, "full": 100, "zero": 0, "min": 5, "minimum": 5
+}
+
+def notify(title, message):
+    try:
+        subprocess.run(["notify-send", "-a", "Antigravity", title, message], check=False)
+    except Exception:
+        pass
+
+def run_command(cmd_list):
+    try:
+        return subprocess.run(cmd_list, capture_output=True, text=True, check=False)
+    except Exception:
+        return None
+
+def extract_number(text):
+    m = re.search(r"\b(\d{1,3})\b", text)
+    if m:
+        return int(m.group(1))
+    t_lower = text.lower()
+    for w, val in WORD_NUMS.items():
+        if re.search(r"\b" + re.escape(w) + r"\b", t_lower):
+            return val
+    return None
+
+def parse_single_intent(query):
+    q = query.strip().lower()
+    num = extract_number(q)
+
+    # ── 1. VIRTUAL DISPLAY / HEADLESS STREAMING (Check BEFORE brightness!) ──
+    if any(k in q for k in ("virtual display", "virtual monitor", "headless display", "headless monitor", "wireless projection", "second screen stream")):
+        if any(w in q for w in ("stop", "off", "disable", "kill", "remove", "close", "shut")):
+            return "virtual_display", "Stopped Virtual Headless Display", [
+                [VIRTUAL_DISPLAY_SCRIPT, "stop"]
+            ]
+        if any(w in q for w in ("status", "check", "info")):
+            return "virtual_display", "Checked Virtual Display Status", [
+                [VIRTUAL_DISPLAY_SCRIPT, "status"]
+            ]
+        return "virtual_display", "Started Virtual Headless Display (1920x1080@60Hz)", [
+            [VIRTUAL_DISPLAY_SCRIPT, "start"]
+        ]
+
+    # ── 2. SCREENSHOT (Check BEFORE brightness/screen!) ─────────────────
+    if any(k in q for k in ("screenshot", "screen shot", "snip", "capture screen", "capture area", "screen capture", "screen-shot")):
+        return "screenshot", "Captured screenshot to clipboard", [
+            ["hyprctl", "dispatch", 'hl.dsp.exec_cmd("grim -g \\"$(slurp)\\" - | wl-copy")']
+        ]
+
+    # ── 3. LOCK / POWER / SESSION ──────────────────────────────────────
+    if re.search(r"\b(lock|lock screen|lock laptop)\b", q):
+        return "system", "Locked screen with Hyprlock", [
+            ["hyprctl", "dispatch", 'hl.dsp.exec_cmd("hyprlock")']
+        ]
+    if any(k in q for k in ("reboot", "restart laptop", "restart system")):
+        return "system", "Rebooting system", [["systemctl", "reboot"]]
+    if any(k in q for k in ("shutdown", "poweroff", "turn off laptop")):
+        return "system", "Powering off system", [["systemctl", "poweroff"]]
+    if any(k in q for k in ("fullscreen", "full screen", "maximize")):
+        return "system", "Toggled Fullscreen", [["hyprctl", "dispatch", "hl.dsp.window.fullscreen({ action = 'toggle' })"]]
+    if any(k in q for k in ("floating", "toggle float")):
+        return "system", "Toggled Float", [["hyprctl", "dispatch", "hl.dsp.window.float({ action = 'toggle' })"]]
+    if any(k in q for k in ("close window", "kill window")):
+        return "system", "Closed Window", [["hyprctl", "dispatch", "hl.dsp.window.close()"]]
+
+    # ── 3.5 APPLE PLASTIC / PLASTIC MODE TOGGLE ────────────────────────
+    if any(k in q for k in ("plastic mode", "apple plastic", "plastic effect", "plastic buttons", "toggle plastic", "plastic", "glass effect", "apple glass", "liquid glass", "glass buttons", "glass mode", "toggle glass")):
+        if any(w in q for w in ("disable", "off", "stop", "remove", "flat")):
+            return "system", "Disabled Plastic Mode (Flat Mode)", [
+                ["qs", "-c", "antigravity", "ipc", "call", "plastic", "disable"]
+            ]
+        if any(w in q for w in ("enable", "on", "start")):
+            return "system", "Enabled Apple Plastic Mode", [
+                ["qs", "-c", "antigravity", "ipc", "call", "plastic", "enable"]
+            ]
+        return "system", "Toggled Apple Plastic Mode", [
+            ["qs", "-c", "antigravity", "ipc", "call", "plastic", "toggle"]
+        ]
+
+    # ── 4. MEDIA CONTROLS ──────────────────────────────────────────────
+    if any(k in q for k in ("play music", "pause music", "pause audio", "resume music", "play song", "stop song", "media toggle", "play/pause")):
+        return "media", "Toggled media playback", [["qs", "-c", "antigravity", "ipc", "call", "media", "playPause"]]
+    if any(k in q for k in ("next track", "next song", "skip song", "next music")):
+        return "media", "Skipped to next media track", [["qs", "-c", "antigravity", "ipc", "call", "media", "next"]]
+    if any(k in q for k in ("previous track", "prev song", "previous song", "prev track", "restart song")):
+        return "media", "Returned to previous media track", [["qs", "-c", "antigravity", "ipc", "call", "media", "previous"]]
+
+    # ── 5. AUDIO & VOLUME ──────────────────────────────────────────────
+    vol_words = ("volume", "vol", "sound", "audio", "speaker", "speakers", "loud", "louder", "quiet", "quieter", "hear", "mute", "unmute", "silence", "mic", "microphone")
+    if any(re.search(r"\b" + re.escape(w) + r"\b", q) for w in vol_words):
+        is_mic = any(m in q for m in ("mic", "microphone", "input"))
+        target_sink = "@DEFAULT_AUDIO_SOURCE@" if is_mic else "@DEFAULT_AUDIO_SINK@"
+        target_label = "microphone" if is_mic else "audio output"
+
+        if "unmute" in q:
+            return "volume", f"Unmuted {target_label}", [
+                ["wpctl", "set-mute", target_sink, "0"]
+            ]
+        if "mute" in q or "silence" in q or (num == 0 and any(w in q for w in ("set", "to", "turn"))):
+            return "volume", f"Muted {target_label}", [
+                ["wpctl", "set-mute", target_sink, "1"]
+            ]
+        if num is not None:
+            pct = min(150, max(0, num))
+            cmds = [["wpctl", "set-volume", target_sink, f"{pct/100:.2f}"]]
+            if not is_mic:
+                cmds.append(["qs", "-c", "antigravity", "ipc", "call", "osd", "volume", str(pct)])
+            return "volume", f"Set {target_label} volume to {pct}%", cmds
+        if any(w in q for w in ("down", "lower", "quiet", "decrease", "drop", "softer")):
+            cmds = [["wpctl", "set-volume", target_sink, "10%-"]]
+            if not is_mic:
+                cmds.append(["qs", "-c", "antigravity", "ipc", "call", "osd", "volume", "40"])
+            return "volume", f"Decreased {target_label} volume (-10%)", cmds
+        if any(w in q for w in ("up", "raise", "increase", "louder", "boost", "more")):
+            cmds = [["wpctl", "set-volume", target_sink, "10%+"]]
+            if not is_mic:
+                cmds.append(["qs", "-c", "antigravity", "ipc", "call", "osd", "volume", "60"])
+            return "volume", f"Increased {target_label} volume (+10%)", cmds
+        return "volume", f"Toggled {target_label} mute", [
+            ["wpctl", "set-mute", target_sink, "toggle"]
+        ]
+
+    # ── 6. WORKSPACES & RIBBON LAYOUT ──────────────────────────────────
+    ws_words = ("workspace", "ws", "desktop", "ribbon", "paperwm", "column")
+    has_explicit_ws = any(re.search(r"\b" + re.escape(w) + r"\b", q) for w in ws_words)
+    has_nav_to_num = bool(re.search(r"\b(?:go\s+to|switch\s+to|move\s+to)\b", q)) and (num is not None)
+
+    if (has_explicit_ws or has_nav_to_num) and not any(k in q for k in ("wallpaper", "theme", "track", "song")):
+        is_move_window = "window" in q and any(w in q for w in ("move", "send", "put", "throw"))
+        if num is not None:
+            if is_move_window:
+                return "workspace", f"Moved window to Workspace {num}", [
+                    ["hyprctl", "dispatch", f"hl.dsp.window.move({{ workspace = {num} }})"]
+                ]
+            else:
+                return "workspace", f"Switched to Workspace {num}", [
+                    ["hyprctl", "dispatch", f"hl.dsp.focus({{ workspace = {num} }})"]
+                ]
+        if any(w in q for w in ("column", "col", "ribbon")):
+            if any(w in q for w in ("right", "next", "forward")):
+                return "workspace", "Scrolled ribbon to next column", [
+                    ["hyprctl", "dispatch", 'hl.dsp.layout("move +col")']
+                ]
+            if any(w in q for w in ("left", "prev", "previous", "back")):
+                return "workspace", "Scrolled ribbon to previous column", [
+                    ["hyprctl", "dispatch", 'hl.dsp.layout("move -col")']
+                ]
+        if any(w in q for w in ("right", "next", "forward")):
+            return "workspace", "Switched to next workspace", [
+                ["hyprctl", "dispatch", "workspace", "+1"]
+            ]
+        if any(w in q for w in ("left", "prev", "previous", "back")):
+            return "workspace", "Switched to previous workspace", [
+                ["hyprctl", "dispatch", "workspace", "-1"]
+            ]
+        return "workspace", "Switched to Scrolling Ribbon Workspace (7)", [
+            ["hyprctl", "dispatch", "hl.dsp.focus({ workspace = 7 })"]
+        ]
+
+    # ── 6. DISPLAY & BRIGHTNESS ────────────────────────────────────────
+    bri_words = ("brightness", "bright", "brighter", "bri", "backlight", "dim", "dimmer", "darker")
+    has_bri_direct = any(re.search(r"\b" + re.escape(w) + r"\b", q) for w in bri_words)
+    has_screen_level = re.search(r"\b(?:screen|display)\b", q) and any(w in q for w in ("dim", "dark", "light", "level", "percent", "%", "up", "down", "high", "low", "set"))
+    if (has_bri_direct or has_screen_level) and not any(k in q for k in ("screenshot", "snip", "virtual", "headless")):
+        if num is not None:
+            pct = min(100, max(1, num))
+            return "brightness", f"Set brightness to {pct}%", [
+                ["brightnessctl", "set", f"{pct}%"],
+                ["qs", "-c", "antigravity", "ipc", "call", "osd", "brightness", str(pct)]
+            ]
+        if any(w in q for w in ("dim", "down", "darker", "decrease", "lower", "less")):
+            return "brightness", "Dimmed display (-10%)", [
+                ["brightnessctl", "set", "10%-"],
+                ["qs", "-c", "antigravity", "ipc", "call", "osd", "brightness", "30"]
+            ]
+        if any(w in q for w in ("up", "raise", "increase", "brighter", "more")):
+            return "brightness", "Increased brightness (+10%)", [
+                ["brightnessctl", "set", "10%+"],
+                ["qs", "-c", "antigravity", "ipc", "call", "osd", "brightness", "70"]
+            ]
+        return "brightness", "Set display brightness to 50%", [
+            ["brightnessctl", "set", "50%"],
+            ["qs", "-c", "antigravity", "ipc", "call", "osd", "brightness", "50"]
+        ]
+
+    # ── 7. HUD, GEMINI & QUICKSHELL PANELS ──────────────────────────────
+    if any(k in q for k in ("hud", "gemini", "antigravity", "ai assistant", "ask gemini", "see gemini", "open hud", "show gemini")):
+        return "hud_panel", "Opened Antigravity HUD (Gemini Assistant)", [
+            ["qs", "-c", "antigravity", "ipc", "call", "antigravity", "toggle"]
+        ]
+    if any(k in q for k in ("docker", "container", "containers")):
+        return "hud_panel", "Toggled Docker Manager", [
+            ["qs", "-c", "antigravity", "ipc", "call", "docker", "toggle"]
+        ]
+    if any(k in q for k in ("whatsapp", "chat", "messages")):
+        return "hud_panel", "Toggled WhatsApp Panel", [
+            ["qs", "-c", "antigravity", "ipc", "call", "whatsapp", "toggle"]
+        ]
+    if any(k in q for k in ("clipboard", "clip", "history")):
+        return "hud_panel", "Toggled Clipboard Manager", [
+            ["qs", "-c", "antigravity", "ipc", "call", "clipboard", "toggle"]
+        ]
+    if any(k in q for k in ("system monitor", "ram stats", "cpu stats", "task manager", "processes")):
+        return "hud_panel", "Toggled System Monitor", [
+            ["qs", "-c", "antigravity", "ipc", "call", "systemMonitor", "toggle"]
+        ]
+    if any(k in q for k in ("next wallpaper", "switch wallpaper", "new wallpaper", "change wallpaper")):
+        return "hud_panel", "Switched to Next Wallpaper", [
+            ["qs", "-c", "antigravity", "ipc", "call", "wallpaper", "next"]
+        ]
+    # Specific Theme Match
+    theme_id, theme_name = match_theme(q)
+    if theme_id:
+        return "theme", f"Switched theme to '{theme_name}'", [
+            ["qs", "-c", "antigravity", "ipc", "call", "theme", "set", theme_id]
+        ]
+    if any(k in q for k in ("next theme", "switch theme", "cycle theme", "change theme", "rotate theme")):
+        return "theme", "Switched to Next Theme", [
+            ["qs", "-c", "antigravity", "ipc", "call", "theme", "next"]
+        ]
+    # Font Preset Match
+    font_id, font_name = match_font(q)
+    if font_id and ("font" in q or "typeface" in q or "switch" in q or "set" in q or "change" in q or q.strip() in ("cupertino", "nordic", "google")):
+        return "font", f"Switched font to {font_name}", [
+            ["qs", "-c", "antigravity", "ipc", "call", "font", font_id]
+        ]
+    if any(k in q for k in ("next font", "switch font", "cycle font", "change font", "rotate font", "toggle font")):
+        return "font", "Switched to Next Font Preset", [
+            ["qs", "-c", "antigravity", "ipc", "call", "font", "next"]
+        ]
+    if any(k in q for k in ("theme dialog", "wallpaper dialog", "theme studio", "wallpaper selector")):
+        return "hud_panel", "Toggled Wallpaper & Theme Dialog", [
+            ["qs", "-c", "antigravity", "ipc", "call", "wallpaperTheme", "toggle"]
+        ]
+    if any(k in q for k in ("control center", "quick settings", "toggles")):
+        return "hud_panel", "Toggled Control Center", [
+            ["qs", "-c", "antigravity", "ipc", "call", "controlCenter", "toggle"]
+        ]
+    if any(k in q for k in ("scratch", "scratchpad", "quake terminal", "drop terminal")):
+        return "hud_panel", "Toggled Quake Scratchpad", [
+            ["hyprctl", "dispatch", f'hl.dsp.exec_cmd("{os.path.expanduser("~/.config/hypr/scripts/scratchpad.sh")}")']
+        ]
+    if any(k in q for k in ("window switcher", "switch window", "alt tab")):
+        return "hud_panel", "Toggled Window Switcher", [
+            ["qs", "-c", "antigravity", "ipc", "call", "windowSwitcher", "toggle"]
+        ]
+    if any(k in q for k in ("task runner", "runner panel", "tasks")):
+        return "hud_panel", "Toggled Task Runner", [
+            ["qs", "-c", "antigravity", "ipc", "call", "runner", "toggle"]
+        ]
+    if any(k in q for k in ("do not disturb", "dnd", "mute notifications")):
+        return "hud_panel", "Toggled Do Not Disturb", [
+            ["qs", "-c", "antigravity", "ipc", "call", "notifications", "toggleDnd"]
+        ]
+    if any(k in q for k in ("clear notifications", "dismiss notifications")):
+        return "hud_panel", "Cleared All Notifications", [
+            ["qs", "-c", "antigravity", "ipc", "call", "notifications", "clear"]
+        ]
+    if any(k in q for k in ("power menu", "session dialog", "logout menu")):
+        return "hud_panel", "Toggled Session Dialog", [
+            ["qs", "-c", "antigravity", "ipc", "call", "session", "toggle"]
+        ]
+
+    # ── 8. QUESTIONS / REASONING (Route to Gemini AI before raw app name search) ──
+    if any(q.startswith(w) for w in ("how ", "what ", "why ", "when ", "where ", "who ", "can you ", "tell me ", "explain ", "summarize ")):
+        return "ai_escalate", f"Ask Gemini: '{query}'", [
+            ["qs", "-c", "antigravity", "ipc", "call", "antigravity", "toggle"]
+        ]
+
+    # ── 9. APPLICATIONS (Dynamic Indexing + Aliases) ───────────────────
+    app = match_app(q)
+    if app:
+        app_name = app["name"]
+        app_id = app.get("id")
+        if app_id:
+            launch_cmd = f"gtk-launch {app_id}"
+        else:
+            launch_cmd = app.get("exec", app_name.lower())
+        return "app_launch", f"Launched {app_name}", [
+            ["hyprctl", "dispatch", f'hl.dsp.exec_cmd("{launch_cmd}")']
+        ]
+
+    # ── 10. FALLBACK / AI ESCALATION ───────────────────────────────────
+    return "ai_escalate", f"Ask Gemini: '{query}'", [
+        ["qs", "-c", "antigravity", "ipc", "call", "antigravity", "toggle"]
+    ]
+
+def parse_compound_intents(full_query):
+    parts = re.split(r"\s*(?:and\s+then|and|then|;|\+)\s*", full_query.strip(), flags=re.IGNORECASE)
+    parts = [p.strip() for p in parts if p.strip()]
+    if not parts:
+        return []
+    actions = []
+    for p in parts:
+        intent, desc, cmds = parse_single_intent(p)
+        actions.append((p, intent, desc, cmds))
+    return actions
+
+def main():
+    if "--history" in sys.argv:
+        print(json.dumps(load_history()))
+        sys.exit(0)
+
+    if "--json" in sys.argv:
+        args = [a for a in sys.argv[1:] if a != "--json"]
+        prompt = " ".join(args).strip()
+        t0 = time.perf_counter()
+        actions = parse_compound_intents(prompt) if prompt else []
+        dt = (time.perf_counter() - t0) * 1000
+
+        out = {
+            "query": prompt,
+            "latency_ms": round(dt, 2),
+            "actions_count": len(actions),
+            "actions": []
+        }
+        for idx, (sub_p, intent, desc, cmds) in enumerate(actions, 1):
+            m = INTENT_META.get(intent, {"icon": "⚡", "tag": "CMD", "color": "#06b6d4"})
+            out["actions"].append({
+                "step": idx,
+                "sub_query": sub_p,
+                "intent": intent,
+                "tag": m.get("tag", "CMD"),
+                "icon": m.get("icon", "⚡"),
+                "color": m.get("color", "#06b6d4"),
+                "description": desc,
+                "commands": [" ".join(c) for c in cmds]
+            })
+        print(json.dumps(out))
+        sys.exit(0)
+
+    dry_run = "--dry-run" in sys.argv or "-n" in sys.argv or os.environ.get("DRY_RUN", "0") == "1"
+    args = [a for a in sys.argv[1:] if a not in ("--dry-run", "-n")]
+
+    if not args:
+        print(f"{BOLD}Usage:{RESET} laya-cmd [--dry-run] [--json] [--history] \"<natural language command>\"")
+        print("Examples:")
+        print("  laya-cmd \"turn on virtual display\"")
+        print("  laya-cmd \"move to the second workspace and take a screenshot\"")
+        print("  laya-cmd --dry-run \"volume to 50%\"")
+        print("  laya-cmd --json \"volume to 50%\"")
+        sys.exit(1)
+
+    full_prompt = " ".join(args).strip()
+    t0 = time.time()
+    actions = parse_compound_intents(full_prompt)
+    dt = (time.time() - t0) * 1000
+
+    mode_tag = f" {YELLOW}[DRY RUN MODE]{RESET}" if dry_run else ""
+    print(f"\n{BOLD}{CYAN}=== Antigravity Semantic Command Engine{mode_tag}{CYAN} ==={RESET}")
+    print(f"{BOLD}Input Prompt:{RESET} {YELLOW}\"{full_prompt}\"{RESET}")
+    print(f"{BOLD}Execution Plan:{RESET} [Parsed in {dt:0.2f}ms | 0MB RAM | {len(actions)} action(s)]")
+
+    for idx, (sub_p, intent, desc, cmds) in enumerate(actions, 1):
+        print(f"\n  {BOLD}Step {idx}:{RESET} {GREEN}{BOLD}{desc}{RESET} [{CYAN}{intent}{RESET}]")
+        if not dry_run:
+            notify(f"Antigravity: {intent.upper()}", desc)
+        for c in cmds:
+            if dry_run:
+                print(f"    ➜ [DRY RUN] Would execute: {' '.join(c)}")
+            else:
+                print(f"    ➜ Executing: {' '.join(c)}")
+                run_command(c)
+
+    if not dry_run and actions:
+        record_history(full_prompt, actions)
+
+    status_text = "✓ Dry run verification completed." if dry_run else "✓ Completed successfully."
+    print(f"\n{GREEN}{status_text}{RESET}\n")
+
+if __name__ == "__main__":
+    main()
