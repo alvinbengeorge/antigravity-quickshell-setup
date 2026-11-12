@@ -7,6 +7,7 @@ import Quickshell.Wayland
 import "../theme"
 import "../services"
 import "../components"
+import "../services/SpotlightEngine.js" as Spotlight
 
 PanelWindow {
     id: omnibarWindow
@@ -27,20 +28,39 @@ PanelWindow {
     WlrLayershell.keyboardFocus: ShellState.omnibarOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     property var parsedPlan: null
+    property var spotlightResult: null
     property bool isExecuting: false
     property var commandHistory: []
     property int historyIndex: -1
 
     onVisibleChanged: {
         if (visible) {
-            omniInput.text = "";
+            const initQuery = ShellState.omnibarInitialQuery || "";
+            ShellState.omnibarInitialQuery = "";
+            omniInput.text = initQuery;
             parsedPlan = null;
+            spotlightResult = initQuery ? Spotlight.inspect(initQuery) : null;
             isExecuting = false;
             historyIndex = -1;
             loadHistoryProc.running = true;
             Qt.callLater(() => {
                 omniInput.forceActiveFocus();
+                if (initQuery) {
+                    omniInput.selectAll();
+                }
             });
+        }
+    }
+
+    Connections {
+        target: ShellState
+        function onOmnibarInitialQueryChanged() {
+            if (ShellState.omnibarOpen && ShellState.omnibarInitialQuery) {
+                omniInput.text = ShellState.omnibarInitialQuery;
+                ShellState.omnibarInitialQuery = "";
+                omniInput.forceActiveFocus();
+                omniInput.selectAll();
+            }
         }
     }
 
@@ -62,6 +82,24 @@ PanelWindow {
         }
     }
 
+    // ── Eyedropper Process ──────────────────────────────────────────────
+    Process {
+        id: eyedropperProc
+        running: false
+        command: ["hyprpicker"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const picked = text.trim();
+                if (picked && picked.startsWith("#")) {
+                    omniInput.text = picked;
+                    omniInput.forceActiveFocus();
+                    Quickshell.execDetached(["wl-copy", picked]);
+                    Quickshell.execDetached(["notify-send", "-a", "Antigravity", "Color Picked", picked]);
+                }
+            }
+        }
+    }
+
     // ── Real-Time Intent Analyzer Subprocess ────────────────────────────
     Timer {
         id: parseDebounceTimer
@@ -69,7 +107,7 @@ PanelWindow {
         repeat: false
         onTriggered: {
             const q = omniInput.text.trim();
-            if (q.length === 0) {
+            if (q.length === 0 || omnibarWindow.spotlightResult !== null) {
                 omnibarWindow.parsedPlan = null;
                 return;
             }
@@ -95,14 +133,23 @@ PanelWindow {
         }
     }
 
-    // ── Execute Command ────────────────────────────────────────────────
+    // ── Execute Command / Copy Spotlight Result ────────────────────────
     function executeCurrentCommand() {
+        if (omnibarWindow.spotlightResult) {
+            const val = omnibarWindow.spotlightResult.copyValue || "";
+            if (val) {
+                Quickshell.execDetached(["wl-copy", val]);
+                Quickshell.execDetached(["notify-send", "-a", "Antigravity", "Copied to Clipboard", val]);
+            }
+            dismissTimer.restart();
+            return;
+        }
+
         const query = omniInput.text.trim();
         if (!query) return;
 
         omnibarWindow.isExecuting = true;
         Quickshell.execDetached(["laya-cmd", query]);
-
         dismissTimer.restart();
     }
 
@@ -140,6 +187,11 @@ PanelWindow {
 
         // Dynamic height based on mode
         height: {
+            if (omnibarWindow.spotlightResult) {
+                if (omnibarWindow.spotlightResult.mode === "glyphs") return 290;
+                if (omnibarWindow.spotlightResult.mode === "color") return 245;
+                return 220; // math, conversion, time
+            }
             if (omnibarWindow.parsedPlan && omnibarWindow.parsedPlan.actions && omnibarWindow.parsedPlan.actions.length > 0) {
                 return Math.min(520, 150 + omnibarWindow.parsedPlan.actions.length * 80);
             }
@@ -165,7 +217,7 @@ PanelWindow {
         Behavior on height { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
         Behavior on border.color { ColorAnimation { duration: 150 } }
 
-        // Subtle ambient neon glow
+        // Ambient neon glow
         Rectangle {
             anchors.fill: parent
             anchors.margins: -1
@@ -212,13 +264,19 @@ PanelWindow {
                         radius: 8
                         color: omnibarWindow.isExecuting
                             ? Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.20)
-                            : Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.15)
+                            : (omnibarWindow.spotlightResult
+                                ? Qt.rgba(Theme.accentAmber.r, Theme.accentAmber.g, Theme.accentAmber.b, 0.20)
+                                : Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.15))
 
                         Text {
                             anchors.centerIn: parent
-                            text: omnibarWindow.isExecuting ? "✓" : "⚡"
+                            text: omnibarWindow.isExecuting
+                                ? "✓"
+                                : (omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.icon : "⚡")
                             font.pixelSize: 16
-                            color: omnibarWindow.isExecuting ? Theme.accentEmerald : Theme.accentCyan
+                            color: omnibarWindow.isExecuting
+                                ? Theme.accentEmerald
+                                : (omnibarWindow.spotlightResult ? Theme.accentAmber : Theme.accentCyan)
                         }
                     }
 
@@ -234,16 +292,22 @@ PanelWindow {
                         clip: true
 
                         Text {
-                            text: "Type a desktop command, action, or prompt..."
+                            text: "Type a command, math (1440 * 0.75), currency (120 usd to inr), hex (#ffaa00), or emoji (:fire:)..."
                             font.family: parent.font.family
                             font.pixelSize: parent.font.pixelSize
                             color: Theme.textMuted
                             visible: !parent.text && !parent.activeFocus
+                            elide: Text.ElideRight
                         }
 
                         onTextChanged: {
                             omnibarWindow.historyIndex = -1;
-                            parseDebounceTimer.restart();
+                            omnibarWindow.spotlightResult = Spotlight.inspect(omniInput.text);
+                            if (!omnibarWindow.spotlightResult) {
+                                parseDebounceTimer.restart();
+                            } else {
+                                omnibarWindow.parsedPlan = null;
+                            }
                         }
 
                         Keys.onReturnPressed: omnibarWindow.executeCurrentCommand()
@@ -271,34 +335,40 @@ PanelWindow {
                         }
                     }
 
-                    // Detected Intent Tag Badge
+                    // Detected Mode Badge
                     Rectangle {
-                        visible: omnibarWindow.parsedPlan && omnibarWindow.parsedPlan.actions && omnibarWindow.parsedPlan.actions.length > 0
+                        visible: omnibarWindow.spotlightResult !== null || (omnibarWindow.parsedPlan && omnibarWindow.parsedPlan.actions && omnibarWindow.parsedPlan.actions.length > 0)
                         height: 24
                         radius: 6
                         implicitWidth: intentTagText.implicitWidth + 14
                         color: {
+                            if (omnibarWindow.spotlightResult) {
+                                return Qt.rgba(Theme.accentAmber.r, Theme.accentAmber.g, Theme.accentAmber.b, 0.20);
+                            }
                             const act = omnibarWindow.parsedPlan && omnibarWindow.parsedPlan.actions && omnibarWindow.parsedPlan.actions[0];
                             return act ? Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.20) : "transparent";
                         }
-                        border.color: Theme.accentCyan
+                        border.color: omnibarWindow.spotlightResult ? Theme.accentAmber : Theme.accentCyan
                         border.width: 1
 
                         Text {
                             id: intentTagText
                             anchors.centerIn: parent
                             text: {
+                                if (omnibarWindow.spotlightResult) {
+                                    return omnibarWindow.spotlightResult.mode.toUpperCase();
+                                }
                                 const act = omnibarWindow.parsedPlan && omnibarWindow.parsedPlan.actions && omnibarWindow.parsedPlan.actions[0];
                                 return act ? act.tag : "";
                             }
                             font.family: Theme.fontMono
                             font.pixelSize: 10
                             font.bold: true
-                            color: Theme.accentCyan
+                            color: omnibarWindow.spotlightResult ? Theme.accentAmber : Theme.accentCyan
                         }
                     }
 
-                    // Engine Latency Badge
+                    // Latency Badge
                     Rectangle {
                         height: 22
                         radius: 5
@@ -310,7 +380,7 @@ PanelWindow {
                         Text {
                             id: latencyText
                             anchors.centerIn: parent
-                            text: omnibarWindow.parsedPlan ? (omnibarWindow.parsedPlan.latency_ms + "ms • 0MB") : "<1ms • 0MB"
+                            text: omnibarWindow.spotlightResult ? "<0.1ms • Local" : (omnibarWindow.parsedPlan ? (omnibarWindow.parsedPlan.latency_ms + "ms • 0MB") : "<1ms • 0MB")
                             font.family: Theme.fontMono
                             font.pixelSize: 10
                             color: Theme.accentEmerald
@@ -340,7 +410,378 @@ PanelWindow {
                             onClicked: {
                                 omniInput.text = "";
                                 omnibarWindow.parsedPlan = null;
+                                omnibarWindow.spotlightResult = null;
                                 omniInput.forceActiveFocus();
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Section S: Spotlight Hero Results (Math, Conversions, Time) ──
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                spacing: 8
+                visible: omnibarWindow.spotlightResult !== null && (omnibarWindow.spotlightResult.mode === "math" || omnibarWindow.spotlightResult.mode === "conversion" || omnibarWindow.spotlightResult.mode === "time")
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    radius: 12
+                    color: Theme.bgCard
+                    border.color: Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.4)
+                    border.width: 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 18
+                        spacing: 16
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 4
+
+                            RowLayout {
+                                spacing: 6
+                                Text {
+                                    text: omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.icon : ""
+                                    font.pixelSize: 16
+                                }
+                                Text {
+                                    text: omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.title : ""
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 10
+                                    font.bold: true
+                                    color: Theme.accentCyan
+                                }
+                            }
+
+                            Text {
+                                text: omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.expression : ""
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 14
+                                font.bold: true
+                                color: Theme.textSecondary
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                            }
+                        }
+
+                        // Big Hero Result
+                        Text {
+                            text: omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.result : ""
+                            font.family: Theme.fontMono
+                            font.pixelSize: 26
+                            font.bold: true
+                            color: Theme.accentEmerald
+                        }
+
+                        // Copy Pill Action
+                        Rectangle {
+                            height: 32
+                            implicitWidth: copyPillRow.implicitWidth + 16
+                            radius: 8
+                            color: copyM.containsMouse ? Theme.accentEmerald : Theme.bgPill
+                            border.color: Theme.accentEmerald
+                            border.width: 1
+
+                            RowLayout {
+                                id: copyPillRow
+                                anchors.centerIn: parent
+                                spacing: 6
+                                Text {
+                                    text: "↵"
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    color: copyM.containsMouse ? Theme.textOnAccent : Theme.accentEmerald
+                                }
+                                Text {
+                                    text: "Copy"
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    color: copyM.containsMouse ? Theme.textOnAccent : Theme.textPrimary
+                                }
+                            }
+
+                            MouseArea {
+                                id: copyM
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: omnibarWindow.executeCurrentCommand()
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Section C: Spotlight Color & Palette Inspector ──────────────
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                spacing: 8
+                visible: omnibarWindow.spotlightResult !== null && omnibarWindow.spotlightResult.mode === "color"
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    radius: 12
+                    color: Theme.bgCard
+                    border.color: Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.4)
+                    border.width: 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 16
+                        spacing: 16
+
+                        // Swatch Box
+                        Rectangle {
+                            width: 68
+                            height: 68
+                            radius: 10
+                            color: omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.hex : "transparent"
+                            border.color: Qt.rgba(1, 1, 1, 0.3)
+                            border.width: 1.5
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "🎨"
+                                font.pixelSize: 22
+                                opacity: 0.6
+                            }
+                        }
+
+                        // Color Value Badges
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
+
+                            Text {
+                                text: "COLOR PALETTE INSPECTOR"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 10
+                                font.bold: true
+                                color: Theme.accentCyan
+                            }
+
+                            RowLayout {
+                                spacing: 8
+
+                                // Hex Chip
+                                Rectangle {
+                                    height: 28
+                                    implicitWidth: hexTxt.implicitWidth + 14
+                                    radius: 6
+                                    color: hexM.containsMouse ? Theme.accentCyan : Theme.bgBase
+                                    border.color: Theme.borderDim
+                                    border.width: 1
+                                    Text {
+                                        id: hexTxt
+                                        anchors.centerIn: parent
+                                        text: omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.hex : ""
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        color: hexM.containsMouse ? Theme.textOnAccent : Theme.accentCyan
+                                    }
+                                    MouseArea {
+                                        id: hexM
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            Quickshell.execDetached(["wl-copy", hexTxt.text]);
+                                            Quickshell.execDetached(["notify-send", "-a", "Antigravity", "HEX Copied", hexTxt.text]);
+                                            omnibarWindow.dismissTimer.restart();
+                                        }
+                                    }
+                                }
+
+                                // RGB Chip
+                                Rectangle {
+                                    height: 28
+                                    implicitWidth: rgbTxt.implicitWidth + 14
+                                    radius: 6
+                                    color: rgbM.containsMouse ? Theme.accentSky : Theme.bgBase
+                                    border.color: Theme.borderDim
+                                    border.width: 1
+                                    Text {
+                                        id: rgbTxt
+                                        anchors.centerIn: parent
+                                        text: omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.rgb : ""
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: 11
+                                        color: rgbM.containsMouse ? Theme.textOnAccent : Theme.textPrimary
+                                    }
+                                    MouseArea {
+                                        id: rgbM
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            Quickshell.execDetached(["wl-copy", rgbTxt.text]);
+                                            Quickshell.execDetached(["notify-send", "-a", "Antigravity", "RGB Copied", rgbTxt.text]);
+                                            omnibarWindow.dismissTimer.restart();
+                                        }
+                                    }
+                                }
+
+                                // HSL Chip
+                                Rectangle {
+                                    height: 28
+                                    implicitWidth: hslTxt.implicitWidth + 14
+                                    radius: 6
+                                    color: hslM.containsMouse ? Theme.accentViolet : Theme.bgBase
+                                    border.color: Theme.borderDim
+                                    border.width: 1
+                                    Text {
+                                        id: hslTxt
+                                        anchors.centerIn: parent
+                                        text: omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.hsl : ""
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: 11
+                                        color: hslM.containsMouse ? Theme.textOnAccent : Theme.textMuted
+                                    }
+                                    MouseArea {
+                                        id: hslM
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            Quickshell.execDetached(["wl-copy", hslTxt.text]);
+                                            Quickshell.execDetached(["notify-send", "-a", "Antigravity", "HSL Copied", hslTxt.text]);
+                                            omnibarWindow.dismissTimer.restart();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Eyedropper Button
+                        Rectangle {
+                            height: 34
+                            implicitWidth: eyeRow.implicitWidth + 16
+                            radius: 8
+                            color: eyeM.containsMouse ? Theme.bgHover : Theme.bgPill
+                            border.color: Theme.borderDim
+                            border.width: 1
+
+                            RowLayout {
+                                id: eyeRow
+                                anchors.centerIn: parent
+                                spacing: 6
+                                Text { text: "💉"; font.pixelSize: 14 }
+                                Text {
+                                    text: "Pick Screen"
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    color: Theme.textPrimary
+                                }
+                            }
+
+                            MouseArea {
+                                id: eyeM
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: eyedropperProc.running = true
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Section G: Spotlight Glyphs & Symbols Inspector ──────────────
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                spacing: 8
+                visible: omnibarWindow.spotlightResult !== null && omnibarWindow.spotlightResult.mode === "glyphs"
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    radius: 12
+                    color: Theme.bgCard
+                    border.color: Qt.rgba(Theme.accentSky.r, Theme.accentSky.g, Theme.accentSky.b, 0.4)
+                    border.width: 1
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 14
+                        spacing: 10
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Text {
+                                text: "GLYPH & SYMBOL SEARCH"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 10
+                                font.bold: true
+                                color: Theme.accentSky
+                            }
+                            Item { Layout.fillWidth: true }
+                            Text {
+                                text: "Click or press ↵ to copy"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 10
+                                color: Theme.textMuted
+                            }
+                        }
+
+                        // Glyphs Row
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+
+                            Repeater {
+                                model: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.matches) ? omnibarWindow.spotlightResult.matches.slice(0, 8) : []
+
+                                delegate: Rectangle {
+                                    width: 72
+                                    height: 60
+                                    radius: 8
+                                    color: symM.containsMouse ? Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.22) : Theme.bgBase
+                                    border.color: symM.containsMouse ? Theme.accentCyan : Theme.borderDim
+                                    border.width: 1
+
+                                    ColumnLayout {
+                                        anchors.centerIn: parent
+                                        spacing: 2
+                                        Text {
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                            text: modelData.char
+                                            font.pixelSize: 22
+                                            color: Theme.textPrimary
+                                        }
+                                        Text {
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                            text: modelData.name
+                                            font.family: Theme.fontFamily
+                                            font.pixelSize: 9
+                                            color: Theme.textMuted
+                                            elide: Text.ElideRight
+                                            Layout.maximumWidth: 64
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        id: symM
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            Quickshell.execDetached(["wl-copy", modelData.char]);
+                                            Quickshell.execDetached(["notify-send", "-a", "Antigravity", "Copied", modelData.char + " (" + modelData.name + ")"]);
+                                            omnibarWindow.dismissTimer.restart();
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -352,7 +793,7 @@ PanelWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: 8
-                visible: omniInput.text.trim().length > 0
+                visible: omnibarWindow.spotlightResult === null && omniInput.text.trim().length > 0
 
                 // Header
                 RowLayout {
@@ -505,12 +946,12 @@ PanelWindow {
 
                     Repeater {
                         model: [
-                            { title: "Virtual Display", sub: "Toggle 1080p Headless", cmd: "turn on virtual display", icon: "🖥️", color: Theme.accentCyan },
+                            { title: "Pick Screen Color", sub: "Interactive eyedropper", cmd: ":eyedropper", icon: "💉", color: Theme.accentCyan },
                             { title: "Screenshot", sub: "Snip area to clipboard", cmd: "take a screenshot", icon: "📸", color: Theme.accentAmber },
-                            { title: "Lock Screen", sub: "Secure with Hyprlock", cmd: "lock the screen", icon: "🔒", color: Theme.accentViolet },
-                            { title: "Next Wallpaper", sub: "Rotate desktop background", cmd: "switch to next wallpaper", icon: "🎨", color: Theme.accentEmerald },
-                            { title: "Plastic Mode", sub: "Toggle Apple plastic effect", cmd: "toggle plastic mode", icon: "🫧", color: Theme.accentSky },
-                            { title: "Do Not Disturb", sub: "Toggle notifications", cmd: "turn on do not disturb", icon: "🔕", color: Theme.accentRose }
+                            { title: "Currency Converter", sub: "120 USD to INR", cmd: "120 usd to inr", icon: "💱", color: Theme.accentEmerald },
+                            { title: "World Clock", sub: "Current time in Tokyo", cmd: "time in tokyo", icon: "🇯🇵", color: Theme.accentSky },
+                            { title: "Glyph & Symbols", sub: "Arrows, math & emoji", cmd: ":arrow", icon: "→", color: Theme.accentViolet },
+                            { title: "Virtual Display", sub: "Toggle 1080p Headless", cmd: "turn on virtual display", icon: "🖥️", color: Theme.accentRose }
                         ]
 
                         Rectangle {
@@ -571,8 +1012,12 @@ PanelWindow {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    omniInput.text = modelData.cmd;
-                                    omnibarWindow.executeCurrentCommand();
+                                    if (modelData.cmd === ":eyedropper") {
+                                        eyedropperProc.running = true;
+                                    } else {
+                                        omniInput.text = modelData.cmd;
+                                        omniInput.forceActiveFocus();
+                                    }
                                 }
                             }
                         }
@@ -687,7 +1132,12 @@ PanelWindow {
                             width: 18; height: 16; radius: 3; color: Theme.bgHover
                             Text { anchors.centerIn: parent; text: "↵"; font.pixelSize: 10; color: Theme.textMuted }
                         }
-                        Text { text: "Execute"; font.family: Theme.fontMono; font.pixelSize: 10; color: Theme.textMuted }
+                        Text {
+                            text: omnibarWindow.spotlightResult ? "Copy Result" : "Execute"
+                            font.family: Theme.fontMono
+                            font.pixelSize: 10
+                            color: omnibarWindow.spotlightResult ? Theme.accentEmerald : Theme.textMuted
+                        }
                     }
 
                     RowLayout {
@@ -720,10 +1170,10 @@ PanelWindow {
                             color: Theme.accentCyan
                         }
                         Text {
-                            text: "v2.0"
+                            text: "Spotlight v2.2"
                             font.family: Theme.fontMono
                             font.pixelSize: 10
-                            color: Theme.textMuted
+                            color: Theme.accentAmber
                         }
                     }
                 }

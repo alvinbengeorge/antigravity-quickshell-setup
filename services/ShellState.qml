@@ -11,6 +11,7 @@ Singleton {
     property bool sessionDialogOpen: false
     property bool launcherOpen: false
     property bool omnibarOpen: false
+    property string omnibarInitialQuery: ""
     property bool clipboardOpen: false
     property bool controlCenterOpen: false
     property bool wallpaperThemeDialogOpen: false
@@ -375,6 +376,7 @@ Singleton {
         function toggle(): void { root.toggleOmnibar(); }
         function show(): void { root.closeAll(); root.omnibarOpen = true; }
         function hide(): void { root.omnibarOpen = false; }
+        function query(val: string): void { root.closeAll(); root.omnibarInitialQuery = val; root.omnibarOpen = true; }
     }
 
     IpcHandler {
