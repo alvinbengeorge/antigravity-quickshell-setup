@@ -7,22 +7,27 @@ import Quickshell.Services.Pipewire
 Singleton {
     id: root
 
-    // Reactive Pipewire properties
-    readonly property real pwVolume: Pipewire.defaultAudioSink?.audio?.volume ?? -1
-    readonly property bool pwMuted: Pipewire.defaultAudioSink?.audio?.muted ?? false
+    // Reactive Pipewire properties (guarded by ready state)
+    readonly property bool pwReady: Pipewire.defaultAudioSink?.ready ?? false
+    readonly property real pwVolume: (pwReady && Pipewire.defaultAudioSink?.audio) ? Pipewire.defaultAudioSink.audio.volume : -1
+    readonly property bool pwMuted: (pwReady && Pipewire.defaultAudioSink?.audio) ? Pipewire.defaultAudioSink.audio.muted : false
 
-    property real volume: pwVolume >= 0 ? pwVolume : 1.0
-    property bool muted: pwMuted
+    property real volume: 1.0
+    property bool muted: false
 
     onPwVolumeChanged: {
-        if (pwVolume >= 0) root.volume = pwVolume;
+        if (pwReady && pwVolume > 0) {
+            root.volume = pwVolume;
+        }
     }
 
     onPwMutedChanged: {
-        root.muted = pwMuted;
+        if (pwReady) {
+            root.muted = pwMuted;
+        }
     }
 
-    // Polling and fallback query via wpctl
+    // Polling and authoritative query via wpctl
     Process {
         id: wpctlProc
         running: false
@@ -48,7 +53,7 @@ Singleton {
         command: ["pactl", "subscribe"]
         stdout: SplitParser {
             onRead: data => {
-                if (data.includes("sink") || data.includes("server")) {
+                if (data.includes("sink") || data.includes("server") || data.includes("change")) {
                     if (!wpctlProc.running) {
                         wpctlProc.running = true;
                     }
@@ -57,51 +62,41 @@ Singleton {
         }
     }
 
-    // Polling interval (throttled to 3000ms in Lite Mode, 500ms in standard)
+    // Periodic safety sync interval
     Timer {
-        interval: ShellState.liteMode ? 3000 : 500
+        interval: ShellState.liteMode ? 4000 : 1500
         running: true
         repeat: true
         onTriggered: {
-            if (Pipewire.defaultAudioSink?.audio?.volume !== undefined && Pipewire.defaultAudioSink?.audio?.volume >= 0) {
-                root.volume = Pipewire.defaultAudioSink.audio.volume;
-                root.muted = Pipewire.defaultAudioSink.audio.muted ?? false;
-            } else if (!wpctlProc.running) {
+            if (!wpctlProc.running) {
                 wpctlProc.running = true;
             }
         }
     }
 
+    Component.onCompleted: {
+        wpctlProc.running = true;
+    }
+
     function toggleMute() {
-        if (Pipewire.defaultAudioSink?.audio) {
-            Pipewire.defaultAudioSink.audio.muted = !Pipewire.defaultAudioSink.audio.muted;
-            root.muted = Pipewire.defaultAudioSink.audio.muted;
-        } else {
-            Quickshell.execDetached(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"]);
-            if (!wpctlProc.running) wpctlProc.running = true;
-        }
+        root.muted = !root.muted;
+        Quickshell.execDetached(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"]);
+        if (!wpctlProc.running) wpctlProc.running = true;
     }
 
     function changeVolume(delta) {
-        if (Pipewire.defaultAudioSink?.audio) {
-            const next = Math.max(0, Math.min(1.5, root.volume + delta));
-            Pipewire.defaultAudioSink.audio.volume = next;
-            root.volume = next;
-        } else {
-            const arg = delta > 0 ? "5%+" : "5%-";
-            Quickshell.execDetached(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", arg]);
-            if (!wpctlProc.running) wpctlProc.running = true;
-        }
+        const next = Math.max(0, Math.min(1.5, root.volume + delta));
+        root.volume = next;
+        const pct = Math.round(Math.abs(delta) * 100);
+        const arg = delta > 0 ? (pct + "%+") : (pct + "%-");
+        Quickshell.execDetached(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", arg]);
+        if (!wpctlProc.running) wpctlProc.running = true;
     }
 
     function setVolume(target) {
         const next = Math.max(0, Math.min(1.5, target));
-        if (Pipewire.defaultAudioSink?.audio) {
-            Pipewire.defaultAudioSink.audio.volume = next;
-            root.volume = next;
-        } else {
-            Quickshell.execDetached(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", Math.round(next * 100) + "%"]);
-            if (!wpctlProc.running) wpctlProc.running = true;
-        }
+        root.volume = next;
+        Quickshell.execDetached(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", Math.round(next * 100) + "%"]);
+        if (!wpctlProc.running) wpctlProc.running = true;
     }
 }

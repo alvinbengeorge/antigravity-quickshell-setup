@@ -77,6 +77,11 @@ Singleton {
         closeProc.running = true;
     }
 
+    function windowsForWorkspace(wsId) {
+        if (!root.windows || !Array.isArray(root.windows)) return [];
+        return root.windows.filter(w => w.workspace_id === wsId);
+    }
+
     Component.onCompleted: {
         refresh();
     }
