@@ -221,6 +221,58 @@ PanelWindow {
                     }
                 }
 
+                // SKYBOX STARS / CONSTELLATIONS TOGGLE BUTTON
+                Rectangle {
+                    height: 28
+                    implicitWidth: skyboxToggleRow.implicitWidth + 14
+                    radius: 8
+                    readonly property bool isSkybox: ShellState.skyboxEnabled
+                    color: ShellState.plasticEnabled
+                        ? "transparent"
+                        : (isSkybox ? Theme.accentAmber : (skyboxMouse.containsMouse ? Theme.bgHover : Theme.bgPill))
+                    border.color: ShellState.plasticEnabled
+                        ? "transparent"
+                        : (isSkybox ? Theme.accentAmber : Theme.borderDim)
+                    border.width: ShellState.plasticEnabled ? 0 : 1
+
+                    LiquidGlassSurface {
+                        radius: 8
+                        visible: ShellState.plasticEnabled && (parent.isSkybox || skyboxMouse.containsMouse)
+                        accentColor: Theme.accentAmber
+                        hovered: skyboxMouse.containsMouse
+                        pressed: skyboxMouse.pressed
+                        showShadow: false
+                    }
+
+                    RowLayout {
+                        id: skyboxToggleRow
+                        anchors.centerIn: parent
+                        spacing: 6
+
+                        Icon {
+                            name: "sparkles"
+                            size: 12
+                            color: parent.parent.isSkybox ? Theme.textOnAccent : Theme.accentAmber
+                        }
+
+                        Text {
+                            text: parent.parent.isSkybox ? "Skybox: ON" : "Skybox: OFF"
+                            font.family: Theme.fontMono
+                            font.pixelSize: 10
+                            font.bold: true
+                            color: parent.parent.isSkybox ? Theme.textOnAccent : Theme.textPrimary
+                        }
+                    }
+
+                    MouseArea {
+                        id: skyboxMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: ShellState.skyboxEnabled = !ShellState.skyboxEnabled
+                    }
+                }
+
                 // Close Button
                 Rectangle {
                     width: 28

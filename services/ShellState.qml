@@ -34,6 +34,7 @@ Singleton {
     property bool use24Hour: false
     property bool clockShowCalendar: true
     property string fontPreset: "cupertino"
+    property bool skyboxEnabled: false
     property bool liteMode: false
     property bool plasticMode: true
     property alias glassButtons: root.plasticMode
@@ -56,6 +57,7 @@ Singleton {
     onUse24HourChanged:         Qt.callLater(root.saveShellSettings)
     onClockShowCalendarChanged: Qt.callLater(root.saveShellSettings)
     onGlassButtonsChanged:      Qt.callLater(root.saveShellSettings)
+    onSkyboxEnabledChanged:     Qt.callLater(root.saveShellSettings)
     onFontPresetChanged: {
         Theme.fontPreset = root.fontPreset;
         Qt.callLater(root.saveShellSettings);
@@ -67,7 +69,8 @@ Singleton {
             use24Hour: root.use24Hour,
             showCalendar: root.clockShowCalendar,
             glassButtons: root.glassButtons,
-            fontPreset: root.fontPreset
+            fontPreset: root.fontPreset,
+            skyboxEnabled: root.skyboxEnabled
         }, null, 2);
         Quickshell.execDetached([
             "python3",
@@ -94,6 +97,7 @@ Singleton {
                         if (typeof data.showCalendar === "boolean") root.clockShowCalendar = data.showCalendar;
                         if (typeof data.glassButtons === "boolean") root.glassButtons = data.glassButtons;
                         if (typeof data.fontPreset === "string")   root.fontPreset = data.fontPreset;
+                        if (typeof data.skyboxEnabled === "boolean") root.skyboxEnabled = data.skyboxEnabled;
                     }
                 } catch (e) { /* first run or corrupt – use defaults */ }
             }
@@ -619,5 +623,12 @@ Singleton {
             root.fontPreset = nxt;
             Theme.fontPreset = nxt;
         }
+    }
+
+    IpcHandler {
+        target: "skybox"
+        function toggle(): void { root.skyboxEnabled = !root.skyboxEnabled; }
+        function on(): void { root.skyboxEnabled = true; }
+        function off(): void { root.skyboxEnabled = false; }
     }
 }

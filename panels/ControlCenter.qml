@@ -26,6 +26,11 @@ PanelWindow {
     WlrLayershell.keyboardFocus: ShellState.controlCenterOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     property string activeTab: "controls"
+    onVisibleChanged: {
+        if (visible) {
+            mainFlickable.contentY = 0;
+        }
+    }
 
     // Backdrop click to close
     MouseArea {
@@ -75,6 +80,25 @@ PanelWindow {
             contentHeight: mainCol.implicitHeight
             clip: true
             boundsBehavior: Flickable.StopAtBounds
+
+            Connections {
+                target: ShellState
+                function onControlCenterOpenChanged() {
+                    if (ShellState.controlCenterOpen) {
+                        mainFlickable.contentY = 0;
+                    }
+                }
+            }
+
+            Connections {
+                target: NetworkService
+                function onWifiDrawerOpenChanged() {
+                    mainFlickable.contentY = 0;
+                }
+                function onBtDrawerOpenChanged() {
+                    mainFlickable.contentY = 0;
+                }
+            }
 
             ScrollBar.vertical: ScrollBar {
                 active: mainFlickable.moving || mainFlickable.flicking
@@ -231,125 +255,816 @@ PanelWindow {
                 spacing: 16
                 visible: controlCenterWindow.activeTab === "controls"
 
-                // Quick Toggle Tiles (Wi-Fi & Bluetooth)
+                // Quick Toggle Tiles (Wi-Fi & Bluetooth Split Tiles)
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 12
 
-                // Wi-Fi Toggle Tile
+                    // Wi-Fi Split Master Tile
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 58
+                        radius: 12
+                        color: ShellState.glassEnabled ? "transparent" : (NetworkService.wifiEnabled ? Theme.bgCard : Theme.bgPill)
+                        border.color: ShellState.glassEnabled ? "transparent" : (NetworkService.wifiEnabled ? Theme.accentCyan : Theme.borderDim)
+                        border.width: ShellState.glassEnabled ? 0 : 1
+
+                        LiquidGlassSurface {
+                            radius: 12
+                            visible: ShellState.glassEnabled
+                            accentColor: NetworkService.wifiEnabled ? Theme.accentCyan : Theme.textMuted
+                            hovered: wifiCardMouse.containsMouse || wifiRadioMouse.containsMouse
+                            showShadow: true
+                        }
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 8
+                            anchors.rightMargin: 8
+                            anchors.topMargin: 8
+                            anchors.bottomMargin: 8
+                            spacing: 8
+
+                            // Left Button: Dedicated Wi-Fi Radio Toggle
+                            Rectangle {
+                                width: 34
+                                height: 34
+                                radius: 9
+                                color: NetworkService.wifiEnabled
+                                    ? Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.22)
+                                    : (wifiRadioMouse.containsMouse ? Theme.bgHover : Theme.bgBase)
+                                border.color: NetworkService.wifiEnabled ? Theme.accentCyan : Theme.borderDim
+                                border.width: 1
+
+                                Icon {
+                                    anchors.centerIn: parent
+                                    name: NetworkService.wifiEnabled ? "wifi" : "wifi-off"
+                                    size: 16
+                                    color: NetworkService.wifiEnabled ? Theme.accentCyan : Theme.textMuted
+                                }
+
+                                MouseArea {
+                                    id: wifiRadioMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: NetworkService.toggleWifi()
+                                }
+                            }
+
+                            // Middle Info: SSID & Status
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 2
+
+                                RowLayout {
+                                    spacing: 4
+                                    Text {
+                                        text: "Wi-Fi"
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        color: Theme.textPrimary
+                                    }
+                                    Rectangle {
+                                        visible: NetworkService.wifiEnabled && NetworkService.activeWifi.freq.length > 0
+                                        height: 14
+                                        width: freqTxt.implicitWidth + 6
+                                        radius: 4
+                                        color: Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.18)
+                                        Text {
+                                            id: freqTxt
+                                            anchors.centerIn: parent
+                                            text: NetworkService.activeWifi.freq.includes("5") ? "5G" : "2.4G"
+                                            font.family: Theme.fontMono
+                                            font.pixelSize: 8
+                                            font.bold: true
+                                            color: Theme.accentCyan
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    text: NetworkService.wifiEnabled
+                                        ? (NetworkService.activeSsid ? NetworkService.activeSsid : "Available")
+                                        : "Disabled"
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 10
+                                    color: NetworkService.wifiEnabled && NetworkService.activeSsid ? Theme.accentCyan : Theme.textMuted
+                                    elide: Text.ElideRight
+                                    Layout.maximumWidth: 70
+                                }
+                            }
+
+                            // Right Button: Expand / Collapse Chevron
+                            Rectangle {
+                                width: 22
+                                height: 22
+                                radius: 6
+                                color: wifiCardMouse.containsMouse ? Theme.bgHover : "transparent"
+
+                                Icon {
+                                    anchors.centerIn: parent
+                                    name: NetworkService.wifiDrawerOpen ? "chevron-up" : "chevron-down"
+                                    size: 12
+                                    color: NetworkService.wifiDrawerOpen ? Theme.accentCyan : Theme.textMuted
+                                }
+                            }
+                        }
+
+                        // Clicking card body expands the Wi-Fi drawer
+                        MouseArea {
+                            id: wifiCardMouse
+                            anchors.fill: parent
+                            anchors.leftMargin: 46 // Don't intercept the radio toggle button on the left
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                NetworkService.wifiDrawerOpen = !NetworkService.wifiDrawerOpen;
+                                if (NetworkService.wifiDrawerOpen) {
+                                    NetworkService.btDrawerOpen = false;
+                                }
+                            }
+                        }
+                    }
+
+                    // Bluetooth Split Master Tile
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 58
+                        radius: 12
+                        color: ShellState.glassEnabled ? "transparent" : (NetworkService.btPowered ? Theme.bgCard : Theme.bgPill)
+                        border.color: ShellState.glassEnabled ? "transparent" : (NetworkService.btPowered ? Theme.accentSky : Theme.borderDim)
+                        border.width: ShellState.glassEnabled ? 0 : 1
+
+                        LiquidGlassSurface {
+                            radius: 12
+                            visible: ShellState.glassEnabled
+                            accentColor: NetworkService.btPowered ? Theme.accentSky : Theme.textMuted
+                            hovered: btCardMouse.containsMouse || btRadioMouse.containsMouse
+                            showShadow: true
+                        }
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 8
+                            anchors.rightMargin: 8
+                            anchors.topMargin: 8
+                            anchors.bottomMargin: 8
+                            spacing: 8
+
+                            // Left Button: Dedicated Bluetooth Radio Toggle
+                            Rectangle {
+                                width: 34
+                                height: 34
+                                radius: 9
+                                color: NetworkService.btPowered
+                                    ? Qt.rgba(Theme.accentSky.r, Theme.accentSky.g, Theme.accentSky.b, 0.22)
+                                    : (btRadioMouse.containsMouse ? Theme.bgHover : Theme.bgBase)
+                                border.color: NetworkService.btPowered ? Theme.accentSky : Theme.borderDim
+                                border.width: 1
+
+                                Icon {
+                                    anchors.centerIn: parent
+                                    name: NetworkService.btPowered ? "bluetooth" : "bluetooth-off"
+                                    size: 16
+                                    color: NetworkService.btPowered ? Theme.accentSky : Theme.textMuted
+                                }
+
+                                MouseArea {
+                                    id: btRadioMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: NetworkService.toggleBluetooth()
+                                }
+                            }
+
+                            // Middle Info: Device count & Name
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 2
+
+                                RowLayout {
+                                    spacing: 4
+                                    Text {
+                                        text: "Bluetooth"
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        color: Theme.textPrimary
+                                    }
+                                    Rectangle {
+                                        visible: NetworkService.btPowered && NetworkService.connectedBtCount > 0
+                                        height: 14
+                                        width: btCountTxt.implicitWidth + 6
+                                        radius: 4
+                                        color: Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.22)
+                                        Text {
+                                            id: btCountTxt
+                                            anchors.centerIn: parent
+                                            text: NetworkService.connectedBtCount.toString()
+                                            font.family: Theme.fontMono
+                                            font.pixelSize: 8
+                                            font.bold: true
+                                            color: Theme.accentEmerald
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    text: NetworkService.btPowered
+                                        ? (NetworkService.primaryConnectedBt
+                                            ? NetworkService.primaryConnectedBt.name
+                                            : (NetworkService.btDevices.length > 0 ? (NetworkService.btDevices.length + " Paired") : "Ready"))
+                                        : "Disabled"
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 10
+                                    color: NetworkService.btPowered && NetworkService.connectedBtCount > 0 ? Theme.accentEmerald : Theme.textMuted
+                                    elide: Text.ElideRight
+                                    Layout.maximumWidth: 70
+                                }
+                            }
+
+                            // Right Button: Expand / Collapse Chevron
+                            Rectangle {
+                                width: 22
+                                height: 22
+                                radius: 6
+                                color: btCardMouse.containsMouse ? Theme.bgHover : "transparent"
+
+                                Icon {
+                                    anchors.centerIn: parent
+                                    name: NetworkService.btDrawerOpen ? "chevron-up" : "chevron-down"
+                                    size: 12
+                                    color: NetworkService.btDrawerOpen ? Theme.accentSky : Theme.textMuted
+                                }
+                            }
+                        }
+
+                        // Clicking card body expands the Bluetooth drawer
+                        MouseArea {
+                            id: btCardMouse
+                            anchors.fill: parent
+                            anchors.leftMargin: 46 // Don't intercept the radio toggle button on the left
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                NetworkService.btDrawerOpen = !NetworkService.btDrawerOpen;
+                                if (NetworkService.btDrawerOpen) {
+                                    NetworkService.wifiDrawerOpen = false;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Collapsible Wi-Fi Glass Drawer
                 Rectangle {
+                    id: wifiDrawer
                     Layout.fillWidth: true
-                    height: 58
+                    visible: NetworkService.wifiDrawerOpen
+                    implicitHeight: wifiDrawerCol.implicitHeight + 20
                     radius: 12
-                    color: ShellState.glassEnabled ? "transparent" : (NetworkService.wifiEnabled ? Theme.bgCard : Theme.bgPill)
-                    border.color: ShellState.glassEnabled ? "transparent" : (NetworkService.wifiEnabled ? Theme.accentCyan : Theme.borderDim)
-                    border.width: ShellState.glassEnabled ? 0 : 1
+                    color: ShellState.glassEnabled ? "transparent" : Theme.bgCard
+                    border.color: ShellState.glassEnabled ? "transparent" : Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.35)
+                    border.width: 1
+                    clip: true
 
                     LiquidGlassSurface {
                         radius: 12
                         visible: ShellState.glassEnabled
-                        accentColor: NetworkService.wifiEnabled ? Theme.accentCyan : Theme.textMuted
-                        hovered: wifiMouse.containsMouse
+                        accentColor: Theme.accentCyan
                         showShadow: true
                     }
 
-                    RowLayout {
+                    ColumnLayout {
+                        id: wifiDrawerCol
                         anchors.fill: parent
                         anchors.margins: 10
                         spacing: 10
 
-                        Icon {
-                            name: NetworkService.wifiEnabled ? "wifi" : "wifi-off"
-                            size: 20
-                            color: NetworkService.wifiEnabled ? Theme.accentCyan : Theme.textMuted
+                        // Active Network Master Card
+                        Rectangle {
+                            Layout.fillWidth: true
+                            visible: NetworkService.activeSsid.length > 0
+                            height: 64
+                            radius: 8
+                            color: Theme.bgBase
+                            border.color: Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.4)
+                            border.width: 1
+
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 8
+                                spacing: 4
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 6
+
+                                    Rectangle {
+                                        width: 8
+                                        height: 8
+                                        radius: 4
+                                        color: Theme.accentEmerald
+                                    }
+
+                                    Text {
+                                        text: NetworkService.activeWifi.ssid
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        color: Theme.textPrimary
+                                        elide: Text.ElideRight
+                                        Layout.fillWidth: true
+                                    }
+
+                                    // 5G / 2.4G Pill
+                                    Rectangle {
+                                        height: 16
+                                        implicitWidth: fTxt.implicitWidth + 8
+                                        radius: 4
+                                        color: Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.2)
+                                        Text {
+                                            id: fTxt
+                                            anchors.centerIn: parent
+                                            text: NetworkService.activeWifi.freq
+                                            font.family: Theme.fontMono
+                                            font.pixelSize: 9
+                                            font.bold: true
+                                            color: Theme.accentCyan
+                                        }
+                                    }
+
+                                    // Signal badge
+                                    Text {
+                                        text: NetworkService.activeWifi.signal + "%"
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: 9
+                                        color: Theme.accentEmerald
+                                    }
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 8
+
+                                    Text {
+                                        text: NetworkService.activeWifi.ip ? ("IP: " + NetworkService.activeWifi.ip) : "Connected"
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: 9
+                                        color: Theme.textMuted
+                                    }
+
+                                    Text {
+                                        text: NetworkService.activeWifi.rate ? ("• " + NetworkService.activeWifi.rate) : ""
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: 9
+                                        color: Theme.textMuted
+                                        visible: NetworkService.activeWifi.rate.length > 0
+                                    }
+
+                                    Item { Layout.fillWidth: true }
+
+                                    // Disconnect Pill
+                                    Rectangle {
+                                        height: 20
+                                        implicitWidth: disTxt.implicitWidth + 10
+                                        radius: 5
+                                        color: disM.containsMouse ? Qt.rgba(Theme.accentRose.r, Theme.accentRose.g, Theme.accentRose.b, 0.25) : Theme.bgPill
+                                        border.color: disM.containsMouse ? Theme.accentRose : Theme.borderDim
+                                        border.width: 1
+
+                                        Text {
+                                            id: disTxt
+                                            anchors.centerIn: parent
+                                            text: "Disconnect"
+                                            font.family: Theme.fontMono
+                                            font.pixelSize: 8
+                                            font.bold: true
+                                            color: disM.containsMouse ? Theme.accentRose : Theme.textSecondary
+                                        }
+
+                                        MouseArea {
+                                            id: disM
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: NetworkService.disconnectWifi()
+                                        }
+                                    }
+                                }
+                            }
                         }
 
+                        // Available Networks Header Row
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
+
+                            Text {
+                                text: "AVAILABLE NETWORKS"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 9
+                                font.bold: true
+                                color: Theme.textSecondary
+                                Layout.fillWidth: true
+                            }
+
+                            // Rescan Button
+                            Rectangle {
+                                height: 22
+                                implicitWidth: scanRow.implicitWidth + 10
+                                radius: 5
+                                color: rescanM.containsMouse ? Theme.bgHover : Theme.bgPill
+                                border.color: Theme.borderDim
+                                border.width: 1
+
+                                RowLayout {
+                                    id: scanRow
+                                    anchors.centerIn: parent
+                                    spacing: 4
+
+                                    Icon {
+                                        name: "refresh-cw"
+                                        size: 10
+                                        color: NetworkService.refreshing ? Theme.accentCyan : Theme.textMuted
+                                        rotation: NetworkService.refreshing ? 180 : 0
+                                        Behavior on rotation { NumberAnimation { duration: 500 } }
+                                    }
+
+                                    Text {
+                                        text: NetworkService.refreshing ? "Scanning..." : "Rescan"
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: 8
+                                        color: Theme.accentCyan
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: rescanM
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: NetworkService.rescanWifi()
+                                }
+                            }
+                        }
+
+                        // Networks Repeater (Max 5 items displayed for clean compactness)
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: 2
-                            Text {
-                                text: "Wi-Fi"
-                                font.family: Theme.fontFamily
-                                font.pixelSize: 12
-                                font.bold: true
-                                color: Theme.textPrimary
-                            }
-                            Text {
-                                text: NetworkService.wifiEnabled ? (NetworkService.activeSsid ? NetworkService.activeSsid : "On") : "Disabled"
-                                font.family: Theme.fontFamily
-                                font.pixelSize: 10
-                                color: Theme.textMuted
-                                elide: Text.ElideRight
-                                Layout.maximumWidth: 100
+                            spacing: 4
+
+                            Repeater {
+                                model: NetworkService.networks.slice(0, 5)
+
+                                delegate: Rectangle {
+                                    Layout.fillWidth: true
+                                    height: 32
+                                    radius: 6
+                                    color: netM.containsMouse ? Theme.bgHover : (modelData.inUse ? Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.12) : "transparent")
+                                    border.color: modelData.inUse ? Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.3) : "transparent"
+                                    border.width: 1
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 8
+                                        anchors.rightMargin: 8
+                                        spacing: 8
+
+                                        Icon {
+                                            name: "wifi"
+                                            size: 13
+                                            color: modelData.inUse ? Theme.accentCyan : (modelData.signal > 60 ? Theme.textPrimary : Theme.textMuted)
+                                        }
+
+                                        Text {
+                                            text: modelData.ssid
+                                            font.family: Theme.fontFamily
+                                            font.pixelSize: 10
+                                            font.bold: modelData.inUse
+                                            color: modelData.inUse ? Theme.accentCyan : Theme.textPrimary
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
+                                        }
+
+                                        // Lock Icon if secured
+                                        Icon {
+                                            name: modelData.security === "Open" ? "unlock" : "lock"
+                                            size: 10
+                                            color: Theme.textMuted
+                                        }
+
+                                        // Signal %
+                                        Text {
+                                            text: modelData.signal + "%"
+                                            font.family: Theme.fontMono
+                                            font.pixelSize: 8
+                                            color: Theme.textMuted
+                                        }
+
+                                        // Connect / Connected Badge
+                                        Rectangle {
+                                            height: 18
+                                            implicitWidth: connBadgeTxt.implicitWidth + 8
+                                            radius: 4
+                                            color: modelData.inUse
+                                                ? Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.2)
+                                                : (netM.containsMouse ? Theme.accentCyan : Theme.bgBase)
+
+                                            Text {
+                                                id: connBadgeTxt
+                                                anchors.centerIn: parent
+                                                text: modelData.inUse ? "Active" : "Connect"
+                                                font.family: Theme.fontMono
+                                                font.pixelSize: 8
+                                                font.bold: true
+                                                color: modelData.inUse ? Theme.accentEmerald : (netM.containsMouse ? Theme.textOnAccent : Theme.textSecondary)
+                                            }
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        id: netM
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            if (!modelData.inUse) {
+                                                NetworkService.connectWifi(modelData.ssid, "");
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
-                    }
-
-                    MouseArea {
-                        id: wifiMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: NetworkService.toggleWifi()
                     }
                 }
 
-                // Bluetooth Toggle Tile
+                // Collapsible Bluetooth & Peripherals Master Deck Drawer
                 Rectangle {
+                    id: btDrawer
                     Layout.fillWidth: true
-                    height: 58
+                    visible: NetworkService.btDrawerOpen
+                    implicitHeight: btDrawerCol.implicitHeight + 20
                     radius: 12
-                    color: ShellState.glassEnabled ? "transparent" : (NetworkService.btPowered ? Theme.bgCard : Theme.bgPill)
-                    border.color: ShellState.glassEnabled ? "transparent" : (NetworkService.btPowered ? Theme.accentSky : Theme.borderDim)
-                    border.width: ShellState.glassEnabled ? 0 : 1
+                    color: ShellState.glassEnabled ? "transparent" : Theme.bgCard
+                    border.color: ShellState.glassEnabled ? "transparent" : Qt.rgba(Theme.accentSky.r, Theme.accentSky.g, Theme.accentSky.b, 0.35)
+                    border.width: 1
+                    clip: true
 
                     LiquidGlassSurface {
                         radius: 12
                         visible: ShellState.glassEnabled
-                        accentColor: NetworkService.btPowered ? Theme.accentSky : Theme.textMuted
-                        hovered: btMouse.containsMouse
+                        accentColor: Theme.accentSky
                         showShadow: true
                     }
 
-                    RowLayout {
+                    ColumnLayout {
+                        id: btDrawerCol
                         anchors.fill: parent
                         anchors.margins: 10
                         spacing: 10
 
-                        Icon {
-                            name: NetworkService.btPowered ? "bluetooth" : "bluetooth-off"
-                            size: 20
-                            color: NetworkService.btPowered ? Theme.accentSky : Theme.textMuted
-                        }
-
-                        ColumnLayout {
+                        // Header Row
+                        RowLayout {
                             Layout.fillWidth: true
-                            spacing: 2
-                            Text {
-                                text: "Bluetooth"
-                                font.family: Theme.fontFamily
-                                font.pixelSize: 12
-                                font.bold: true
-                                color: Theme.textPrimary
+                            spacing: 6
+
+                            Icon {
+                                name: "bluetooth"
+                                size: 12
+                                color: Theme.accentSky
                             }
+
                             Text {
-                                text: NetworkService.btPowered ? "Enabled" : "Disabled"
-                                font.family: Theme.fontFamily
-                                font.pixelSize: 10
+                                text: "PERIPHERALS MASTER DECK"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 9
+                                font.bold: true
+                                color: Theme.accentSky
+                                Layout.fillWidth: true
+                            }
+
+                            // Device count badge
+                            Text {
+                                text: NetworkService.connectedBtCount + " Connected / " + NetworkService.btDevices.length + " Paired"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 8
                                 color: Theme.textMuted
                             }
                         }
-                    }
 
-                    MouseArea {
-                        id: btMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: NetworkService.toggleBluetooth()
+                        // Section 1: Active Connected Peripherals with Battery Badges
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 4
+                            visible: NetworkService.connectedBtCount > 0
+
+                            Text {
+                                text: "CONNECTED DEVICES"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 8
+                                font.bold: true
+                                color: Theme.accentEmerald
+                            }
+
+                            Repeater {
+                                model: NetworkService.btDevices.filter(function(d) { return d.connected; })
+
+                                delegate: Rectangle {
+                                    Layout.fillWidth: true
+                                    height: 38
+                                    radius: 7
+                                    color: Theme.bgBase
+                                    border.color: Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.35)
+                                    border.width: 1
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 8
+                                        anchors.rightMargin: 8
+                                        spacing: 8
+
+                                        Icon {
+                                            name: modelData.icon || "bluetooth"
+                                            size: 15
+                                            color: Theme.accentEmerald
+                                        }
+
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 1
+
+                                            Text {
+                                                text: modelData.name
+                                                font.family: Theme.fontFamily
+                                                font.pixelSize: 10
+                                                font.bold: true
+                                                color: Theme.textPrimary
+                                                elide: Text.ElideRight
+                                                Layout.fillWidth: true
+                                            }
+
+                                            Text {
+                                                text: modelData.mac
+                                                font.family: Theme.fontMono
+                                                font.pixelSize: 8
+                                                color: Theme.textMuted
+                                            }
+                                        }
+
+                                        // Battery Badge (if available, e.g. 85%)
+                                        Rectangle {
+                                            visible: modelData.battery >= 0
+                                            height: 18
+                                            implicitWidth: batTxt.implicitWidth + 10
+                                            radius: 5
+                                            color: modelData.battery > 30
+                                                ? Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.2)
+                                                : Qt.rgba(Theme.accentAmber.r, Theme.accentAmber.g, Theme.accentAmber.b, 0.25)
+                                            border.color: modelData.battery > 30 ? Theme.accentEmerald : Theme.accentAmber
+                                            border.width: 1
+
+                                            RowLayout {
+                                                anchors.centerIn: parent
+                                                spacing: 3
+                                                Icon {
+                                                    name: modelData.battery > 20 ? "battery" : "battery-warning"
+                                                    size: 9
+                                                    color: modelData.battery > 30 ? Theme.accentEmerald : Theme.accentAmber
+                                                }
+                                                Text {
+                                                    id: batTxt
+                                                    text: modelData.battery + "%"
+                                                    font.family: Theme.fontMono
+                                                    font.pixelSize: 8
+                                                    font.bold: true
+                                                    color: modelData.battery > 30 ? Theme.accentEmerald : Theme.accentAmber
+                                                }
+                                            }
+                                        }
+
+                                        // Disconnect Button
+                                        Rectangle {
+                                            height: 20
+                                            implicitWidth: btDisTxt.implicitWidth + 8
+                                            radius: 4
+                                            color: btDisM.containsMouse ? Qt.rgba(Theme.accentRose.r, Theme.accentRose.g, Theme.accentRose.b, 0.25) : Theme.bgPill
+                                            border.color: btDisM.containsMouse ? Theme.accentRose : Theme.borderDim
+                                            border.width: 1
+
+                                            Text {
+                                                id: btDisTxt
+                                                anchors.centerIn: parent
+                                                text: "Disconnect"
+                                                font.family: Theme.fontMono
+                                                font.pixelSize: 8
+                                                font.bold: true
+                                                color: btDisM.containsMouse ? Theme.accentRose : Theme.textSecondary
+                                            }
+
+                                            MouseArea {
+                                                id: btDisM
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: NetworkService.toggleBtDevice(modelData.mac, true)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Section 2: Paired / Disconnected Devices
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 4
+
+                            Text {
+                                text: "PAIRED PERIPHERALS"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 8
+                                font.bold: true
+                                color: Theme.textMuted
+                            }
+
+                            Repeater {
+                                model: NetworkService.btDevices.filter(function(d) { return !d.connected; })
+
+                                delegate: Rectangle {
+                                    Layout.fillWidth: true
+                                    height: 32
+                                    radius: 6
+                                    color: btItemM.containsMouse ? Theme.bgHover : Theme.bgBase
+                                    border.color: Theme.borderDim
+                                    border.width: 1
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 8
+                                        anchors.rightMargin: 8
+                                        spacing: 8
+
+                                        Icon {
+                                            name: modelData.icon || "bluetooth"
+                                            size: 13
+                                            color: Theme.textMuted
+                                        }
+
+                                        Text {
+                                            text: modelData.name
+                                            font.family: Theme.fontFamily
+                                            font.pixelSize: 10
+                                            color: Theme.textPrimary
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
+                                        }
+
+                                        // Connect Button
+                                        Rectangle {
+                                            height: 18
+                                            implicitWidth: btConnTxt.implicitWidth + 8
+                                            radius: 4
+                                            color: btItemM.containsMouse ? Theme.accentSky : Theme.bgPill
+
+                                            Text {
+                                                id: btConnTxt
+                                                anchors.centerIn: parent
+                                                text: "Connect"
+                                                font.family: Theme.fontMono
+                                                font.pixelSize: 8
+                                                font.bold: true
+                                                color: btItemM.containsMouse ? Theme.textOnAccent : Theme.accentSky
+                                            }
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        id: btItemM
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: NetworkService.toggleBtDevice(modelData.mac, false)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Empty State if no Bluetooth devices
+                        Text {
+                            visible: NetworkService.btDevices.length === 0
+                            text: "No paired Bluetooth devices found."
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 10
+                            font.italic: true
+                            color: Theme.textMuted
+                        }
                     }
                 }
-            }
 
             // System Styling & Performance Toggles (Liquid Glass & Lite Mode)
             RowLayout {
@@ -2039,220 +2754,6 @@ PanelWindow {
                 }
             }
 
-            // Wi-Fi Section
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 8
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 6
-
-                    Icon {
-                        name: "wifi"
-                        size: 12
-                        color: Theme.textMuted
-                    }
-
-                    Text {
-                        text: "AVAILABLE WI-FI NETWORKS"
-                        font.family: Theme.fontMono
-                        font.pixelSize: 10
-                        font.bold: true
-                        color: Theme.textMuted
-                    }
-                    Item { Layout.fillWidth: true }
-                    Text {
-                        text: NetworkService.networks.length + " found"
-                        font.family: Theme.fontMono
-                        font.pixelSize: 10
-                        color: Theme.accentCyan
-                    }
-                }
-
-                // Networks Scroll List
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: 150
-                    radius: 10
-                    color: Theme.bgPill
-                    border.color: Theme.borderDim
-                    border.width: 1
-                    clip: true
-
-                    ListView {
-                        id: wifiListView
-                        anchors.fill: parent
-                        anchors.margins: 6
-                        spacing: 4
-                        model: NetworkService.networks
-
-                        ScrollBar.vertical: ScrollBar {
-                            active: true
-                            policy: ScrollBar.AsNeeded
-                        }
-
-                        delegate: Rectangle {
-                            width: wifiListView.width - 12
-                            height: 34
-                            radius: 6
-                            color: modelData.inUse ? Theme.bgCard : (netMouse.containsMouse ? Theme.bgHover : "transparent")
-                            border.color: modelData.inUse ? Theme.accentCyan : "transparent"
-                            border.width: 1
-
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 8
-                                anchors.rightMargin: 8
-                                spacing: 8
-
-                                Icon {
-                                    name: modelData.inUse ? "check" : (modelData.security.includes("WPA") ? "lock" : "globe")
-                                    size: 12
-                                    color: modelData.inUse ? Theme.accentCyan : Theme.textMuted
-                                }
-
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: modelData.ssid
-                                    font.family: Theme.fontFamily
-                                    font.pixelSize: 11
-                                    font.bold: modelData.inUse
-                                    color: modelData.inUse ? Theme.accentCyan : Theme.textPrimary
-                                    elide: Text.ElideRight
-                                }
-
-                                Text {
-                                    text: modelData.signal + "%"
-                                    font.family: Theme.fontMono
-                                    font.pixelSize: 10
-                                    color: Theme.textMuted
-                                }
-                            }
-
-                            MouseArea {
-                                id: netMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    if (!modelData.inUse) {
-                                        NetworkService.connectWifi(modelData.ssid);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Bluetooth Section
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 8
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 6
-
-                    Icon {
-                        name: "bluetooth"
-                        size: 12
-                        color: Theme.textMuted
-                    }
-
-                    Text {
-                        text: "BLUETOOTH DEVICES"
-                        font.family: Theme.fontMono
-                        font.pixelSize: 10
-                        font.bold: true
-                        color: Theme.textMuted
-                    }
-                    Item { Layout.fillWidth: true }
-                    Text {
-                        text: NetworkService.btDevices.length + " paired"
-                        font.family: Theme.fontMono
-                        font.pixelSize: 10
-                        color: Theme.accentSky
-                    }
-                }
-
-                // Devices List
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 4
-
-                    Repeater {
-                        model: NetworkService.btDevices
-                        Rectangle {
-                            Layout.fillWidth: true
-                            height: 36
-                            radius: 8
-                            color: modelData.connected ? Theme.bgCard : (devMouse.containsMouse ? Theme.bgHover : Theme.bgPill)
-                            border.color: modelData.connected ? Theme.accentSky : Theme.borderDim
-                            border.width: 1
-
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 10
-                                anchors.rightMargin: 10
-                                spacing: 8
-
-                                Icon {
-                                    name: {
-                                        const lower = (modelData.name || "").toLowerCase();
-                                        if (lower.includes("bud") || lower.includes("headphone") || lower.includes("ear") || lower.includes("airpod")) {
-                                            return "headphones";
-                                        } else if (lower.includes("soundbar") || lower.includes("speaker") || lower.includes("audio")) {
-                                            return "speaker";
-                                        } else if (lower.includes("phone") || lower.includes("pixel") || lower.includes("iphone") || lower.includes("galaxy")) {
-                                            return "smartphone";
-                                        }
-                                        return modelData.connected ? "headphones" : "bluetooth";
-                                    }
-                                    size: 13
-                                    color: modelData.connected ? Theme.accentSky : Theme.textMuted
-                                }
-
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: modelData.name
-                                    font.family: Theme.fontFamily
-                                    font.pixelSize: 11
-                                    color: modelData.connected ? Theme.accentSky : Theme.textPrimary
-                                    elide: Text.ElideRight
-                                }
-
-                                Rectangle {
-                                    width: 64
-                                    height: 22
-                                    radius: 11
-                                    color: modelData.connected ? Theme.accentRose : Theme.bgHover
-
-                                    Text {
-                                        anchors.centerIn: parent
-                                        text: modelData.connected ? "Disconnect" : "Connect"
-                                        font.family: Theme.fontFamily
-                                        font.pixelSize: 9
-                                        font.bold: true
-                                        color: modelData.connected ? Theme.textOnAccent : Theme.textSecondary
-                                    }
-                                }
-                            }
-
-                            MouseArea {
-                                id: devMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    NetworkService.toggleBtDevice(modelData.mac, modelData.connected);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
             } // Close controlsCol
 
             // --- NOTIFICATIONS CONTENT WRAPPER ---
