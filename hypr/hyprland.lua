@@ -216,6 +216,7 @@ hl.bind(mainMod .. " + Escape", hl.dsp.exec_cmd("qs -c antigravity ipc call sess
 hl.bind(mainMod .. " + Tab", hl.dsp.exec_cmd("qs -c antigravity ipc call windowSwitcher toggle"))
 hl.bind(mainMod .. " + slash", hl.dsp.exec_cmd("qs -c antigravity ipc call search toggle"))
 hl.bind(mainMod .. " + K", hl.dsp.exec_cmd("qs -c antigravity ipc call omnibar toggle"))
+hl.bind(mainMod .. " + G", hl.dsp.exec_cmd("qs -c antigravity ipc call pie toggle"))
 hl.bind(mainMod .. " + A", hl.dsp.exec_cmd("qs -c antigravity ipc call antigravity toggle"))
 hl.bind(mainMod .. " + N", hl.dsp.exec_cmd("qs -c antigravity ipc call antigravity toggle"))
 hl.bind(mainMod .. " + X", hl.dsp.exec_cmd("qs -c antigravity ipc call session toggle"))

@@ -88,6 +88,7 @@ ShellRoot {
     SystemMonitor {}
     MediaDropdown {}
     WorkspacePreview {}
+    RadialPieMenu {}
 
     // Multi-screen On-Screen Display (OSD) Pill
     Variants {

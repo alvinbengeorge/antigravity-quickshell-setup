@@ -20,6 +20,8 @@ Singleton {
     property bool runnerOpen: false
     property bool windowSwitcherOpen: false
     property bool whatsappOpen: false
+    property bool pieMenuOpen: false
+    property int pieInitialSlice: -1
     property bool systemMonitorOpen: false
     property bool mediaCardOpen: false
     property bool workspacePreviewOpen: false
@@ -340,6 +342,26 @@ Singleton {
         root.whatsappOpen = false;
         root.systemMonitorOpen = false;
         root.mediaCardOpen = false;
+        root.pieMenuOpen = false;
+    }
+
+    function togglePieMenu() {
+        root.pieMenuOpen = !root.pieMenuOpen;
+        if (root.pieMenuOpen) {
+            root.antigravityPanelOpen = false;
+            root.sessionDialogOpen = false;
+            root.launcherOpen = false;
+            root.omnibarOpen = false;
+            root.controlCenterOpen = false;
+            root.clipboardOpen = false;
+            root.wallpaperThemeDialogOpen = false;
+            root.dockerOpen = false;
+            root.runnerOpen = false;
+            root.windowSwitcherOpen = false;
+            root.whatsappOpen = false;
+            root.systemMonitorOpen = false;
+            root.mediaCardOpen = false;
+        }
     }
 
     function toggleMediaCard() {
@@ -377,6 +399,18 @@ Singleton {
         function show(): void { root.closeAll(); root.omnibarOpen = true; }
         function hide(): void { root.omnibarOpen = false; }
         function query(val: string): void { root.closeAll(); root.omnibarInitialQuery = val; root.omnibarOpen = true; }
+    }
+
+    IpcHandler {
+        target: "pie"
+        function toggle(): void { root.togglePieMenu(); }
+        function show(): void { root.closeAll(); root.pieMenuOpen = true; }
+        function hide(): void { root.pieMenuOpen = false; }
+        function select(idx: int): void {
+            root.closeAll();
+            root.pieInitialSlice = idx;
+            root.pieMenuOpen = true;
+        }
     }
 
     IpcHandler {
