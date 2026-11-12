@@ -1093,9 +1093,10 @@ PanelWindow {
                         anchors.margins: 10
                         spacing: 10
 
-                        Text {
-                            text: "🫧"
-                            font.pixelSize: 18
+                        Icon {
+                            name: "sparkles"
+                            size: 18
+                            color: ShellState.plasticMode ? Theme.accentCyan : Theme.textPrimary
                         }
 
                         ColumnLayout {
@@ -1148,9 +1149,10 @@ PanelWindow {
                         anchors.margins: 10
                         spacing: 10
 
-                        Text {
-                            text: ShellState.liteMode ? "⚡" : "✨"
-                            font.pixelSize: 18
+                        Icon {
+                            name: ShellState.liteMode ? "zap" : "sparkles"
+                            size: 18
+                            color: ShellState.liteMode ? Theme.accentAmber : Theme.textPrimary
                         }
 
                         ColumnLayout {

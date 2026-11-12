@@ -45,9 +45,10 @@ Rectangle {
         anchors.centerIn: parent
         spacing: 6
 
-        Text {
-            text: BatteryService.isCharging ? "⚡" : (BatteryService.percentage <= 20 ? "🪫" : "🔋")
-            font.pixelSize: 13
+        Icon {
+            name: BatteryService.isCharging ? "battery-charging" : (BatteryService.percentage <= 20 ? "battery-warning" : "battery")
+            size: 14
+            color: BatteryService.isCharging ? Theme.accentEmerald : (BatteryService.percentage <= 20 ? Theme.accentRose : (BatteryService.percentage <= 40 ? Theme.accentAmber : Theme.textPrimary))
         }
 
         Text {

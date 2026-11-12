@@ -268,12 +268,14 @@ PanelWindow {
                                 ? Qt.rgba(Theme.accentAmber.r, Theme.accentAmber.g, Theme.accentAmber.b, 0.20)
                                 : Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.15))
 
-                        Text {
+                        Icon {
                             anchors.centerIn: parent
-                            text: omnibarWindow.isExecuting
-                                ? "✓"
-                                : (omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.icon : "⚡")
-                            font.pixelSize: 16
+                            name: omnibarWindow.isExecuting
+                                ? "check"
+                                : (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.lucide
+                                    ? omnibarWindow.spotlightResult.lucide
+                                    : "zap")
+                            size: 16
                             color: omnibarWindow.isExecuting
                                 ? Theme.accentEmerald
                                 : (omnibarWindow.spotlightResult ? Theme.accentAmber : Theme.accentCyan)
@@ -547,11 +549,11 @@ PanelWindow {
                             border.color: Qt.rgba(1, 1, 1, 0.3)
                             border.width: 1.5
 
-                            Text {
+                            Icon {
                                 anchors.centerIn: parent
-                                text: "🎨"
-                                font.pixelSize: 22
-                                opacity: 0.6
+                                name: "palette"
+                                size: 20
+                                color: Theme.accentCyan
                             }
                         }
 
@@ -674,7 +676,11 @@ PanelWindow {
                                 id: eyeRow
                                 anchors.centerIn: parent
                                 spacing: 6
-                                Text { text: "💉"; font.pixelSize: 14 }
+                                Icon {
+                                    name: "palette"
+                                    size: 14
+                                    color: Theme.accentCyan
+                                }
                                 Text {
                                     text: "Pick Screen"
                                     font.family: Theme.fontFamily
@@ -946,12 +952,12 @@ PanelWindow {
 
                     Repeater {
                         model: [
-                            { title: "Pick Screen Color", sub: "Interactive eyedropper", cmd: ":eyedropper", icon: "💉", color: Theme.accentCyan },
-                            { title: "Screenshot", sub: "Snip area to clipboard", cmd: "take a screenshot", icon: "📸", color: Theme.accentAmber },
-                            { title: "Currency Converter", sub: "120 USD to INR", cmd: "120 usd to inr", icon: "💱", color: Theme.accentEmerald },
-                            { title: "World Clock", sub: "Current time in Tokyo", cmd: "time in tokyo", icon: "🇯🇵", color: Theme.accentSky },
-                            { title: "Glyph & Symbols", sub: "Arrows, math & emoji", cmd: ":arrow", icon: "→", color: Theme.accentViolet },
-                            { title: "Virtual Display", sub: "Toggle 1080p Headless", cmd: "turn on virtual display", icon: "🖥️", color: Theme.accentRose }
+                            { title: "Pick Screen Color", sub: "Interactive eyedropper", cmd: ":eyedropper", icon: "palette", color: Theme.accentCyan },
+                            { title: "Screenshot", sub: "Snip area to clipboard", cmd: "take a screenshot", icon: "image", color: Theme.accentAmber },
+                            { title: "Currency Converter", sub: "120 USD to INR", cmd: "120 usd to inr", icon: "refresh-cw", color: Theme.accentEmerald },
+                            { title: "World Clock", sub: "Current time in Tokyo", cmd: "time in tokyo", icon: "clock", color: Theme.accentSky },
+                            { title: "Glyph & Symbols", sub: "Arrows, math & symbols", cmd: ":arrow", icon: "sparkles", color: Theme.accentViolet },
+                            { title: "Virtual Display", sub: "Toggle 1080p Headless", cmd: "turn on virtual display", icon: "monitor", color: Theme.accentRose }
                         ]
 
                         Rectangle {
@@ -979,9 +985,10 @@ PanelWindow {
                                 anchors.margins: 8
                                 spacing: 8
 
-                                Text {
-                                    text: modelData.icon
-                                    font.pixelSize: 18
+                                Icon {
+                                    name: modelData.icon
+                                    size: 18
+                                    color: modelData.color
                                 }
 
                                 ColumnLayout {

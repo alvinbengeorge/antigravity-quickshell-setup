@@ -31,10 +31,11 @@ Rectangle {
         anchors.centerIn: parent
         spacing: 7
 
-        // Docker Whale Icon
-        Text {
-            text: "🐳"
-            font.pixelSize: 13
+        // Docker Layers Icon
+        Icon {
+            name: "layers"
+            size: 14
+            color: mouseArea.containsMouse ? Theme.accentSky : Theme.textPrimary
         }
 
         // Status indicator dot

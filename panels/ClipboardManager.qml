@@ -97,9 +97,10 @@ PanelWindow {
                     anchors.rightMargin: 14
                     spacing: 10
 
-                    Text {
-                        text: "📋"
-                        font.pixelSize: 14
+                    Icon {
+                        name: "copy"
+                        size: 14
+                        color: Theme.accentCyan
                     }
 
                     TextInput {
@@ -249,11 +250,12 @@ PanelWindow {
                                         cache: true
                                     }
 
-                                    // Icon emoji fallback for text/code/urls
-                                    Text {
+                                    // Icon vector fallback for text/code/urls
+                                    Icon {
                                         anchors.centerIn: parent
-                                        text: modelData.type === "url" ? "🔗" : (modelData.type === "code" ? "💻" : (modelData.type === "image" ? "🖼" : "📄"))
-                                        font.pixelSize: 13
+                                        name: modelData.type === "url" ? "link" : (modelData.type === "code" ? "code" : (modelData.type === "image" ? "image" : "file-text"))
+                                        size: 13
+                                        color: modelData.pinned ? Theme.accentAmber : Theme.textSecondary
                                         visible: modelData.type !== "image" || !modelData.thumb
                                     }
                                 }
@@ -516,9 +518,9 @@ PanelWindow {
                         anchors.centerIn: parent
                         spacing: 4
 
-                        Text {
-                            text: "🗑"
-                            font.pixelSize: 10
+                        Icon {
+                            name: "trash-2"
+                            size: 11
                             color: clearMouse.containsMouse ? "#FFFFFF" : Theme.accentRose
                         }
                         Text {

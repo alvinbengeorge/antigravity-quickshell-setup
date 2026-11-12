@@ -100,9 +100,10 @@ PanelWindow {
                     anchors.rightMargin: 16
                     spacing: 10
 
-                    Text {
-                        text: "🔍"
-                        font.pixelSize: 14
+                    Icon {
+                        name: "search"
+                        size: 16
+                        color: Theme.accentCyan
                     }
 
                     TextInput {
@@ -355,9 +356,10 @@ PanelWindow {
                             anchors.margins: 12
                             spacing: 12
 
-                            Text {
-                                text: "⚡"
-                                font.pixelSize: 22
+                            Icon {
+                                name: "zap"
+                                size: 22
+                                color: Theme.accentAmber
                             }
 
                             ColumnLayout {

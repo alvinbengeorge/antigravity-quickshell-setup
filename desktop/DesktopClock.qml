@@ -278,10 +278,13 @@ PanelWindow {
                         showShadow: false
                     }
 
-                    Text {
+                    Icon {
                         anchors.centerIn: parent
-                        text: "📅"
-                        font.pixelSize: 11
+                        name: "calendar"
+                        size: 13
+                        color: root.showCalendar
+                            ? (ShellState.plasticEnabled ? Theme.accentViolet : Theme.textOnAccent)
+                            : (calMouse.containsMouse ? Theme.textPrimary : Theme.textMuted)
                     }
 
                     MouseArea {

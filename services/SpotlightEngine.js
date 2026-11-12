@@ -231,6 +231,7 @@ function evaluateMath(raw) {
             return {
                 mode: "math",
                 icon: "🧮",
+                lucide: "code",
                 title: "CALCULATION RESULT",
                 expression: expr,
                 result: formatNumber(res),
@@ -277,6 +278,7 @@ function evaluateConversion(raw) {
         return {
             mode: "conversion",
             icon: "🌡️",
+            lucide: "gauge",
             title: "TEMPERATURE CONVERSION",
             expression: val + " °C ➜ °F",
             result: formatNumber(res) + " °F",
@@ -289,6 +291,7 @@ function evaluateConversion(raw) {
         return {
             mode: "conversion",
             icon: "🌡️",
+            lucide: "gauge",
             title: "TEMPERATURE CONVERSION",
             expression: val + " °F ➜ °C",
             result: formatNumber(res) + " °C",
@@ -305,6 +308,7 @@ function evaluateConversion(raw) {
         return {
             mode: "conversion",
             icon: "💱",
+            lucide: "refresh-cw",
             title: "CURRENCY CONVERSION",
             expression: val + " " + u1.toUpperCase() + " ➜ " + u2.toUpperCase(),
             result: sym + " " + formatNumber(res),
@@ -320,6 +324,7 @@ function evaluateConversion(raw) {
         return {
             mode: "conversion",
             icon: "💾",
+            lucide: "hard-drive",
             title: "DIGITAL STORAGE CONVERSION",
             expression: val + " " + u1.toUpperCase() + " ➜ " + u2.toUpperCase(),
             result: formatNumber(res) + " " + u2.toUpperCase(),
@@ -335,6 +340,7 @@ function evaluateConversion(raw) {
         return {
             mode: "conversion",
             icon: "📏",
+            lucide: "sliders",
             title: "LENGTH CONVERSION",
             expression: val + " " + u1 + " ➜ " + u2,
             result: formatNumber(res) + " " + u2,
@@ -350,6 +356,7 @@ function evaluateConversion(raw) {
         return {
             mode: "conversion",
             icon: "⚖️",
+            lucide: "sliders",
             title: "MASS & WEIGHT CONVERSION",
             expression: val + " " + u1 + " ➜ " + u2,
             result: formatNumber(res) + " " + u2,
@@ -365,6 +372,7 @@ function evaluateConversion(raw) {
         return {
             mode: "conversion",
             icon: "⚡",
+            lucide: "gauge",
             title: "SPEED CONVERSION",
             expression: val + " " + u1 + " ➜ " + u2,
             result: formatNumber(res) + " " + u2,
@@ -394,6 +402,7 @@ function evaluateTime(raw) {
         return {
             mode: "time",
             icon: city.flag || "⏰",
+            lucide: "clock",
             title: "WORLD CLOCK // " + city.name.toUpperCase(),
             expression: dateStr + " • " + city.name,
             result: timeStr,
@@ -468,6 +477,7 @@ function evaluateColor(raw) {
     return {
         mode: "color",
         icon: "🎨",
+        lucide: "palette",
         title: "COLOR PALETTE INSPECTOR",
         hex: hexStr,
         rgb: "rgb(" + r + ", " + g + ", " + b + ")",
@@ -502,6 +512,7 @@ function evaluateGlyphs(raw) {
     return {
         mode: "glyphs",
         icon: matches[0].char,
+        lucide: "sparkles",
         title: "GLYPH & SYMBOL INSPECTOR",
         matches: matches.slice(0, 12),
         primary: matches[0],

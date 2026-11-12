@@ -390,9 +390,10 @@ PanelWindow {
                                 RowLayout {
                                     visible: prCard.modelData.comments > 0
                                     spacing: 2
-                                    Text {
-                                        text: "💬"
-                                        font.pixelSize: 8
+                                    Icon {
+                                        name: "message-square"
+                                        size: 10
+                                        color: Theme.textMuted
                                     }
                                     Text {
                                         text: String(prCard.modelData.comments ?? 0)
