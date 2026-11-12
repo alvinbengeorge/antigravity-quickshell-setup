@@ -8,6 +8,7 @@ import "bar"
 import "panels"
 import "desktop"
 import "notifications"
+import "dock"
 
 ShellRoot {
     id: root
@@ -27,6 +28,16 @@ ShellRoot {
         model: Quickshell.screens
 
         TopBar {
+            required property ShellScreen modelData
+            screen: modelData
+        }
+    }
+
+    // Instantiate Liquid Glass Floating Dock on all detected screens
+    Variants {
+        model: Quickshell.screens
+
+        FloatingDock {
             required property ShellScreen modelData
             screen: modelData
         }
