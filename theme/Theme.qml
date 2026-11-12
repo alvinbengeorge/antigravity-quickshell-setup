@@ -579,9 +579,17 @@ Singleton {
     readonly property int cardRadius: 16
     readonly property int smallRadius: 8
 
-    // Fonts
-    readonly property string fontFamily: "Google Sans, Inter, system-ui, sans-serif"
-    readonly property string fontMono: "Adwaita Mono, Noto Sans Mono, monospace"
+    // Fonts (resolved dynamically to actual installed font families)
+    function _resolveFont(candidates, fallback) {
+        var available = Qt.fontFamilies();
+        for (var i = 0; i < candidates.length; i++) {
+            if (available.indexOf(candidates[i]) !== -1) return candidates[i];
+        }
+        return fallback;
+    }
+
+    readonly property string fontFamily: _resolveFont(["Google Sans", "Inter", "Adwaita Sans"], "sans-serif")
+    readonly property string fontMono: _resolveFont(["Adwaita Mono", "JetBrains Mono", "Source Code Pro", "Noto Sans Mono"], "monospace")
 
     // Theme metadata
     readonly property string themeName: currentPalette.name
