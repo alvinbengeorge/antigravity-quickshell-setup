@@ -6,6 +6,7 @@ import time
 import subprocess
 
 CACHE_FILE = '/tmp/agy_quota_cache.json'
+PERSISTENT_CACHE = os.path.expanduser('~/.cache/antigravity/agy_quota_cache.json')
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 UPDATE_SCRIPT = os.path.join(SCRIPT_DIR, 'update_quota_cache.py')
 
@@ -29,12 +30,15 @@ def read_quota_cache():
     now = time.time()
     cache_data = None
 
-    if os.path.exists(CACHE_FILE):
-        try:
-            with open(CACHE_FILE, 'r') as f:
-                cache_data = json.load(f)
-        except Exception:
-            cache_data = None
+    for target in [CACHE_FILE, PERSISTENT_CACHE]:
+        if os.path.exists(target):
+            try:
+                with open(target, 'r') as f:
+                    cache_data = json.load(f)
+                if cache_data and 'quotas' in cache_data:
+                    break
+            except Exception:
+                cache_data = None
 
     need_refresh = False
     if not cache_data:

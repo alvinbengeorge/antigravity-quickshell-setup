@@ -5,6 +5,7 @@ import time
 import os
 
 CACHE_FILE = '/tmp/agy_quota_cache.json'
+PERSISTENT_CACHE = os.path.expanduser('~/.cache/antigravity/agy_quota_cache.json')
 LOCK_FILE = '/tmp/agy_quota_cache.lock'
 
 def update_cache():
@@ -26,11 +27,7 @@ def update_cache():
             import shutil
             agy_bin = shutil.which('agy') or 'agy'
 
-        dummy_home = '/tmp/agy_quota_profile'
-        os.makedirs(os.path.join(dummy_home, '.gemini'), exist_ok=True)
         env = os.environ.copy()
-        env['HOME'] = dummy_home
-        env['XDG_CONFIG_HOME'] = os.path.join(dummy_home, '.config')
         env['PATH'] = f"{os.path.expanduser('~/.local/bin')}:{env.get('PATH', '')}"
 
         res = subprocess.run(
@@ -68,11 +65,18 @@ def update_cache():
                         'description': desc
                     }
 
+            payload = {
+                'updated_at': time.time(),
+                'quotas': parsed
+            }
             with open(CACHE_FILE, 'w') as f:
-                json.dump({
-                    'updated_at': time.time(),
-                    'quotas': parsed
-                }, f)
+                json.dump(payload, f)
+            try:
+                os.makedirs(os.path.dirname(PERSISTENT_CACHE), exist_ok=True)
+                with open(PERSISTENT_CACHE, 'w') as f:
+                    json.dump(payload, f)
+            except Exception:
+                pass
     except Exception as e:
         pass
     finally:
