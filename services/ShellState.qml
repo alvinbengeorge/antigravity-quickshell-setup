@@ -485,6 +485,7 @@ Singleton {
         function toggle(): void { root.toggleDesktopJira(); }
         function show(): void { root.desktopJiraVisible = true; }
         function hide(): void { root.desktopJiraVisible = false; }
+        function refresh(): void { JiraService.refresh(true); }
     }
 
     IpcHandler {

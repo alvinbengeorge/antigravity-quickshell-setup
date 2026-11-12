@@ -85,6 +85,36 @@ def format_relative_time(iso_str):
     except Exception:
         return iso_str[:10]
 
+def query_jql(jira_url, auth_header, jql, max_results=100, max_pages=3):
+    """Fetch issues matching JQL, with nextPageToken pagination up to max_pages."""
+    issues = []
+    next_page_token = None
+    for _ in range(max_pages):
+        body = {
+            "jql": jql,
+            "maxResults": max_results,
+            "fields": ["summary", "status", "priority", "issuetype", "updated", "created", "project"]
+        }
+        if next_page_token:
+            body["nextPageToken"] = next_page_token
+        payload = json.dumps(body).encode("utf-8")
+        req = urllib.request.Request(f"{jira_url}/rest/api/3/search/jql", data=payload, headers={
+            "Authorization": auth_header,
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=15) as r:
+                res = json.loads(r.read().decode("utf-8"))
+                batch = res.get("issues", [])
+                issues.extend(batch)
+                next_page_token = res.get("nextPageToken")
+                if not next_page_token or not batch:
+                    break
+        except Exception:
+            break
+    return issues
+
 def fetch_jira_data(jira_url, username, token):
     auth_str = f"{username}:{token}"
     auth_header = "Basic " + base64.b64encode(auth_str.encode("utf-8")).decode("utf-8")
@@ -118,19 +148,37 @@ def fetch_jira_data(jira_url, username, token):
     }
 
     # 2. Fetch tasks assigned to currentUser()
-    payload = json.dumps({
-        "jql": "assignee = currentUser() ORDER BY updated DESC",
-        "maxResults": 50,
-        "fields": ["summary", "status", "priority", "issuetype", "updated", "created", "project"]
-    }).encode("utf-8")
+    # Strategy:
+    # A. Fetch all active (unfinished) tasks: statusCategory != Done (up to 300 tasks with pagination).
+    #    Active To Do / In Progress / In Review tasks MUST NEVER be starved by completed issues.
+    # B. Fetch recent completed tasks: statusCategory = Done (up to 50 newest).
+    active_issues = query_jql(
+        jira_url,
+        auth_header,
+        "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC",
+        max_results=100,
+        max_pages=3
+    )
 
-    req_issues = urllib.request.Request(f"{jira_url}/rest/api/3/search/jql", data=payload, headers={
-        "Authorization": auth_header,
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-    })
-    with urllib.request.urlopen(req_issues, timeout=15) as r:
-        raw_issues = json.loads(r.read().decode("utf-8")).get("issues", [])
+    done_issues = query_jql(
+        jira_url,
+        auth_header,
+        "assignee = currentUser() AND statusCategory = Done ORDER BY updated DESC",
+        max_results=50,
+        max_pages=1
+    )
+
+    raw_issues = active_issues + done_issues
+
+    # Fallback to single broad query if targeted queries returned nothing
+    if not raw_issues:
+        raw_issues = query_jql(
+            jira_url,
+            auth_header,
+            "assignee = currentUser() ORDER BY updated DESC",
+            max_results=150,
+            max_pages=2
+        )
 
     tasks = []
     to_do_count = 0
