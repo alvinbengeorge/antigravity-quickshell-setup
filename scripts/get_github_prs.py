@@ -40,7 +40,8 @@ def fetch_prs_graphql():
     query = """
 query {
   viewer {
-    pullRequests(first: 30, states: OPEN, orderBy: {field: UPDATED_AT, direction: DESC}) {
+    pullRequests(first: 100, states: OPEN, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      totalCount
       nodes {
         number
         title
@@ -74,7 +75,9 @@ query {
         raise RuntimeError(res.stderr.strip() or f"gh exited with {res.returncode}")
 
     data = json.loads(res.stdout)
-    nodes = data.get("data", {}).get("viewer", {}).get("pullRequests", {}).get("nodes", [])
+    pr_container = data.get("data", {}).get("viewer", {}).get("pullRequests", {})
+    total_count = pr_container.get("totalCount", 0)
+    nodes = pr_container.get("nodes", [])
     prs = []
     for item in nodes:
         repo_data = item.get("repository") or {}
@@ -108,13 +111,14 @@ query {
             "updated_at": item.get("updatedAt", ""),
             "updated_ago": format_relative_time(item.get("updatedAt", ""))
         })
-    return prs
+    return total_count, prs
 
 def fetch_prs_search_fallback():
     cmd = [
         "gh", "search", "prs",
         "--state=open",
         "--author=@me",
+        "--limit=100",
         "--json", "number,title,repository,url,updatedAt,isDraft,commentsCount,labels"
     ]
     res = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
@@ -140,17 +144,17 @@ def fetch_prs_search_fallback():
             "updated_at": item.get("updatedAt", ""),
             "updated_ago": format_relative_time(item.get("updatedAt", ""))
         })
-    return prs
+    return len(prs), prs
 
 def fetch_prs():
     try:
-        prs = fetch_prs_graphql()
+        total_count, prs = fetch_prs_graphql()
     except Exception:
-        prs = fetch_prs_search_fallback()
+        total_count, prs = fetch_prs_search_fallback()
 
     return {
         "status": "ok",
-        "count": len(prs),
+        "count": total_count,
         "prs": prs,
         "updated_at_epoch": time.time(),
         "last_updated": datetime.now().strftime("%I:%M %p")
