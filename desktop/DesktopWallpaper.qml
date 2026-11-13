@@ -134,43 +134,50 @@ PanelWindow {
         Canvas {
             id: skyCanvas
             anchors.fill: parent
+            renderTarget: Canvas.FramebufferObject
 
-            property real twinkle: 1.0
             property var stars: []
             property var constellations: []
-
-            SequentialAnimation on twinkle {
-                running: skyboxLayer.visible
-                loops: Animation.Infinite
-                NumberAnimation { to: 0.65; duration: 2400; easing.type: Easing.InOutSine }
-                NumberAnimation { to: 1.0; duration: 2400; easing.type: Easing.InOutSine }
-            }
-
-            onTwinkleChanged: requestPaint()
+            property string lastDaySeed: ""
 
             function initSkybox() {
                 if (width <= 0 || height <= 0) return;
-                const starList = [];
-                // Deterministic pseudo-random distribution
-                const count = 110;
-                let seed = 42;
+
+                const today = new Date();
+                const daySeedStr = today.getFullYear() + "-" + (today.getMonth() + 1) + "-" + today.getDate();
+                lastDaySeed = daySeedStr;
+
+                // Seed hash from date (1 unique celestial map per calendar day)
+                let seed = 1337;
+                for (let c = 0; c < daySeedStr.length; c++) {
+                    seed = (seed * 31 + daySeedStr.charCodeAt(c)) % 233280;
+                }
+
                 function rnd() {
                     seed = (seed * 9301 + 49297) % 233280;
                     return seed / 233280;
                 }
 
+                const starList = [];
+                const count = 120;
                 for (let i = 0; i < count; i++) {
                     const sx = rnd() * width;
-                    const sy = rnd() * (height * 0.75); // Concentrate stars on upper 75%
-                    const sr = 0.8 + rnd() * 1.5;
-                    const isTwinkler = (i % 5 === 0);
+                    const sy = rnd() * (height * 0.75); // Upper 75% night sky
+                    const sr = 0.8 + rnd() * 1.6;
                     const tint = (i % 3 === 0) ? "#E0F2FE" : ((i % 4 === 0) ? "#FEF3C7" : "#FFFFFF");
-                    starList.push({ x: sx, y: sy, r: sr, tw: isTwinkler, tint: tint, baseAlpha: 0.35 + rnd() * 0.55 });
+                    starList.push({
+                        x: sx,
+                        y: sy,
+                        r: sr,
+                        tint: tint,
+                        alpha: 0.35 + rnd() * 0.55
+                    });
                 }
                 stars = starList;
 
-                // Subtle constellation lines
-                const cx1 = width * 0.22, cy1 = height * 0.18;
+                // Deterministic daily constellation lines
+                const cx1 = width * (0.18 + rnd() * 0.1);
+                const cy1 = height * (0.14 + rnd() * 0.1);
                 const c1 = [
                     { x: cx1, y: cy1 },
                     { x: cx1 + 45, y: cy1 - 25 },
@@ -181,7 +188,8 @@ PanelWindow {
                     { x: cx1, y: cy1 }
                 ];
 
-                const cx2 = width * 0.72, cy2 = height * 0.15;
+                const cx2 = width * (0.68 + rnd() * 0.1);
+                const cy2 = height * (0.12 + rnd() * 0.1);
                 const c2 = [
                     { x: cx2, y: cy2 },
                     { x: cx2 + 35, y: cy2 + 30 },
@@ -192,6 +200,20 @@ PanelWindow {
 
                 constellations = [c1, c2];
                 requestPaint();
+            }
+
+            // Midnight date-check timer (checks every 10 minutes, repaints ONLY if day changed)
+            Timer {
+                interval: 600000
+                running: true
+                repeat: true
+                onTriggered: {
+                    const now = new Date();
+                    const curSeed = now.getFullYear() + "-" + (now.getMonth() + 1) + "-" + now.getDate();
+                    if (curSeed !== skyCanvas.lastDaySeed) {
+                        skyCanvas.initSkybox();
+                    }
+                }
             }
 
             onWidthChanged: initSkybox()
@@ -225,19 +247,18 @@ PanelWindow {
                     }
                 }
 
-                // 2. Draw Stars
+                // 2. Draw Static Stars (zero CPU redraws)
                 for (let i = 0; i < stars.length; i++) {
                     const s = stars[i];
-                    const alpha = s.tw ? (s.baseAlpha * twinkle) : s.baseAlpha;
                     ctx.fillStyle = s.tint;
-                    ctx.globalAlpha = Math.min(1.0, Math.max(0.1, alpha));
+                    ctx.globalAlpha = Math.min(1.0, Math.max(0.1, s.alpha));
                     ctx.beginPath();
                     ctx.arc(s.x, s.y, s.r, 0, 2 * Math.PI);
                     ctx.fill();
                 }
                 ctx.globalAlpha = 1.0;
 
-                // 3. Subtle Crescent Moon Glow in Top-Right
+                // 3. Crescent Moon Glow in Top-Right
                 const mx = width * 0.88;
                 const my = height * 0.14;
                 const moonGlow = ctx.createRadialGradient(mx, my, 4, mx, my, 45);
