@@ -135,18 +135,18 @@ PanelWindow {
                     implicitWidth: gradToggleRow.implicitWidth + 14
                     radius: 8
                     readonly property bool isGradient: WallpaperService.mode === "gradient"
-                    color: ShellState.plasticEnabled
-                        ? "transparent"
-                        : (isGradient ? Theme.accentViolet : (gradMouse.containsMouse ? Theme.bgHover : Theme.bgPill))
-                    border.color: ShellState.plasticEnabled
-                        ? "transparent"
-                        : (isGradient ? Theme.accentViolet : Theme.borderDim)
-                    border.width: ShellState.plasticEnabled ? 0 : 1
+                    color: isGradient
+                        ? Theme.accentViolet
+                        : (gradMouse.containsMouse ? Theme.bgHover : Theme.bgPill)
+                    border.color: isGradient
+                        ? Theme.accentViolet
+                        : (gradMouse.containsMouse ? Theme.accentViolet : Theme.borderDim)
+                    border.width: 1
 
                     LiquidGlassSurface {
                         radius: 8
-                        visible: ShellState.plasticEnabled && (parent.isGradient || gradMouse.containsMouse)
-                        accentColor: Theme.accentViolet
+                        visible: ShellState.plasticEnabled
+                        accentColor: parent.isGradient ? Theme.accentViolet : Theme.textMuted
                         hovered: gradMouse.containsMouse
                         pressed: gradMouse.pressed
                         showShadow: false
@@ -186,9 +186,23 @@ PanelWindow {
                     height: 28
                     implicitWidth: wpToggleRow.implicitWidth + 14
                     radius: 8
-                    color: Theme.fromWallpaperActive ? Theme.accentCyan : Theme.bgPill
-                    border.color: Theme.fromWallpaperActive ? Theme.accentCyan : Theme.borderDim
+                    readonly property bool isFromWp: Theme.fromWallpaperActive
+                    color: isFromWp
+                        ? Theme.accentCyan
+                        : (wpMouse.containsMouse ? Theme.bgHover : Theme.bgPill)
+                    border.color: isFromWp
+                        ? Theme.accentCyan
+                        : (wpMouse.containsMouse ? Theme.accentCyan : Theme.borderDim)
                     border.width: 1
+
+                    LiquidGlassSurface {
+                        radius: 8
+                        visible: ShellState.plasticEnabled
+                        accentColor: parent.isFromWp ? Theme.accentCyan : Theme.textMuted
+                        hovered: wpMouse.containsMouse
+                        pressed: wpMouse.pressed
+                        showShadow: false
+                    }
 
                     RowLayout {
                         id: wpToggleRow
@@ -198,19 +212,20 @@ PanelWindow {
                         Icon {
                             name: "sparkles"
                             size: 12
-                            color: Theme.fromWallpaperActive ? Theme.textOnAccent : Theme.accentSky
+                            color: parent.parent.isFromWp ? Theme.textOnAccent : Theme.accentSky
                         }
 
                         Text {
-                            text: Theme.isExtractingWallpaper ? "Extracting..." : (Theme.fromWallpaperActive ? "From WP: ON (Live)" : "From WP: OFF")
+                            text: Theme.isExtractingWallpaper ? "Extracting..." : (parent.parent.isFromWp ? "From WP: ON" : "From WP: OFF")
                             font.family: Theme.fontMono
                             font.pixelSize: 10
                             font.bold: true
-                            color: Theme.fromWallpaperActive ? Theme.textOnAccent : Theme.textPrimary
+                            color: parent.parent.isFromWp ? Theme.textOnAccent : Theme.textPrimary
                         }
                     }
 
                     MouseArea {
+                        id: wpMouse
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
@@ -227,18 +242,18 @@ PanelWindow {
                     implicitWidth: skyboxToggleRow.implicitWidth + 14
                     radius: 8
                     readonly property bool isSkybox: ShellState.skyboxEnabled
-                    color: ShellState.plasticEnabled
-                        ? "transparent"
-                        : (isSkybox ? Theme.accentAmber : (skyboxMouse.containsMouse ? Theme.bgHover : Theme.bgPill))
-                    border.color: ShellState.plasticEnabled
-                        ? "transparent"
-                        : (isSkybox ? Theme.accentAmber : Theme.borderDim)
-                    border.width: ShellState.plasticEnabled ? 0 : 1
+                    color: isSkybox
+                        ? Theme.accentAmber
+                        : (skyboxMouse.containsMouse ? Theme.bgHover : Theme.bgPill)
+                    border.color: isSkybox
+                        ? Theme.accentAmber
+                        : (skyboxMouse.containsMouse ? Theme.accentAmber : Theme.borderDim)
+                    border.width: 1
 
                     LiquidGlassSurface {
                         radius: 8
-                        visible: ShellState.plasticEnabled && (parent.isSkybox || skyboxMouse.containsMouse)
-                        accentColor: Theme.accentAmber
+                        visible: ShellState.plasticEnabled
+                        accentColor: parent.isSkybox ? Theme.accentAmber : Theme.textMuted
                         hovered: skyboxMouse.containsMouse
                         pressed: skyboxMouse.pressed
                         showShadow: false
