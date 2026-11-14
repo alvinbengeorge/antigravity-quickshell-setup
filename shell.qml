@@ -84,7 +84,6 @@ ShellRoot {
 
     // Centered & Dropdown Overlays
     AntigravityPanel {}
-    Launcher {}
     Omnibar {}
     ClipboardManager {}
     SessionDialog {}

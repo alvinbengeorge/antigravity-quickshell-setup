@@ -174,7 +174,7 @@ quickshell log -c antigravity -t 30
 
 | Shortcut | Action | Description |
 |---|---|---|
-| `Super + Space` | **App Launcher & Search** | Spotlight-style fuzzy application & file search |
+| `Super + Space` / `Super + K` | **Spotlight Omnibar & App Suite** | Universal application search, math, currencies, color inspector, glyphs & semantic commands |
 | `Super + A` / `Super + I` | **Antigravity AI HUD** | Access agent instructions, active trajectories & brain logs |
 | `Super + V` | **Clipboard History** | Visual clipboard manager with search and image preview |
 | `Super + Tab` | **Window Switcher** | Alt-Tab style visual switcher across workspaces |
@@ -238,7 +238,7 @@ custom_quickshell/
 │   ├── MediaDropdown.qml             # Floating frosted mini-player beneath dynamic island
 │   ├── WorkspacePreview.qml          # Live workspace preview popup
 │   ├── AntigravityPanel.qml          # Full agent HUD & brain inspector
-│   ├── Launcher.qml                  # Quick application launcher modal
+│   ├── Omnibar.qml                   # Universal Spotlight & application suite (math, apps, conversions)
 │   ├── Clipboard.qml                 # Visual clipboard history manager
 │   └── SessionDialog.qml             # Power, lock, and session modal
 ├── services/

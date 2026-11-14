@@ -29,6 +29,8 @@ PanelWindow {
 
     property var parsedPlan: null
     property var spotlightResult: null
+    property var matchedApps: []
+    property int selectedAppIndex: 0
     property bool isExecuting: false
     property var commandHistory: []
     property int historyIndex: -1
@@ -40,6 +42,8 @@ PanelWindow {
             omniInput.text = initQuery;
             parsedPlan = null;
             spotlightResult = initQuery ? Spotlight.inspect(initQuery) : null;
+            matchedApps = (!spotlightResult && initQuery) ? AppService.search(initQuery) : [];
+            selectedAppIndex = 0;
             isExecuting = false;
             historyIndex = -1;
             loadHistoryProc.running = true;
@@ -107,7 +111,7 @@ PanelWindow {
         repeat: false
         onTriggered: {
             const q = omniInput.text.trim();
-            if (q.length === 0 || omnibarWindow.spotlightResult !== null) {
+            if (q.length === 0 || omnibarWindow.spotlightResult !== null || (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0)) {
                 omnibarWindow.parsedPlan = null;
                 return;
             }
@@ -133,8 +137,19 @@ PanelWindow {
         }
     }
 
-    // ── Execute Command / Copy Spotlight Result ────────────────────────
-    function executeCurrentCommand() {
+    // ── Execute Command / Launch App / Copy Spotlight Result ────────────
+    function executeCurrentCommand(forceSemantic) {
+        const query = omniInput.text.trim();
+
+        // 1. Force Semantic Execution
+        if (forceSemantic && query) {
+            omnibarWindow.isExecuting = true;
+            Quickshell.execDetached(["laya-cmd", query]);
+            dismissTimer.restart();
+            return;
+        }
+
+        // 2. Spotlight Result (Copy to clipboard)
         if (omnibarWindow.spotlightResult) {
             const val = omnibarWindow.spotlightResult.copyValue || "";
             if (val) {
@@ -145,9 +160,20 @@ PanelWindow {
             return;
         }
 
-        const query = omniInput.text.trim();
-        if (!query) return;
+        // 3. Application Launch
+        if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
+            const idx = Math.max(0, Math.min(omnibarWindow.selectedAppIndex, omnibarWindow.matchedApps.length - 1));
+            const app = omnibarWindow.matchedApps[idx];
+            if (app) {
+                omnibarWindow.isExecuting = true;
+                app.execute();
+                dismissTimer.restart();
+                return;
+            }
+        }
 
+        // 4. Fallback Semantic Execution
+        if (!query) return;
         omnibarWindow.isExecuting = true;
         Quickshell.execDetached(["laya-cmd", query]);
         dismissTimer.restart();
@@ -155,7 +181,7 @@ PanelWindow {
 
     Timer {
         id: dismissTimer
-        interval: 150
+        interval: 140
         repeat: false
         onTriggered: {
             ShellState.omnibarOpen = false;
@@ -185,17 +211,24 @@ PanelWindow {
         anchors.horizontalCenter: parent.horizontalCenter
         y: parent.height * 0.16
 
-        // Dynamic height based on mode
+        // Dynamic height based on active mode
         height: {
             if (omnibarWindow.spotlightResult) {
                 if (omnibarWindow.spotlightResult.mode === "glyphs") return 290;
                 if (omnibarWindow.spotlightResult.mode === "color") return 245;
                 return 220; // math, conversion, time
             }
+            if (omniInput.text.trim().length === 0) {
+                return 440; // Quick actions & recent history
+            }
+            if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
+                const count = Math.min(omnibarWindow.matchedApps.length, 5);
+                return Math.min(540, 146 + count * 56 + 42);
+            }
             if (omnibarWindow.parsedPlan && omnibarWindow.parsedPlan.actions && omnibarWindow.parsedPlan.actions.length > 0) {
                 return Math.min(520, 150 + omnibarWindow.parsedPlan.actions.length * 80);
             }
-            return (omniInput.text.trim().length === 0) ? 440 : 220;
+            return 220;
         }
 
         radius: 18
@@ -266,7 +299,9 @@ PanelWindow {
                             ? Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.20)
                             : (omnibarWindow.spotlightResult
                                 ? Qt.rgba(Theme.accentAmber.r, Theme.accentAmber.g, Theme.accentAmber.b, 0.20)
-                                : Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.15))
+                                : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0)
+                                    ? Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.20)
+                                    : Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.15)))
 
                         Icon {
                             anchors.centerIn: parent
@@ -274,11 +309,15 @@ PanelWindow {
                                 ? "check"
                                 : (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.lucide
                                     ? omnibarWindow.spotlightResult.lucide
-                                    : "zap")
+                                    : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0)
+                                        ? "search"
+                                        : "zap"))
                             size: 16
                             color: omnibarWindow.isExecuting
                                 ? Theme.accentEmerald
-                                : (omnibarWindow.spotlightResult ? Theme.accentAmber : Theme.accentCyan)
+                                : (omnibarWindow.spotlightResult
+                                    ? Theme.accentAmber
+                                    : Theme.accentCyan)
                         }
                     }
 
@@ -294,7 +333,7 @@ PanelWindow {
                         clip: true
 
                         Text {
-                            text: "Type a command, math (1440 * 0.75), currency (120 usd to inr), hex (#ffaa00), or emoji (:fire:)..."
+                            text: "Type to search apps, math (1440 * 0.75), currency (120 usd to inr), hex (#ffaa00), glyphs (:fire:)..."
                             font.family: parent.font.family
                             font.pixelSize: parent.font.pixelSize
                             color: Theme.textMuted
@@ -306,40 +345,79 @@ PanelWindow {
                             omnibarWindow.historyIndex = -1;
                             omnibarWindow.spotlightResult = Spotlight.inspect(omniInput.text);
                             if (!omnibarWindow.spotlightResult) {
+                                const q = omniInput.text.trim();
+                                if (q.length > 0) {
+                                    omnibarWindow.matchedApps = AppService.search(q);
+                                    omnibarWindow.selectedAppIndex = 0;
+                                } else {
+                                    omnibarWindow.matchedApps = [];
+                                    omnibarWindow.selectedAppIndex = 0;
+                                }
                                 parseDebounceTimer.restart();
                             } else {
+                                omnibarWindow.matchedApps = [];
+                                omnibarWindow.selectedAppIndex = 0;
                                 omnibarWindow.parsedPlan = null;
                             }
                         }
 
-                        Keys.onReturnPressed: omnibarWindow.executeCurrentCommand()
-                        Keys.onEnterPressed: omnibarWindow.executeCurrentCommand()
-
-                        Keys.onEscapePressed: {
-                            ShellState.omnibarOpen = false;
-                        }
-
-                        Keys.onUpPressed: {
-                            if (omnibarWindow.commandHistory.length > 0) {
-                                omnibarWindow.historyIndex = Math.min(omnibarWindow.commandHistory.length - 1, omnibarWindow.historyIndex + 1);
-                                omniInput.text = omnibarWindow.commandHistory[omnibarWindow.historyIndex].prompt || "";
-                            }
-                        }
-
-                        Keys.onDownPressed: {
-                            if (omnibarWindow.historyIndex > 0) {
-                                omnibarWindow.historyIndex--;
-                                omniInput.text = omnibarWindow.commandHistory[omnibarWindow.historyIndex].prompt || "";
-                            } else if (omnibarWindow.historyIndex === 0) {
-                                omnibarWindow.historyIndex = -1;
-                                omniInput.text = "";
+                        Keys.onPressed: event => {
+                            if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                                if (event.modifiers & Qt.ControlModifier) {
+                                    omnibarWindow.executeCurrentCommand(true);
+                                } else {
+                                    omnibarWindow.executeCurrentCommand(false);
+                                }
+                                event.accepted = true;
+                            } else if (event.key === Qt.Key_Down) {
+                                if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
+                                    omnibarWindow.selectedAppIndex = (omnibarWindow.selectedAppIndex + 1) % omnibarWindow.matchedApps.length;
+                                    if (appsListView) appsListView.positionViewAtIndex(omnibarWindow.selectedAppIndex, ListView.Contain);
+                                    event.accepted = true;
+                                } else if (omniInput.text.trim().length === 0) {
+                                    if (omnibarWindow.historyIndex > 0) {
+                                        omnibarWindow.historyIndex--;
+                                        omniInput.text = omnibarWindow.commandHistory[omnibarWindow.historyIndex].prompt || "";
+                                    } else if (omnibarWindow.historyIndex === 0) {
+                                        omnibarWindow.historyIndex = -1;
+                                        omniInput.text = "";
+                                    }
+                                    event.accepted = true;
+                                }
+                            } else if (event.key === Qt.Key_Up) {
+                                if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
+                                    omnibarWindow.selectedAppIndex = (omnibarWindow.selectedAppIndex - 1 + omnibarWindow.matchedApps.length) % omnibarWindow.matchedApps.length;
+                                    if (appsListView) appsListView.positionViewAtIndex(omnibarWindow.selectedAppIndex, ListView.Contain);
+                                    event.accepted = true;
+                                } else if (omniInput.text.trim().length === 0) {
+                                    if (omnibarWindow.commandHistory.length > 0) {
+                                        omnibarWindow.historyIndex = Math.min(omnibarWindow.commandHistory.length - 1, omnibarWindow.historyIndex + 1);
+                                        omniInput.text = omnibarWindow.commandHistory[omnibarWindow.historyIndex].prompt || "";
+                                    }
+                                    event.accepted = true;
+                                }
+                            } else if (event.key === Qt.Key_PageDown) {
+                                if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
+                                    omnibarWindow.selectedAppIndex = Math.min(omnibarWindow.matchedApps.length - 1, omnibarWindow.selectedAppIndex + 5);
+                                    if (appsListView) appsListView.positionViewAtIndex(omnibarWindow.selectedAppIndex, ListView.Contain);
+                                    event.accepted = true;
+                                }
+                            } else if (event.key === Qt.Key_PageUp) {
+                                if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
+                                    omnibarWindow.selectedAppIndex = Math.max(0, omnibarWindow.selectedAppIndex - 5);
+                                    if (appsListView) appsListView.positionViewAtIndex(omnibarWindow.selectedAppIndex, ListView.Contain);
+                                    event.accepted = true;
+                                }
+                            } else if (event.key === Qt.Key_Escape) {
+                                ShellState.omnibarOpen = false;
+                                event.accepted = true;
                             }
                         }
                     }
 
                     // Detected Mode Badge
                     Rectangle {
-                        visible: omnibarWindow.spotlightResult !== null || (omnibarWindow.parsedPlan && omnibarWindow.parsedPlan.actions && omnibarWindow.parsedPlan.actions.length > 0)
+                        visible: omnibarWindow.spotlightResult !== null || (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) || (omnibarWindow.parsedPlan && omnibarWindow.parsedPlan.actions && omnibarWindow.parsedPlan.actions.length > 0)
                         height: 24
                         radius: 6
                         implicitWidth: intentTagText.implicitWidth + 14
@@ -347,10 +425,13 @@ PanelWindow {
                             if (omnibarWindow.spotlightResult) {
                                 return Qt.rgba(Theme.accentAmber.r, Theme.accentAmber.g, Theme.accentAmber.b, 0.20);
                             }
+                            if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
+                                return Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.20);
+                            }
                             const act = omnibarWindow.parsedPlan && omnibarWindow.parsedPlan.actions && omnibarWindow.parsedPlan.actions[0];
-                            return act ? Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.20) : "transparent";
+                            return act ? Qt.rgba(Theme.accentViolet.r, Theme.accentViolet.g, Theme.accentViolet.b, 0.20) : "transparent";
                         }
-                        border.color: omnibarWindow.spotlightResult ? Theme.accentAmber : Theme.accentCyan
+                        border.color: omnibarWindow.spotlightResult ? Theme.accentAmber : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? Theme.accentCyan : Theme.accentViolet)
                         border.width: 1
 
                         Text {
@@ -360,13 +441,16 @@ PanelWindow {
                                 if (omnibarWindow.spotlightResult) {
                                     return omnibarWindow.spotlightResult.mode.toUpperCase();
                                 }
+                                if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
+                                    return omnibarWindow.matchedApps.length === 1 ? "APPLICATION" : (omnibarWindow.matchedApps.length + " APPS");
+                                }
                                 const act = omnibarWindow.parsedPlan && omnibarWindow.parsedPlan.actions && omnibarWindow.parsedPlan.actions[0];
                                 return act ? act.tag : "";
                             }
                             font.family: Theme.fontMono
                             font.pixelSize: 10
                             font.bold: true
-                            color: omnibarWindow.spotlightResult ? Theme.accentAmber : Theme.accentCyan
+                            color: omnibarWindow.spotlightResult ? Theme.accentAmber : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? Theme.accentCyan : Theme.accentViolet)
                         }
                     }
 
@@ -382,7 +466,7 @@ PanelWindow {
                         Text {
                             id: latencyText
                             anchors.centerIn: parent
-                            text: omnibarWindow.spotlightResult ? "<0.1ms • Local" : (omnibarWindow.parsedPlan ? (omnibarWindow.parsedPlan.latency_ms + "ms • 0MB") : "<1ms • 0MB")
+                            text: omnibarWindow.spotlightResult ? "<0.1ms • Local" : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? "<0.2ms • System" : (omnibarWindow.parsedPlan ? (omnibarWindow.parsedPlan.latency_ms + "ms • 0MB") : "<1ms • 0MB"))
                             font.family: Theme.fontMono
                             font.pixelSize: 10
                             color: Theme.accentEmerald
@@ -413,6 +497,8 @@ PanelWindow {
                                 omniInput.text = "";
                                 omnibarWindow.parsedPlan = null;
                                 omnibarWindow.spotlightResult = null;
+                                omnibarWindow.matchedApps = [];
+                                omnibarWindow.selectedAppIndex = 0;
                                 omniInput.forceActiveFocus();
                             }
                         }
@@ -513,7 +599,7 @@ PanelWindow {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: omnibarWindow.executeCurrentCommand()
+                                onClicked: omnibarWindow.executeCurrentCommand(false)
                             }
                         }
                     }
@@ -794,12 +880,280 @@ PanelWindow {
                 }
             }
 
-            // ── Section A: Live Execution Plan Visualizer (Active input) ──
+            // ── Section M: Matched Applications List ────────────────────────
             ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: 8
-                visible: omnibarWindow.spotlightResult === null && omniInput.text.trim().length > 0
+                visible: omnibarWindow.spotlightResult === null && omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0
+
+                // Header
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+
+                    Text {
+                        text: "APPLICATIONS (" + omnibarWindow.matchedApps.length + ")"
+                        font.family: Theme.fontMono
+                        font.pixelSize: 11
+                        font.bold: true
+                        color: Theme.accentCyan
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    Text {
+                        text: "↑↓ to navigate • ↵ to launch"
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 10
+                        color: Theme.textMuted
+                    }
+                }
+
+                // Applications ListView
+                ListView {
+                    id: appsListView
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    spacing: 4
+                    model: omnibarWindow.matchedApps
+                    currentIndex: omnibarWindow.selectedAppIndex
+                    boundsBehavior: Flickable.StopAtBounds
+
+                    ScrollBar.vertical: ScrollBar {
+                        active: true
+                        policy: appsListView.contentHeight > appsListView.height ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
+                    }
+
+                    delegate: Rectangle {
+                        id: appItem
+                        required property var modelData
+                        required property int index
+
+                        width: appsListView.width - (appsListView.contentHeight > appsListView.height ? 12 : 0)
+                        height: 52
+                        radius: 8
+                        readonly property bool isSelected: omnibarWindow.selectedAppIndex === appItem.index
+                        readonly property bool isHovered: appMouse.containsMouse
+
+                        color: ShellState.glassEnabled
+                            ? "transparent"
+                            : ((isSelected || isHovered) ? Theme.bgHover : Theme.bgCard)
+                        border.color: ShellState.glassEnabled
+                            ? "transparent"
+                            : (isSelected ? Theme.accentCyan : Theme.borderDim)
+                        border.width: isSelected ? 1 : (ShellState.glassEnabled ? 0 : 1)
+
+                        LiquidGlassSurface {
+                            radius: 8
+                            visible: ShellState.glassEnabled && (appItem.isSelected || appItem.isHovered)
+                            accentColor: Theme.accentCyan
+                            hovered: appItem.isHovered
+                            pressed: appMouse.pressed
+                            showShadow: false
+                        }
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 12
+                            anchors.rightMargin: 12
+                            spacing: 12
+
+                            // App Icon Box
+                            Rectangle {
+                                width: 36
+                                height: 36
+                                radius: 8
+                                color: ShellState.glassEnabled ? Qt.rgba(Theme.bgCard.r, Theme.bgCard.g, Theme.bgCard.b, 0.4) : Theme.bgBase
+                                border.color: Theme.borderDim
+                                border.width: 1
+
+                                Image {
+                                    id: appIcon
+                                    anchors.centerIn: parent
+                                    width: 28
+                                    height: 28
+                                    sourceSize.width: 28
+                                    sourceSize.height: 28
+                                    fillMode: Image.PreserveAspectFit
+                                    source: Quickshell.iconPath(appItem.modelData.icon) || ""
+                                    asynchronous: true
+                                }
+
+                                // Fallback letter badge
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: (appItem.modelData.name || "A").charAt(0).toUpperCase()
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 15
+                                    font.bold: true
+                                    color: Theme.accentCyan
+                                    visible: appIcon.status !== Image.Ready
+                                }
+                            }
+
+                            // App Title & Description
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 2
+
+                                RowLayout {
+                                    spacing: 8
+                                    Text {
+                                        text: appItem.modelData.name || ""
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: 13
+                                        font.bold: true
+                                        color: appItem.isSelected ? Theme.accentCyan : Theme.textPrimary
+                                        elide: Text.ElideRight
+                                    }
+
+                                    // Generic Name tag if available and distinct
+                                    Text {
+                                        text: (appItem.modelData.genericName && appItem.modelData.genericName.toLowerCase() !== appItem.modelData.name.toLowerCase()) ? ("• " + appItem.modelData.genericName) : ""
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: 11
+                                        color: Theme.textMuted
+                                        visible: text.length > 0
+                                        elide: Text.ElideRight
+                                    }
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: appItem.modelData.comment || appItem.modelData.execString || ""
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 11
+                                    color: appItem.isSelected ? Theme.textSecondary : Theme.textMuted
+                                    elide: Text.ElideRight
+                                    visible: text.length > 0
+                                }
+                            }
+
+                            // Right-hand launch pill
+                            Rectangle {
+                                height: 24
+                                implicitWidth: launchTxt.implicitWidth + 14
+                                radius: 6
+                                color: appItem.isSelected ? Theme.accentCyan : Theme.bgHover
+                                border.color: appItem.isSelected ? Theme.accentCyan : Theme.borderDim
+                                border.width: 1
+
+                                RowLayout {
+                                    id: launchTxt
+                                    anchors.centerIn: parent
+                                    spacing: 4
+                                    Text {
+                                        text: "↵"
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: 10
+                                        font.bold: true
+                                        color: appItem.isSelected ? Theme.textOnAccent : Theme.accentCyan
+                                    }
+                                    Text {
+                                        text: appItem.isSelected ? "Launch" : "Open"
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: 10
+                                        font.bold: true
+                                        color: appItem.isSelected ? Theme.textOnAccent : Theme.textMuted
+                                    }
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            id: appMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onEntered: {
+                                omnibarWindow.selectedAppIndex = appItem.index;
+                            }
+                            onClicked: {
+                                omnibarWindow.isExecuting = true;
+                                appItem.modelData.execute();
+                                omnibarWindow.dismissTimer.restart();
+                            }
+                        }
+                    }
+                }
+
+                // Semantic Command Fallback Runner Strip
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 34
+                    radius: 8
+                    color: semanticMouse.containsMouse ? Theme.bgHover : Theme.bgCard
+                    border.color: semanticMouse.containsMouse ? Theme.accentAmber : Theme.borderDim
+                    border.width: 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 12
+                        spacing: 8
+
+                        Icon {
+                            name: "terminal"
+                            size: 14
+                            color: Theme.accentAmber
+                        }
+
+                        Text {
+                            text: "Run with Antigravity Engine:"
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 11
+                            color: Theme.textMuted
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: '"' + omniInput.text.trim() + '"'
+                            font.family: Theme.fontMono
+                            font.pixelSize: 11
+                            color: Theme.accentAmber
+                            elide: Text.ElideRight
+                        }
+
+                        Rectangle {
+                            height: 20
+                            implicitWidth: ctrlEnterTxt.implicitWidth + 8
+                            radius: 4
+                            color: Theme.bgHover
+                            border.color: Theme.borderDim
+                            border.width: 1
+
+                            Text {
+                                id: ctrlEnterTxt
+                                anchors.centerIn: parent
+                                text: "Ctrl+↵"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 9
+                                font.bold: true
+                                color: Theme.textMuted
+                            }
+                        }
+                    }
+
+                    MouseArea {
+                        id: semanticMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            omnibarWindow.executeCurrentCommand(true);
+                        }
+                    }
+                }
+            }
+
+            // ── Section A: Live Execution Plan Visualizer (Active input, 0 apps) ──
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                spacing: 8
+                visible: omnibarWindow.spotlightResult === null && (omnibarWindow.matchedApps.length === 0) && omniInput.text.trim().length > 0
 
                 // Header
                 RowLayout {
@@ -921,7 +1275,7 @@ PanelWindow {
                         MouseArea {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: omnibarWindow.executeCurrentCommand()
+                            onClicked: omnibarWindow.executeCurrentCommand(true)
                         }
                     }
                 }
@@ -1116,7 +1470,7 @@ PanelWindow {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 omniInput.text = modelData.prompt;
-                                omnibarWindow.executeCurrentCommand();
+                                omnibarWindow.executeCurrentCommand(true);
                             }
                         }
                     }
@@ -1140,10 +1494,10 @@ PanelWindow {
                             Text { anchors.centerIn: parent; text: "↵"; font.pixelSize: 10; color: Theme.textMuted }
                         }
                         Text {
-                            text: omnibarWindow.spotlightResult ? "Copy Result" : "Execute"
+                            text: omnibarWindow.spotlightResult ? "Copy Result" : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? "Launch App" : "Execute")
                             font.family: Theme.fontMono
                             font.pixelSize: 10
-                            color: omnibarWindow.spotlightResult ? Theme.accentEmerald : Theme.textMuted
+                            color: omnibarWindow.spotlightResult ? Theme.accentEmerald : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? Theme.accentCyan : Theme.textMuted)
                         }
                     }
 
@@ -1153,7 +1507,22 @@ PanelWindow {
                             width: 28; height: 16; radius: 3; color: Theme.bgHover
                             Text { anchors.centerIn: parent; text: "↑↓"; font.pixelSize: 10; color: Theme.textMuted }
                         }
-                        Text { text: "History"; font.family: Theme.fontMono; font.pixelSize: 10; color: Theme.textMuted }
+                        Text {
+                            text: (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? "Navigate" : "History"
+                            font.family: Theme.fontMono
+                            font.pixelSize: 10
+                            color: Theme.textMuted
+                        }
+                    }
+
+                    RowLayout {
+                        spacing: 4
+                        visible: omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0
+                        Rectangle {
+                            width: 38; height: 16; radius: 3; color: Theme.bgHover
+                            Text { anchors.centerIn: parent; text: "Ctrl+↵"; font.pixelSize: 9; color: Theme.textMuted }
+                        }
+                        Text { text: "Run as Cmd"; font.family: Theme.fontMono; font.pixelSize: 10; color: Theme.textMuted }
                     }
 
                     RowLayout {
@@ -1177,7 +1546,7 @@ PanelWindow {
                             color: Theme.accentCyan
                         }
                         Text {
-                            text: "Spotlight v2.2"
+                            text: "Spotlight & App Suite v3.0"
                             font.family: Theme.fontMono
                             font.pixelSize: 10
                             color: Theme.accentAmber

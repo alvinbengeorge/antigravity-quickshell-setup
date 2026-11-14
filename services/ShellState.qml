@@ -216,15 +216,7 @@ Singleton {
     }
 
     function toggleLauncher() {
-        root.launcherOpen = !root.launcherOpen;
-        if (root.launcherOpen) {
-            root.antigravityPanelOpen = false;
-            root.sessionDialogOpen = false;
-            root.controlCenterOpen = false;
-            root.clipboardOpen = false;
-            root.dockerOpen = false;
-            root.omnibarOpen = false;
-        }
+        root.toggleOmnibar();
     }
 
     function toggleOmnibar() {
@@ -437,11 +429,15 @@ Singleton {
 
     IpcHandler {
         target: "search"
-        function toggle(): void { root.toggleLauncher(); }
-        function workspacesToggle(): void { root.toggleLauncher(); }
-        function keybindsToggle(): void { root.toggleLauncher(); }
+        function toggle(): void { root.toggleOmnibar(); }
+        function workspacesToggle(): void { root.toggleOmnibar(); }
+        function keybindsToggle(): void { root.toggleOmnibar(); }
         function clipboardToggle(): void { root.toggleClipboard(); }
-        function emojisToggle(): void { root.toggleLauncher(); }
+        function emojisToggle(): void {
+            root.closeAll();
+            root.omnibarInitialQuery = ":";
+            root.omnibarOpen = true;
+        }
     }
 
     IpcHandler {
