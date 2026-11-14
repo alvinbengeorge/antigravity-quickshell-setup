@@ -97,7 +97,27 @@ The shell includes a consolidated multi-call native Rust engine (`agy-tools`) de
 
 ## 🚀 Setup & Deployment
 
-### Step 1: Clone & Symlink Quickshell Configuration
+### Quick Start (Automated 1-Step Installer)
+
+The easiest way to set up the entire desktop shell, verify dependencies, link configurations, and compile the native Rust engine is via the automated installer:
+
+```bash
+# Clone the repository
+git clone https://github.com/alvinbengeorge/antigravity-quickshell-setup.git ~/custom_quickshell
+cd ~/custom_quickshell
+
+# Run the 1-step installer
+./install.sh
+```
+
+> [!TIP]
+> **Non-Interactive Mode**: Pass `./install.sh -y` to automatically accept all defaults and launch the shell upon completion.
+
+---
+
+### Manual Setup (Step-by-Step)
+
+#### Step 1: Clone & Symlink Quickshell Configuration
 
 Clone this repository and symlink it to your user's Quickshell configuration path under the target name `antigravity`:
 
