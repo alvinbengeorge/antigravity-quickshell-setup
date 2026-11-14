@@ -196,6 +196,11 @@ else
         status_warn "Missing tools: ${MISSING_PKGS[*]}"
         if [ "$PKG_MGR" = "dnf" ]; then
             if confirm "Would you like to install missing dependencies via dnf now?"; then
+                # Enable COPR for quickshell on Fedora if not already installed
+                if ! command -v qs &>/dev/null; then
+                    status_info "Enabling lionheartp/Hyprland COPR repository for Quickshell..."
+                    sudo dnf copr enable -y lionheartp/Hyprland || true
+                fi
                 sudo dnf install -y quickshell hyprland kitty playerctl grim slurp upower \
                                     pipewire-utils pulseaudio-utils libnotify \
                                     python3-pillow python3-numpy python3-dbus cliphist wl-clipboard \

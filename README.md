@@ -49,21 +49,30 @@ A high-performance, modern desktop shell built with **[Quickshell](https://quick
 
 ### 1. Fedora Linux (Native)
 
+> [!IMPORTANT]
+> **Fedora COPR Repository**: `quickshell` is not part of the standard Fedora base repositories. You must enable the **`lionheartp/Hyprland`** COPR repository, which provides packaged and tested builds of Quickshell and Hyprland for Fedora 40+:
+> ```bash
+> sudo dnf copr enable lionheartp/Hyprland
+> ```
+
 Install compositor, shell, media, and telemetry packages via `dnf`:
 
 ```bash
-# Core Compositor & Shell
-sudo dnf install quickshell hyprland kitty
+# 1. Enable Quickshell & Hyprland COPR repository
+sudo dnf copr enable -y lionheartp/Hyprland
 
-# Audio, Media & Utilities
-sudo dnf install playerctl grim slurp upower \
-                 pipewire-utils pulseaudio-utils libnotify \
-                 gsettings-desktop-schemas
+# 2. Core Compositor & Shell
+sudo dnf install -y quickshell hyprland kitty
 
-# Python Libraries for Image & Audio Processing
-sudo dnf install python3-pillow python3-numpy python3-dbus
+# 3. Audio, Media, Wayland Clipboard & Utilities
+sudo dnf install -y playerctl grim slurp upower cliphist wl-clipboard \
+                    pipewire-utils pulseaudio-utils libnotify \
+                    gsettings-desktop-schemas
 
-# Install hyprshade for GLSL Screen Shaders
+# 4. Python Libraries for Image & Audio Processing
+sudo dnf install -y python3-pillow python3-numpy python3-dbus
+
+# 5. Install hyprshade for GLSL Screen Shaders
 pip3 install --user hyprshade
 ```
 
