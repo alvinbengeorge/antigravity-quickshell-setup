@@ -72,16 +72,6 @@ ShellRoot {
         }
     }
 
-    // Instantiate Desktop Wordle Widget on all detected screens
-    Variants {
-        model: Quickshell.screens
-
-        WordleWidget {
-            required property ShellScreen modelData
-            screen: modelData
-        }
-    }
-
     // Centered & Dropdown Overlays
     AntigravityPanel {}
     Omnibar {}
