@@ -42,13 +42,14 @@ Singleton {
     property string activeTab: "ram" // "ram", "cpu", "swap", "groups"
     property string searchQuery: ""
 
+    readonly property string binPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/system_monitor"
     readonly property string scriptPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/system_monitor.py"
 
     // ── Telemetry Data Query Process ─────────────────────────────────────────
     Process {
         id: dataProc
         running: false
-        command: ["python3", root.scriptPath, "data"]
+        command: [root.binPath, "data"]
         stdout: StdioCollector {
             id: dataCollector
             onStreamFinished: {
@@ -92,7 +93,7 @@ Singleton {
 
     function killProcess(pid, force) {
         if (!pid) return;
-        killProc.command = ["python3", root.scriptPath, "kill", String(pid), force ? "1" : "0"];
+        killProc.command = [root.binPath, "kill", String(pid), force ? "1" : "0"];
         killProc.running = true;
     }
 
@@ -109,7 +110,7 @@ Singleton {
 
     function dropCaches() {
         // Run sync and attempt drop caches
-        dropCachesProc.command = ["python3", root.scriptPath, "drop_caches"];
+        dropCachesProc.command = [root.binPath, "drop_caches"];
         dropCachesProc.running = true;
     }
 
