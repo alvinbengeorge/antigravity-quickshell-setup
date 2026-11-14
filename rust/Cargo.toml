@@ -32,6 +32,10 @@ path = "src/bin/extract_media_color.rs"
 name = "audio_beat_tracker"
 path = "src/bin/audio_beat_tracker.rs"
 
+[[bin]]
+name = "docker_manager"
+path = "src/bin/docker_manager.rs"
+
 [profile.release]
 opt-level = 3
 lto = true

@@ -27,13 +27,14 @@ Singleton {
     property string activeLogContainer: ""
     property bool logsLoading: false
 
+    readonly property string binPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/docker_manager"
     readonly property string scriptPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/docker_manager.py"
 
     // ── Data Query Process ──────────────────────────────────────────────────
     Process {
         id: dataProc
         running: false
-        command: ["python3", root.scriptPath, "data"]
+        command: [root.binPath, "data"]
         stdout: StdioCollector {
             id: dataCollector
             onStreamFinished: {
@@ -65,7 +66,7 @@ Singleton {
     Process {
         id: statsProc
         running: false
-        command: ["python3", root.scriptPath, "stats"]
+        command: [root.binPath, "stats"]
         stdout: StdioCollector {
             onStreamFinished: {
                 root.statsLoading = false;
@@ -108,7 +109,7 @@ Singleton {
         property string pendingAction: ""
         property string pendingTarget: ""
 
-        command: ["python3", root.scriptPath, "action", pendingAction, pendingTarget]
+        command: [root.binPath, "action", pendingAction, pendingTarget]
         stdout: StdioCollector {
             onStreamFinished: {
                 root.loading = false;
@@ -124,7 +125,7 @@ Singleton {
         property string logTarget: ""
         property string logLines: "150"
 
-        command: ["python3", root.scriptPath, "action", "logs", logTarget, logLines]
+        command: [root.binPath, "action", "logs", logTarget, logLines]
         stdout: StdioCollector {
             id: logsCollector
             onStreamFinished: {

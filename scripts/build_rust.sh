@@ -25,5 +25,6 @@ ln -sf "$RUST_DIR/target/release/system_monitor" "$BIN_DIR/system_monitor"
 ln -sf "$RUST_DIR/target/release/cliphist_helper" "$BIN_DIR/cliphist_helper"
 ln -sf "$RUST_DIR/target/release/extract_media_color" "$BIN_DIR/extract_media_color"
 ln -sf "$RUST_DIR/target/release/audio_beat_tracker" "$BIN_DIR/audio_beat_tracker"
+ln -sf "$RUST_DIR/target/release/docker_manager" "$BIN_DIR/docker_manager"
 
 echo "Build successful! Binaries linked in $BIN_DIR"
