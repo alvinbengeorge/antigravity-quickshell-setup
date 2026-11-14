@@ -11,12 +11,13 @@ Singleton {
     property real b2: 0.0
     property real b3: 0.0
 
+    readonly property string binPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/audio_beat_tracker"
     readonly property string scriptPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/audio_beat_tracker.py"
 
     Process {
         id: trackerProc
         running: !ShellState.liteMode
-        command: ["python3", "-u", root.scriptPath]
+        command: [root.binPath]
         onExited: {
             if (!ShellState.liteMode) {
                 restartTimer.start();
