@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+RUST_BIN="$ROOT_DIR/rust/target/release/agy-tools"
+
+if [ -x "$RUST_BIN" ]; then
+    exec "$RUST_BIN" cliphist_helper "$@"
+fi
+
+exec python3 "$ROOT_DIR/scripts/cliphist_helper.py" "$@"

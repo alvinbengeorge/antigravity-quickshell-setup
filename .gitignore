@@ -8,7 +8,6 @@ workspace/*.png
 
 # Rust build artifacts
 rust/target/
-/bin/
 
 # Secrets & Environment
 *.env

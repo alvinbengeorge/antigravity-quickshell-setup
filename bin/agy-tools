@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+RUST_BIN="$ROOT_DIR/rust/target/release/agy-tools"
+
+if [ -x "$RUST_BIN" ]; then
+    exec "$RUST_BIN" "$@"
+fi
+
+case "$1" in
+    system-stats|stats|fast_system_stats)
+        shift
+        exec python3 "$ROOT_DIR/scripts/fast_system_stats.py" "$@"
+        ;;
+    system-monitor|monitor|system_monitor)
+        shift
+        exec python3 "$ROOT_DIR/scripts/system_monitor.py" "$@"
+        ;;
+    cliphist|clipboard|cliphist_helper)
+        shift
+        exec python3 "$ROOT_DIR/scripts/cliphist_helper.py" "$@"
+        ;;
+    media-color|color|extract_media_color)
+        shift
+        exec python3 "$ROOT_DIR/scripts/extract_media_color.py" "$@"
+        ;;
+    audio-tracker|audio|audio_beat_tracker)
+        shift
+        exec python3 "$ROOT_DIR/scripts/audio_beat_tracker.py" "$@"
+        ;;
+    docker|docker_manager)
+        shift
+        exec python3 "$ROOT_DIR/scripts/docker_manager.py" "$@"
+        ;;
+    *)
+        echo "Antigravity Unified Tools (agy-tools) - Rust binary not yet compiled."
+        echo "Run './scripts/build_rust.sh' to compile the high-performance native engine."
+        exit 1
+        ;;
+esac
