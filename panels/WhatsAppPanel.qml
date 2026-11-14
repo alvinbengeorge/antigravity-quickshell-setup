@@ -768,7 +768,7 @@ PanelWindow {
                         anchors.fill: parent
                         anchors.margins: 10
                         fillMode: Image.PreserveAspectFit
-                        source: "file://" + WhatsAppService.qrPath
+                        source: (WhatsAppService.status === "qr_ready" && WhatsAppService.qrPath) ? ("file://" + WhatsAppService.qrPath) : ""
                         cache: false
                     }
                 }
