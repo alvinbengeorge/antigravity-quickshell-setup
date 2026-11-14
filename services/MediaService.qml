@@ -112,6 +112,8 @@ Singleton {
         }
     }
 
+    readonly property string colorExtractorBin: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/extract_media_color"
+
     function extractArtColor() {
         if (ShellState.liteMode) {
             root.artColor = "";
@@ -119,7 +121,7 @@ Singleton {
         }
         if (trackArtUrl && trackArtUrl.length > 0) {
             colorExtractorProc.command = [
-                Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/extract_media_color.py",
+                root.colorExtractorBin,
                 trackArtUrl
             ];
             colorExtractorProc.running = true;
