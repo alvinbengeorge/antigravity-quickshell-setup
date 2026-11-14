@@ -19,12 +19,12 @@ Singleton {
     readonly property string userName: (session && session.pushName) ? session.pushName : "Alvin"
     readonly property string sessionId: (session && session.id) ? session.id : "5e24dc37-3676-48a7-9c50-35559fefbed6"
 
-    readonly property string scriptPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/get_openwa_status.py"
+    readonly property string scriptPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/openwa_status"
 
     Process {
         id: statusProc
         running: false
-        command: ["python3", root.scriptPath]
+        command: [root.scriptPath]
         stdout: StdioCollector {
             id: collector
             onStreamFinished: {
@@ -79,8 +79,8 @@ Singleton {
         interval: {
             if (root.status === "reconnecting" || root.status === "loading") return 4000;
             if (root.status === "qr_ready") return 6000;
-            if (root.status === "offline" || root.status === "disconnected") return 12000;
-            return 25000; // Normal idle poll
+            if (root.status === "offline" || root.status === "disconnected") return 60000;
+            return 30000; // Normal idle poll
         }
         running: true
         repeat: true
@@ -91,7 +91,7 @@ Singleton {
     function refresh(): void {
         if (statusProc.running) return;
         root.loading = true;
-        statusProc.command = ["python3", root.scriptPath];
+        statusProc.command = [root.scriptPath];
         statusProc.running = true;
     }
 
@@ -99,7 +99,7 @@ Singleton {
         if (actionProc.running) return;
         root.status = "reconnecting";
         root.loading = true;
-        actionProc.command = ["python3", root.scriptPath, "--reconnect", root.sessionId];
+        actionProc.command = [root.scriptPath, "--reconnect", root.sessionId];
         actionProc.running = true;
     }
 
@@ -107,7 +107,7 @@ Singleton {
         if (actionProc.running) return;
         root.status = "disconnecting";
         root.loading = true;
-        actionProc.command = ["python3", root.scriptPath, "--disconnect", root.sessionId];
+        actionProc.command = [root.scriptPath, "--disconnect", root.sessionId];
         actionProc.running = true;
     }
 
@@ -115,7 +115,7 @@ Singleton {
         if (actionProc.running) return;
         root.status = "loading";
         root.loading = true;
-        actionProc.command = ["python3", root.scriptPath, "--start-gateway"];
+        actionProc.command = [root.scriptPath, "--start-gateway"];
         actionProc.running = true;
     }
 

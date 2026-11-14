@@ -56,14 +56,6 @@ Rectangle {
                 if (WhatsAppService.status === "disconnected") return Theme.accentAmber;
                 return Theme.accentRose;
             }
-
-            // Pulse animation when unread messages > 0 or initializing
-            SequentialAnimation on opacity {
-                running: !ShellState.liteMode && (WhatsAppService.unreadCount > 0 || WhatsAppService.status === "reconnecting")
-                loops: Animation.Infinite
-                NumberAnimation { from: 1.0; to: 0.35; duration: 1000; easing.type: Easing.InOutQuad }
-                NumberAnimation { from: 0.35; to: 1.0; duration: 1000; easing.type: Easing.InOutQuad }
-            }
         }
 
         // Status label / Unread Counter

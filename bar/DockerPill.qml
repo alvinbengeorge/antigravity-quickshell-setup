@@ -38,26 +38,6 @@ Rectangle {
             color: mouseArea.containsMouse ? Theme.accentSky : Theme.textPrimary
         }
 
-        // Status indicator dot
-        Rectangle {
-            width: 6
-            height: 6
-            radius: 3
-            color: {
-                if (!DockerService.daemonRunning) return Theme.accentRose;
-                if (DockerService.summary.running > 0) return Theme.accentEmerald;
-                return Theme.textMuted;
-            }
-
-            // Gentle pulse when active containers are running (disabled in Lite Mode)
-            SequentialAnimation on opacity {
-                running: !ShellState.liteMode && DockerService.daemonRunning && DockerService.summary.running > 0
-                loops: Animation.Infinite
-                NumberAnimation { from: 1.0; to: 0.35; duration: 1200; easing.type: Easing.InOutQuad }
-                NumberAnimation { from: 0.35; to: 1.0; duration: 1200; easing.type: Easing.InOutQuad }
-            }
-        }
-
         // Running Count
         Text {
             text: !DockerService.daemonRunning ? "OFFLINE" : DockerService.summary.running

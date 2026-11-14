@@ -12,12 +12,12 @@ Singleton {
     property string lastUpdated: "Just now"
     property string status: "idle"
 
-    readonly property string scriptPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/get_github_prs.py"
+    readonly property string scriptPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/github_prs"
 
     Process {
         id: prProc
         running: false
-        command: ["python3", root.scriptPath]
+        command: [root.scriptPath]
         stdout: StdioCollector {
             id: collector
             onStreamFinished: {
@@ -57,9 +57,9 @@ Singleton {
         if (prProc.running) return;
         root.loading = true;
         if (force) {
-            prProc.command = ["python3", root.scriptPath, "--force"];
+            prProc.command = [root.scriptPath, "--force"];
         } else {
-            prProc.command = ["python3", root.scriptPath];
+            prProc.command = [root.scriptPath];
         }
         prProc.running = true;
     }

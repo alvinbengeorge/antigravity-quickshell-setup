@@ -25,12 +25,12 @@ Singleton {
     property string errorMessage: ""
     property string activeFilter: "all" // "all", "in_progress", "to_do", "done"
 
-    readonly property string scriptPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/get_jira_tasks.py"
+    readonly property string scriptPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/jira_tasks"
 
     Process {
         id: jiraProc
         running: false
-        command: ["python3", root.scriptPath]
+        command: [root.scriptPath]
         stdout: StdioCollector {
             id: collector
             onStreamFinished: {
@@ -85,9 +85,9 @@ Singleton {
         if (jiraProc.running) return;
         root.loading = true;
         if (force) {
-            jiraProc.command = ["python3", root.scriptPath, "--force"];
+            jiraProc.command = [root.scriptPath, "--force"];
         } else {
-            jiraProc.command = ["python3", root.scriptPath];
+            jiraProc.command = [root.scriptPath];
         }
         jiraProc.running = true;
     }

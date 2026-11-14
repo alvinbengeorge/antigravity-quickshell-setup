@@ -147,13 +147,6 @@ PanelWindow {
                             height: 5
                             radius: 3
                             color: AntigravityService.isActive ? Theme.accentCyan : Theme.textMuted
-
-                            SequentialAnimation on opacity {
-                                running: !ShellState.liteMode && AntigravityService.isActive
-                                loops: Animation.Infinite
-                                PropertyAnimation { to: 0.3; duration: 800 }
-                                PropertyAnimation { to: 1.0; duration: 800 }
-                            }
                         }
 
                         Text {

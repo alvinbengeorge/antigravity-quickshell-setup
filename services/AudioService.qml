@@ -62,18 +62,6 @@ Singleton {
         }
     }
 
-    // Periodic safety sync interval
-    Timer {
-        interval: ShellState.liteMode ? 4000 : 1500
-        running: true
-        repeat: true
-        onTriggered: {
-            if (!wpctlProc.running) {
-                wpctlProc.running = true;
-            }
-        }
-    }
-
     Component.onCompleted: {
         wpctlProc.running = true;
     }

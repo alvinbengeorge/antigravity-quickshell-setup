@@ -26,6 +26,9 @@ AVAILABLE SUBCOMMANDS:
     tuned, tuned_manager       TuneD active profile and switcher
     tasks, task_runner         Developer persistent task manager and executor
     agy, antigravity_status    Antigravity agent & brain status and quota cache
+    whatsapp, openwa           WhatsApp OpenWA connection, chats, and actions
+    github, github-prs         GitHub open pull requests and CI status
+    jira, jira-tasks           Jira assigned issues, status categories, and counts
 
 OPTIONS:
     -h, --help                 Print help information
@@ -95,6 +98,18 @@ fn main() {
             tools::antigravity_status::run(&raw_args[1..]);
             return;
         }
+        "openwa_status" | "get_openwa_status" => {
+            tools::openwa_status::run(&raw_args[1..]);
+            return;
+        }
+        "github_prs" | "get_github_prs" => {
+            tools::github_prs::run(&raw_args[1..]);
+            return;
+        }
+        "jira_tasks" | "get_jira_tasks" => {
+            tools::jira_tasks::run(&raw_args[1..]);
+            return;
+        }
         _ => {}
     }
 
@@ -141,6 +156,15 @@ fn main() {
         }
         "agy" | "antigravity_status" | "antigravity-status" | "status" => {
             tools::antigravity_status::run(rest);
+        }
+        "whatsapp" | "openwa" | "openwa_status" | "get_openwa_status" => {
+            tools::openwa_status::run(rest);
+        }
+        "github" | "github-prs" | "github_prs" | "prs" => {
+            tools::github_prs::run(rest);
+        }
+        "jira" | "jira-tasks" | "jira_tasks" => {
+            tools::jira_tasks::run(rest);
         }
         "-V" | "--version" => {
             println!("agy-tools 0.1.0");
