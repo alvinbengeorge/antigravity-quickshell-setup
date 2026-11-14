@@ -223,11 +223,11 @@ PanelWindow {
             }
             if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
                 const count = Math.min(omnibarWindow.matchedApps.length, 5);
-                if (count === 1) return 260;
-                if (count === 2) return 330;
-                if (count === 3) return 400;
-                if (count === 4) return 470;
-                return 540;
+                if (count === 1) return 295;
+                if (count === 2) return 365;
+                if (count === 3) return 435;
+                if (count === 4) return 505;
+                return 550;
             }
             if (omnibarWindow.parsedPlan && omnibarWindow.parsedPlan.actions && omnibarWindow.parsedPlan.actions.length > 0) {
                 return Math.min(520, 150 + omnibarWindow.parsedPlan.actions.length * 80);
@@ -1082,6 +1082,75 @@ PanelWindow {
                         }
                     }
                 }
+
+                // Pushed-down "Run as agy" tile with generous breathing room
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 36
+                    Layout.topMargin: 4
+                    radius: 8
+                    color: runAsAntiMouse.containsMouse ? Theme.bgHover : Theme.bgCard
+                    border.color: runAsAntiMouse.containsMouse ? Theme.accentAmber : Theme.borderDim
+                    border.width: 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 12
+                        spacing: 8
+
+                        Icon {
+                            name: "terminal"
+                            size: 14
+                            color: Theme.accentAmber
+                        }
+
+                        Text {
+                            text: "Run as agy:"
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 11
+                            color: Theme.textMuted
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: '"' + omniInput.text.trim() + '"'
+                            font.family: Theme.fontMono
+                            font.pixelSize: 11
+                            color: Theme.accentAmber
+                            elide: Text.ElideRight
+                        }
+
+                        Rectangle {
+                            height: 20
+                            implicitWidth: ctrlEnterTxt.implicitWidth + 8
+                            radius: 4
+                            color: Theme.bgHover
+                            border.color: Theme.borderDim
+                            border.width: 1
+
+                            Text {
+                                id: ctrlEnterTxt
+                                anchors.centerIn: parent
+                                text: "Ctrl+↵"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 9
+                                font.bold: true
+                                color: Theme.textMuted
+                            }
+                        }
+                    }
+
+                    MouseArea {
+                        id: runAsAntiMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            omnibarWindow.executeCurrentCommand(true);
+                        }
+                    }
+                }
             }
 
             // ── Section A: Live Execution Plan Visualizer (Active input, 0 apps) ──
@@ -1430,10 +1499,10 @@ PanelWindow {
                             Text { anchors.centerIn: parent; text: "↵"; font.pixelSize: 10; color: Theme.textMuted }
                         }
                         Text {
-                            text: omnibarWindow.spotlightResult ? "Copy Result" : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? "Launch App" : "Execute")
+                            text: omnibarWindow.spotlightResult ? "Copy Result" : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? "Launch App" : "Run as agy")
                             font.family: Theme.fontMono
                             font.pixelSize: 10
-                            color: omnibarWindow.spotlightResult ? Theme.accentEmerald : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? Theme.accentCyan : Theme.textMuted)
+                            color: omnibarWindow.spotlightResult ? Theme.accentEmerald : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? Theme.accentCyan : Theme.accentAmber)
                         }
                     }
 
@@ -1458,7 +1527,7 @@ PanelWindow {
                             width: 38; height: 16; radius: 3; color: Theme.bgHover
                             Text { anchors.centerIn: parent; text: "Ctrl+↵"; font.pixelSize: 9; color: Theme.textMuted }
                         }
-                        Text { text: "Run as Cmd"; font.family: Theme.fontMono; font.pixelSize: 10; color: Theme.textMuted }
+                        Text { text: "Run as agy"; font.family: Theme.fontMono; font.pixelSize: 10; color: Theme.textMuted }
                     }
 
                     RowLayout {

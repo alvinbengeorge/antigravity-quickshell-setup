@@ -26,14 +26,12 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
-    implicitWidth: 320
-    implicitHeight: 64
+    implicitWidth: 310
+    implicitHeight: 52
 
     Rectangle {
         id: pillCard
-        anchors.centerIn: parent
-        width: 310
-        height: 52
+        anchors.fill: parent
         radius: 26
 
         // Theme-aware glassmorphic styling
@@ -45,18 +43,18 @@ PanelWindow {
             radius: 26
             visible: ShellState.glassEnabled
             accentColor: OsdService.isMuted ? Theme.accentRose : OsdService.accentColor
-            showShadow: true
+            showShadow: false
         }
 
-        // Smooth slide & fade transition
+        // Smooth fade & scale transition
         opacity: OsdService.active ? 1.0 : 0.0
-        y: OsdService.active ? 0 : -18
+        scale: OsdService.active ? 1.0 : 0.94
 
         Behavior on opacity {
             NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
         }
-        Behavior on y {
-            NumberAnimation { duration: 220; easing.type: Easing.OutBack }
+        Behavior on scale {
+            NumberAnimation { duration: 200; easing.type: Easing.OutBack }
         }
 
         RowLayout {

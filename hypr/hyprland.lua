@@ -188,10 +188,10 @@ hl.window_rule({
     rounding = 16,
 })
 
--- Quickshell Compositor Blur Rules (Panels, Dialogs & Modals only; TopBar remains pure transparent)
+-- Quickshell Compositor Blur Rules (Panels, Dialogs & Modals only; TopBar & OSD remain pure transparent)
 hl.layer_rule({
     blur = true,
-    match = { namespace = "quickshell:(launcher|session|antigravity:hud|clipboard|wallpapertheme|docker|runner|windowswitcher|whatsapp|systemmonitor|controlcenter|osd|omnibar|notifications)" }
+    match = { namespace = "quickshell:(session|antigravity:hud|clipboard|wallpapertheme|docker|runner|windowswitcher|whatsapp|systemmonitor|controlcenter|omnibar|notifications)" }
 })
 
 ---------------------
