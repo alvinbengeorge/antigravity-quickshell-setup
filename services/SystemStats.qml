@@ -12,10 +12,12 @@ Singleton {
     property string netDown: "0B"
     property string netUp: "0B"
 
+    readonly property string rustBinary: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/fast_system_stats"
+
     Process {
         id: statProc
         running: false
-        command: ["python3", Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/fast_system_stats.py"]
+        command: [root.rustBinary]
         stdout: StdioCollector {
             id: collector
             onStreamFinished: {

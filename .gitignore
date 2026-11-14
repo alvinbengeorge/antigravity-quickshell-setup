@@ -6,6 +6,10 @@ __pycache__/
 .playwright-mcp/
 workspace/*.png
 
+# Rust build artifacts
+rust/target/
+/bin/
+
 # Secrets & Environment
 *.env
 *.env.*
