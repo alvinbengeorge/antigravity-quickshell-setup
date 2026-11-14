@@ -19,6 +19,9 @@ AVAILABLE SUBCOMMANDS:
     media-color, color      Vibrant album art color extractor (Catmull-Rom)
     audio-tracker, audio    SIMD real-to-complex FFT audio visualizer
     docker                  Docker container/image manager and JSON telemetry
+    battery, battery_helper Microsecond sysfs battery telemetry & power control
+    network, network_status Native WiFi and Bluetooth BlueZ engine
+    wallpapers              Fast wallpaper directory listing & scanner
 
 OPTIONS:
     -h, --help              Print help information
@@ -60,6 +63,18 @@ fn main() {
             tools::docker_manager::run(&raw_args[1..]);
             return;
         }
+        "battery_helper" => {
+            tools::battery_helper::run(&raw_args[1..]);
+            return;
+        }
+        "network_status" => {
+            tools::network_status::run(&raw_args[1..]);
+            return;
+        }
+        "wallpaper_helper" => {
+            tools::wallpaper_helper::run(&raw_args[1..]);
+            return;
+        }
         _ => {}
     }
 
@@ -85,6 +100,15 @@ fn main() {
         }
         "docker" | "docker_manager" => {
             tools::docker_manager::run(rest);
+        }
+        "battery" | "battery_helper" => {
+            tools::battery_helper::run(rest);
+        }
+        "network" | "network_status" => {
+            tools::network_status::run(rest);
+        }
+        "wallpapers" | "wallpaper_helper" => {
+            tools::wallpaper_helper::run(rest);
         }
         "-V" | "--version" => {
             println!("agy-tools 0.1.0");

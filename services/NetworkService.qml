@@ -24,6 +24,8 @@ Singleton {
     property var primaryConnectedBt: null
     property bool refreshing: false
 
+    readonly property string binPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/network_status"
+
     // Collapsible drawer states in Control Center
     property bool wifiDrawerOpen: false
     property bool btDrawerOpen: false
@@ -48,18 +50,18 @@ Singleton {
     }
 
     function rescanWifi() {
-        Quickshell.execDetached(["python3", Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/get_network_status.py", "--rescan-wifi"]);
+        Quickshell.execDetached([root.binPath, "--rescan-wifi"]);
         root.refreshing = true;
         refreshTimer.restart();
     }
 
     function disconnectWifi() {
-        Quickshell.execDetached(["python3", Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/get_network_status.py", "--disconnect-wifi"]);
+        Quickshell.execDetached([root.binPath, "--disconnect-wifi"]);
         refreshTimer.restart();
     }
 
     function connectWifi(ssid, password) {
-        let args = ["python3", Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/get_network_status.py", "--connect-wifi", ssid];
+        let args = [root.binPath, "--connect-wifi", ssid];
         if (password && password.length > 0) {
             args.push(password);
         }
@@ -68,14 +70,14 @@ Singleton {
     }
 
     function toggleBtDevice(mac, connected) {
-        Quickshell.execDetached(["python3", Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/get_network_status.py", "--toggle-bt", mac]);
+        Quickshell.execDetached([root.binPath, "--toggle-bt", mac]);
         refreshTimer.restart();
     }
 
     Process {
         id: statusProc
         running: false
-        command: ["python3", Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/get_network_status.py"]
+        command: [root.binPath]
         stdout: StdioCollector {
             id: collector
             onStreamFinished: {

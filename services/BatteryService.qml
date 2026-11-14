@@ -50,10 +50,12 @@ Singleton {
         cycleDisplayMode();
     }
 
+    readonly property string binPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/battery_helper"
+
     Process {
         id: batProc
         running: false
-        command: ["python3", "-c", "import json, os\ncap, stat = 0, 'Unknown'\ntry:\n    with open('/sys/class/power_supply/BAT0/capacity') as f: cap = int(f.read().strip())\n    with open('/sys/class/power_supply/BAT0/status') as f: stat = f.read().strip()\nexcept Exception: pass\nte, tf, rate = 0, 0, 0.0\ntry:\n    import dbus\n    b = dbus.SystemBus()\n    d = b.get_object('org.freedesktop.UPower', '/org/freedesktop/UPower/devices/DisplayDevice')\n    p = dbus.Interface(d, 'org.freedesktop.DBus.Properties')\n    te = int(p.Get('org.freedesktop.UPower.Device', 'TimeToEmpty'))\n    tf = int(p.Get('org.freedesktop.UPower.Device', 'TimeToFull'))\n    rate = float(p.Get('org.freedesktop.UPower.Device', 'EnergyRate'))\nexcept Exception: pass\nprint(json.dumps({'capacity': cap, 'status': stat, 'time_empty': te, 'time_full': tf, 'energy_rate': round(rate, 1)}))"]
+        command: [root.binPath]
         stdout: StdioCollector {
             id: collector
             onStreamFinished: {
@@ -86,7 +88,7 @@ Singleton {
     Process {
         id: openStatsProc
         running: false
-        command: ["bash", "-c", "python3 -c \"\nimport subprocess, json\ntry:\n    clients = json.loads(subprocess.check_output(['hyprctl', 'clients', '-j']))\n    p = next((c for c in clients if 'org.gnome.PowerStats' in c.get('class', '')), None)\n    if p:\n        subprocess.run(['hyprctl', 'repl', f\\\"hl.dispatch(hl.dsp.focus({{ window = '{p['address']}' }}))\\\"], capture_output=True)\n    else:\n        subprocess.Popen(['setsid', 'gnome-power-statistics'])\nexcept Exception:\n    subprocess.Popen(['setsid', 'gnome-power-statistics'])\n\""]
+        command: [root.binPath, "open-stats"]
     }
 
     function openPowerStatistics() {

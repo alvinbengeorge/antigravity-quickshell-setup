@@ -133,7 +133,7 @@ Singleton {
     Process {
         id: scanProc
         running: true
-        command: ["python3", "-c", "import os, json; dir = os.path.expanduser('~/Pictures/Wallpapers'); files = [f for f in os.listdir(dir) if f.lower().endswith(('.jpg','.jpeg','.png','.webp'))] if os.path.isdir(dir) else []; files.sort(); print(json.dumps(files))"]
+        command: [Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/wallpaper_helper"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
