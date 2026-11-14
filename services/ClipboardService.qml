@@ -15,6 +15,7 @@ Singleton {
     property bool isImage: false
     property bool isLoading: false
 
+    readonly property string helperBin: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/cliphist_helper"
     readonly property string helperScript: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/cliphist_helper.py"
 
     function refresh() {
@@ -26,7 +27,7 @@ Singleton {
     Process {
         id: fetchProc
         running: false
-        command: ["python3", root.helperScript, "list", "80"]
+        command: [root.helperBin, "list", "80"]
         stdout: StdioCollector {
             onStreamFinished: {
                 root.isLoading = false;
@@ -82,7 +83,7 @@ Singleton {
         } else {
             root.isImage = false;
             root.previewImagePath = "";
-            decodeProc.command = ["python3", root.helperScript, "decode-text", item.id];
+            decodeProc.command = [root.helperBin, "decode-text", item.id];
             decodeProc.running = true;
         }
     }
@@ -99,12 +100,12 @@ Singleton {
     }
 
     function copyItem(id) {
-        Quickshell.execDetached(["python3", root.helperScript, "copy", id]);
+        Quickshell.execDetached([root.helperBin, "copy", id]);
         ShellState.clipboardOpen = false;
     }
 
     function deleteItem(id, rawText) {
-        Quickshell.execDetached(["python3", root.helperScript, "delete", id, rawText || ""]);
+        Quickshell.execDetached([root.helperBin, "delete", id, rawText || ""]);
         root.rawItems = root.rawItems.filter(i => i.id !== id);
         root.items = root.items.filter(i => i.id !== id);
         if (root.items.length > 0) {
@@ -119,7 +120,7 @@ Singleton {
     }
 
     function clearAll() {
-        Quickshell.execDetached(["python3", root.helperScript, "wipe"]);
+        Quickshell.execDetached([root.helperBin, "wipe"]);
         root.rawItems = [];
         root.items = [];
         root.selectedItem = null;

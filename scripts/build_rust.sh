@@ -22,5 +22,6 @@ cargo build --release
 mkdir -p "$BIN_DIR"
 ln -sf "$RUST_DIR/target/release/fast_system_stats" "$BIN_DIR/fast_system_stats"
 ln -sf "$RUST_DIR/target/release/system_monitor" "$BIN_DIR/system_monitor"
+ln -sf "$RUST_DIR/target/release/cliphist_helper" "$BIN_DIR/cliphist_helper"
 
 echo "Build successful! Binaries linked in $BIN_DIR"
