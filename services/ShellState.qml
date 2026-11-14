@@ -76,9 +76,10 @@ Singleton {
             skyboxEnabled: root.skyboxEnabled
         }, null, 2);
         Quickshell.execDetached([
-            "python3",
+            "sh",
             "-c",
-            "import sys, os; os.makedirs(os.path.dirname(sys.argv[1]), exist_ok=True); open(sys.argv[1], 'w').write(sys.argv[2])",
+            "mkdir -p \"$(dirname \"$1\")\" && printf '%s' \"$2\" > \"$1\"",
+            "_",
             root.shellSettingsPath,
             payload
         ]);

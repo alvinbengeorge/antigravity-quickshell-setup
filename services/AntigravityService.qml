@@ -31,7 +31,7 @@ Singleton {
     Process {
         id: statusProc
         running: false
-        command: ["python3", Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/get_antigravity_status.py"]
+        command: [Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/antigravity_status"]
         stdout: StdioCollector {
             id: collector
             onStreamFinished: {
@@ -87,7 +87,7 @@ Singleton {
     }
 
     function refreshQuota() {
-        Quickshell.execDetached(["python3", Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/get_antigravity_status.py", "--refresh-quota"]);
+        Quickshell.execDetached([Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/antigravity_status", "--refresh-quota"]);
     }
 
     function launchCli() {

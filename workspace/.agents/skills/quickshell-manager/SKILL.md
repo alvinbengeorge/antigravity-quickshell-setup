@@ -194,14 +194,13 @@ qs -c antigravity ipc call theme set <themeKey>        # Set theme (e.g. deepspa
 ## 7. System Telemetry & Antigravity Token Tracking
 
 * **System Telemetry**:
-  - CPU, RAM, and SWAP are queried reactively in `services/SystemStats.qml` via:
-    `python3 -c "import psutil; print(f'{int(psutil.cpu_percent(interval=0.1))} {int(psutil.virtual_memory().percent)} {int(psutil.swap_memory().percent)}')"`
+  - High-performance procfs CPU, RAM, Network and SWAP are queried in `services/SystemStats.qml` via native Rust (`bin/fast_system_stats`).
   - Displayed in `bar/SystemPill.qml` alongside Volume and Antigravity metrics.
 
 * **Antigravity 5-Hour & Weekly Quotas**:
   - Quotas are queried programmatically via Antigravity's internal command:
     `agy --print "/quota" --output-format json`
-  - Cached in `/tmp/agy_quota_cache.json` by `scripts/update_quota_cache.py` to prevent blocking the shell UI.
+  - Managed by native Rust engine `bin/antigravity_status` and cached in `/tmp/agy_quota_cache.json` to prevent blocking the shell UI.
   - Exposes:
     - **Gemini 5-Hour Limit Remaining** (`gemini-5h` window: 5h rolling demand).
     - **Gemini Weekly Limit Remaining** (`gemini-weekly` window: weekly tier allocation).

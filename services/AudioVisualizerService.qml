@@ -15,17 +15,17 @@ Singleton {
 
     Process {
         id: trackerProc
-        running: !ShellState.liteMode
+        running: !ShellState.liteMode && MediaService.isPlaying
         command: [root.binPath]
         onExited: {
-            if (!ShellState.liteMode) {
+            if (!ShellState.liteMode && MediaService.isPlaying) {
                 restartTimer.start();
             }
         }
         stdout: SplitParser {
             splitMarker: "\n"
             onRead: data => {
-                if (ShellState.liteMode) return;
+                if (ShellState.liteMode || !MediaService.isPlaying) return;
                 try {
                     const parsed = JSON.parse(data.trim());
                     root.b0 = parsed.b0;
@@ -42,7 +42,24 @@ Singleton {
         interval: 1000
         repeat: false
         onTriggered: {
-            if (!ShellState.liteMode) {
+            if (!ShellState.liteMode && MediaService.isPlaying) {
+                trackerProc.running = true;
+            }
+        }
+    }
+
+    Connections {
+        target: MediaService
+        function onIsPlayingChanged() {
+            if (!MediaService.isPlaying) {
+                trackerProc.running = false;
+                restartTimer.stop();
+                root.b0 = 0.0;
+                root.b1 = 0.0;
+                root.b2 = 0.0;
+                root.b3 = 0.0;
+                Quickshell.execDetached(["pkill", "-f", "audio_beat_tracker"]);
+            } else if (!ShellState.liteMode) {
                 trackerProc.running = true;
             }
         }

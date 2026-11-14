@@ -12,13 +12,13 @@ Singleton {
     property string activeCategory: "all"
     property string lastExecutedResult: ""
 
-    readonly property string scriptPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/task_runner.py"
+    readonly property string scriptPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/task_runner"
 
     // Process to list tasks
     Process {
         id: listProc
         running: false
-        command: ["python3", root.scriptPath, "list"]
+        command: [root.scriptPath, "list"]
         stdout: StdioCollector {
             id: listCollector
             onStreamFinished: {
@@ -43,7 +43,7 @@ Singleton {
         id: runProc
         running: false
         property string targetTaskId: ""
-        command: ["python3", root.scriptPath, "run", targetTaskId]
+        command: [root.scriptPath, "run", targetTaskId]
         stdout: StdioCollector {
             id: runCollector
             onStreamFinished: {
@@ -66,7 +66,7 @@ Singleton {
         id: saveProc
         running: false
         property string payload: ""
-        command: ["python3", root.scriptPath, "create", payload]
+        command: [root.scriptPath, "create", payload]
         stdout: StdioCollector {
             onStreamFinished: {
                 root.refresh();
@@ -79,7 +79,7 @@ Singleton {
         id: deleteProc
         running: false
         property string targetTaskId: ""
-        command: ["python3", root.scriptPath, "delete", targetTaskId]
+        command: [root.scriptPath, "delete", targetTaskId]
         stdout: StdioCollector {
             onStreamFinished: {
                 root.refresh();

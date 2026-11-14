@@ -13,19 +13,23 @@ USAGE:
     (Or execute directly via symlinks: fast_system_stats, system_monitor, etc.)
 
 AVAILABLE SUBCOMMANDS:
-    system-stats, stats     High-performance procfs CPU/RAM/Net telemetry
-    system-monitor, monitor Process telemetry, memory grouping, and termination
-    cliphist, clipboard     Wayland clipboard history and disk caching
-    media-color, color      Vibrant album art color extractor (Catmull-Rom)
-    audio-tracker, audio    SIMD real-to-complex FFT audio visualizer
-    docker                  Docker container/image manager and JSON telemetry
-    battery, battery_helper Microsecond sysfs battery telemetry & power control
-    network, network_status Native WiFi and Bluetooth BlueZ engine
-    wallpapers              Fast wallpaper directory listing & scanner
+    system-stats, stats        High-performance procfs CPU/RAM/Net telemetry
+    system-monitor, monitor    Process telemetry, memory grouping, and termination
+    cliphist, clipboard        Wayland clipboard history and disk caching
+    media-color, color         Vibrant album art color extractor (Catmull-Rom)
+    audio-tracker, audio       SIMD real-to-complex FFT audio visualizer
+    docker, docker_manager     Docker container/image manager and JSON telemetry
+    battery, battery_helper    Microsecond sysfs battery telemetry & power control
+    network, network_status    Native WiFi and Bluetooth BlueZ engine
+    wallpapers, wallpaper      Fast wallpaper directory listing & scanner
+    windows, window_switcher   Hyprland client list, focus, and close
+    tuned, tuned_manager       TuneD active profile and switcher
+    tasks, task_runner         Developer persistent task manager and executor
+    agy, antigravity_status    Antigravity agent & brain status and quota cache
 
 OPTIONS:
-    -h, --help              Print help information
-    -V, --version           Print version information
+    -h, --help                 Print help information
+    -V, --version              Print version information
 "#);
 }
 
@@ -75,6 +79,22 @@ fn main() {
             tools::wallpaper_helper::run(&raw_args[1..]);
             return;
         }
+        "window_switcher" => {
+            tools::window_switcher::run(&raw_args[1..]);
+            return;
+        }
+        "tuned_manager" => {
+            tools::tuned_manager::run(&raw_args[1..]);
+            return;
+        }
+        "task_runner" => {
+            tools::task_runner::run(&raw_args[1..]);
+            return;
+        }
+        "antigravity_status" | "get_antigravity_status" => {
+            tools::antigravity_status::run(&raw_args[1..]);
+            return;
+        }
         _ => {}
     }
 
@@ -107,8 +127,20 @@ fn main() {
         "network" | "network_status" => {
             tools::network_status::run(rest);
         }
-        "wallpapers" | "wallpaper_helper" => {
+        "wallpapers" | "wallpaper_helper" | "wallpaper" => {
             tools::wallpaper_helper::run(rest);
+        }
+        "windows" | "window_switcher" | "window-switcher" => {
+            tools::window_switcher::run(rest);
+        }
+        "tuned" | "tuned_manager" | "tuned-manager" => {
+            tools::tuned_manager::run(rest);
+        }
+        "tasks" | "task_runner" | "task-runner" => {
+            tools::task_runner::run(rest);
+        }
+        "agy" | "antigravity_status" | "antigravity-status" | "status" => {
+            tools::antigravity_status::run(rest);
         }
         "-V" | "--version" => {
             println!("agy-tools 0.1.0");

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+RUST_BIN="$ROOT_DIR/rust/target/release/agy-tools"
+
+if [ -x "$RUST_BIN" ]; then
+    exec "$RUST_BIN" antigravity_status "$@"
+fi
+
+echo "Error: Native Rust binary not found at $RUST_BIN. Run ./scripts/build_rust.sh" >&2
+exit 1

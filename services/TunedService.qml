@@ -38,8 +38,7 @@ Singleton {
         }
 
         Quickshell.execDetached([
-            "python3",
-            Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/tuned_manager.py",
+            Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/tuned_manager",
             "switch",
             profileId
         ]);
@@ -51,8 +50,7 @@ Singleton {
         id: statusProc
         running: false
         command: [
-            "python3",
-            Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/tuned_manager.py"
+            Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/tuned_manager"
         ]
         stdout: StdioCollector {
             id: collector

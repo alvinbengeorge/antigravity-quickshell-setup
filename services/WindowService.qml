@@ -10,13 +10,13 @@ Singleton {
     property bool loading: false
     property int selectedIndex: 0
 
-    readonly property string scriptPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/window_switcher.py"
+    readonly property string scriptPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/window_switcher"
 
     // Process to query open windows
     Process {
         id: listProc
         running: false
-        command: ["python3", root.scriptPath, "list"]
+        command: [root.scriptPath, "list"]
         stdout: StdioCollector {
             id: listCollector
             onStreamFinished: {
@@ -44,7 +44,7 @@ Singleton {
         id: focusProc
         running: false
         property string targetAddr: ""
-        command: ["python3", root.scriptPath, "focus", targetAddr]
+        command: [root.scriptPath, "focus", targetAddr]
     }
 
     // Process to close window
@@ -52,7 +52,7 @@ Singleton {
         id: closeProc
         running: false
         property string targetAddr: ""
-        command: ["python3", root.scriptPath, "close", targetAddr]
+        command: [root.scriptPath, "close", targetAddr]
         stdout: StdioCollector {
             onStreamFinished: {
                 root.refresh();

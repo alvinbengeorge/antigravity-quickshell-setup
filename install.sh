@@ -268,7 +268,7 @@ step_header "6" "Compiling Native Rust Acceleration Engine (agy-tools)"
 
 if [ "$SKIP_RUST" = true ]; then
     status_skip "Rust engine compilation skipped (--skip-rust passed)."
-    status_info "Quickshell will seamlessly utilize the automatic Python fallbacks."
+    status_warn "Ensure Rust engine is compiled with ./scripts/build_rust.sh for desktop performance."
 else
     if [ -f "$HOME/.cargo/env" ]; then
         # shellcheck source=/dev/null
@@ -284,7 +284,7 @@ else
             source "$HOME/.cargo/env"
             status_ok "Rust toolchain installed successfully!"
         else
-            status_skip "Skipping Rust installation. Desktop shell will run in automatic Python fallback mode."
+            status_skip "Skipping Rust installation. Please install rust toolchain to build native engine."
         fi
     fi
 
@@ -300,10 +300,10 @@ else
             if [[ "$TEST_OUT" =~ "cpu" ]]; then
                 status_ok "Engine self-test passed: ${DIM}${TEST_OUT}${RESET}"
             else
-                status_warn "Engine self-test returned unexpected output; dispatchers will fallback if needed."
+                status_warn "Engine self-test returned unexpected output."
             fi
         else
-            status_warn "Binary build did not produce target executable. Automatic Python fallback active."
+            status_warn "Binary build did not produce target executable. Check compiler errors."
         fi
     fi
 fi
