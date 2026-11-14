@@ -16,7 +16,6 @@ Singleton {
     property bool isLoading: false
 
     readonly property string helperBin: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/cliphist_helper"
-    readonly property string helperScript: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/cliphist_helper.py"
 
     function refresh() {
         if (root.isLoading) return;

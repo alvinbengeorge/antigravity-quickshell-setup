@@ -69,7 +69,7 @@ Singleton {
 
     Timer {
         id: pollTimer
-        interval: ShellState.liteMode ? 10000 : 2500
+        interval: ShellState.liteMode ? 12000 : 5000
         running: true
         repeat: true
         triggeredOnStart: true
@@ -84,6 +84,10 @@ Singleton {
         if (!statusProc.running) {
             statusProc.running = true;
         }
+    }
+
+    function refreshQuota() {
+        Quickshell.execDetached(["python3", Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/get_antigravity_status.py", "--refresh-quota"]);
     }
 
     function launchCli() {

@@ -203,13 +203,13 @@ else
                 fi
                 sudo dnf install -y quickshell hyprland kitty playerctl grim slurp upower \
                                     pipewire-utils pulseaudio-utils libnotify \
-                                    python3-pillow python3-numpy python3-dbus cliphist wl-clipboard \
+                                    python3-dbus cliphist wl-clipboard \
                                     gsettings-desktop-schemas || true
             fi
         elif [ "$PKG_MGR" = "pacman" ]; then
             if confirm "Would you like to install missing dependencies via pacman now?"; then
                 sudo pacman -S --needed --noconfirm hyprland kitty playerctl grim slurp upower \
-                                                   pipewire-pulse python-pillow python-numpy \
+                                                   pipewire-pulse \
                                                    python-dbus libnotify cliphist wl-clipboard || true
             fi
         else

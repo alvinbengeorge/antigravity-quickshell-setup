@@ -45,7 +45,9 @@ def read_quota_cache():
         need_refresh = True
     else:
         updated_at = cache_data.get('updated_at', 0)
-        if now - updated_at > 90:  # Refresh every 90 seconds
+        # Quota windows are 5h and weekly; refresh at most every 30 minutes in background
+        # or when explicitly requested via --refresh-quota
+        if '--refresh-quota' in sys.argv or (now - updated_at > 1800):
             need_refresh = True
 
     if need_refresh:

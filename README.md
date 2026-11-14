@@ -69,8 +69,8 @@ sudo dnf install -y playerctl grim slurp upower cliphist wl-clipboard \
                     pipewire-utils pulseaudio-utils libnotify \
                     gsettings-desktop-schemas
 
-# 4. Python Libraries for Image & Audio Processing
-sudo dnf install -y python3-pillow python3-numpy python3-dbus
+# 4. System & D-Bus Libraries
+sudo dnf install -y python3-dbus
 
 # 5. Install hyprshade for GLSL Screen Shaders
 pip3 install --user hyprshade
@@ -83,8 +83,7 @@ All packages are readily available in Arch's official repositories and the AUR:
 ```bash
 # Core Compositor & Utilities
 sudo pacman -S hyprland kitty playerctl grim slurp upower \
-               pipewire-pulse python-pillow python-numpy \
-               python-dbus libnotify
+               pipewire-pulse python-dbus libnotify
 
 # AUR Packages (Quickshell & Hyprshade)
 yay -S quickshell-git hyprshade

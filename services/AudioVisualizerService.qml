@@ -12,7 +12,6 @@ Singleton {
     property real b3: 0.0
 
     readonly property string binPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/audio_beat_tracker"
-    readonly property string scriptPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/audio_beat_tracker.py"
 
     Process {
         id: trackerProc
@@ -59,7 +58,7 @@ Singleton {
                 root.b1 = 0.0;
                 root.b2 = 0.0;
                 root.b3 = 0.0;
-                Quickshell.execDetached(["pkill", "-f", "audio_beat_tracker.py"]);
+                Quickshell.execDetached(["pkill", "-f", "audio_beat_tracker"]);
             } else {
                 trackerProc.running = true;
             }

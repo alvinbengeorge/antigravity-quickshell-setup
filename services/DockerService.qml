@@ -28,7 +28,6 @@ Singleton {
     property bool logsLoading: false
 
     readonly property string binPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/docker_manager"
-    readonly property string scriptPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/docker_manager.py"
 
     // ── Data Query Process ──────────────────────────────────────────────────
     Process {

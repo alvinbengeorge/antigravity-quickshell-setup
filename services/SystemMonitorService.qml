@@ -43,7 +43,6 @@ Singleton {
     property string searchQuery: ""
 
     readonly property string binPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/system_monitor"
-    readonly property string scriptPath: Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/scripts/system_monitor.py"
 
     // ── Telemetry Data Query Process ─────────────────────────────────────────
     Process {
