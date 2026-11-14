@@ -41,7 +41,7 @@ fn spawn_parec(monitor: &str) -> io::Result<Child> {
         .spawn()
 }
 
-fn main() {
+pub fn run(_args: &[String]) {
     let mut real_planner = RealFftPlanner::<f32>::new();
     let r2c = real_planner.plan_fft_forward(CHUNK);
     let mut indata = r2c.make_input_vec();

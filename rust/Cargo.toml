@@ -12,29 +12,13 @@ ureq = { version = "2.10", default-features = false, features = ["tls"] }
 rustfft = "6.4.1"
 realfft = "3.5.1"
 
-[[bin]]
-name = "fast_system_stats"
-path = "src/bin/fast_system_stats.rs"
+[lib]
+name = "antigravity_tools"
+path = "src/lib.rs"
 
 [[bin]]
-name = "system_monitor"
-path = "src/bin/system_monitor.rs"
-
-[[bin]]
-name = "cliphist_helper"
-path = "src/bin/cliphist_helper.rs"
-
-[[bin]]
-name = "extract_media_color"
-path = "src/bin/extract_media_color.rs"
-
-[[bin]]
-name = "audio_beat_tracker"
-path = "src/bin/audio_beat_tracker.rs"
-
-[[bin]]
-name = "docker_manager"
-path = "src/bin/docker_manager.rs"
+name = "agy-tools"
+path = "src/main.rs"
 
 [profile.release]
 opt-level = 3

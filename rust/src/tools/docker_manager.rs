@@ -566,9 +566,7 @@ fn perform_action(action: &str, target: &str, args: &[String]) -> ActionResult {
     }
 }
 
-fn main() {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-
+pub fn run(args: &[String]) {
     if args.is_empty() || args[0] == "data" {
         let data = get_docker_data();
         if let Ok(json_str) = serde_json::to_string(&data) {

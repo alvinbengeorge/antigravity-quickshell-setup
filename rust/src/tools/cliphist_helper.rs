@@ -199,9 +199,8 @@ fn wipe_all_cmd() {
     }
 }
 
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() < 2 {
+pub fn run(args: &[String]) {
+    if args.is_empty() {
         let items = get_list(80);
         if let Ok(json) = serde_json::to_string(&items) {
             println!("{}", json);
@@ -209,32 +208,32 @@ fn main() {
         return;
     }
 
-    match args[1].as_str() {
+    match args[0].as_str() {
         "list" => {
-            let limit = args.get(2).and_then(|s| s.parse::<usize>().ok()).unwrap_or(80);
+            let limit = args.get(1).and_then(|s| s.parse::<usize>().ok()).unwrap_or(80);
             let items = get_list(limit);
             if let Ok(json) = serde_json::to_string(&items) {
                 println!("{}", json);
             }
         }
         "decode-image" => {
-            if let Some(cid) = args.get(2) {
+            if let Some(cid) = args.get(1) {
                 decode_image_cmd(cid);
             }
         }
         "decode-text" => {
-            if let Some(cid) = args.get(2) {
+            if let Some(cid) = args.get(1) {
                 decode_text_cmd(cid);
             }
         }
         "copy" => {
-            if let Some(cid) = args.get(2) {
+            if let Some(cid) = args.get(1) {
                 copy_item_cmd(cid);
             }
         }
         "delete" => {
-            if let Some(cid) = args.get(2) {
-                let raw_text = args.get(3).map(|s| s.as_str()).unwrap_or("");
+            if let Some(cid) = args.get(1) {
+                let raw_text = args.get(2).map(|s| s.as_str()).unwrap_or("");
                 delete_item_cmd(cid, raw_text);
             }
         }

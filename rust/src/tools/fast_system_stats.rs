@@ -257,11 +257,10 @@ fn run_stream(interval_ms: u64) {
     }
 }
 
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() > 1 && (args[1] == "--stream" || args[1] == "-s" || args[1] == "--watch") {
+pub fn run(args: &[String]) {
+    if !args.is_empty() && (args[0] == "--stream" || args[0] == "-s" || args[0] == "--watch") {
         let ms = args
-            .get(2)
+            .get(1)
             .and_then(|s| s.parse::<u64>().ok())
             .unwrap_or(2500);
         run_stream(ms);

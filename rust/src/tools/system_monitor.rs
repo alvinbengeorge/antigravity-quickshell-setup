@@ -441,9 +441,8 @@ fn drop_caches() {
     println!(r#"{{"success":false,"error":"Permission denied"}}"#);
 }
 
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    let action = args.get(1).map(|s| s.as_str()).unwrap_or("data");
+pub fn run(args: &[String]) {
+    let action = args.first().map(|s| s.as_str()).unwrap_or("data");
 
     match action {
         "data" => {
@@ -453,9 +452,9 @@ fn main() {
             }
         }
         "kill" => {
-            if let Some(pid_str) = args.get(2) {
+            if let Some(pid_str) = args.get(1) {
                 let force = args
-                    .get(3)
+                    .get(2)
                     .map(|s| matches!(s.as_str(), "1" | "true" | "force" | "-9"))
                     .unwrap_or(false);
                 kill_process(pid_str, force);

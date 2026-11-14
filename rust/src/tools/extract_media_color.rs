@@ -162,9 +162,8 @@ fn extract_vibrant_color(art_url: &str) -> Option<ColorResult> {
     })
 }
 
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    let art_url = args.get(1).map(|s| s.as_str()).unwrap_or("");
+pub fn run(args: &[String]) {
+    let art_url = args.first().map(|s| s.as_str()).unwrap_or("");
 
     let res = extract_vibrant_color(art_url).unwrap_or(ColorResult {
         color: String::new(),

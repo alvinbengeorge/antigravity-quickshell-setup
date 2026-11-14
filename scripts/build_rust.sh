@@ -15,16 +15,21 @@ if ! command -v cargo &>/dev/null; then
     exit 1
 fi
 
-echo "Building Antigravity Rust Tools in release mode..."
+echo "Building Antigravity Unified Multi-Call Engine (agy-tools) in release mode..."
 cd "$RUST_DIR"
-cargo build --release
+cargo build --release --bin agy-tools
 
 mkdir -p "$BIN_DIR"
-ln -sf "$RUST_DIR/target/release/fast_system_stats" "$BIN_DIR/fast_system_stats"
-ln -sf "$RUST_DIR/target/release/system_monitor" "$BIN_DIR/system_monitor"
-ln -sf "$RUST_DIR/target/release/cliphist_helper" "$BIN_DIR/cliphist_helper"
-ln -sf "$RUST_DIR/target/release/extract_media_color" "$BIN_DIR/extract_media_color"
-ln -sf "$RUST_DIR/target/release/audio_beat_tracker" "$BIN_DIR/audio_beat_tracker"
-ln -sf "$RUST_DIR/target/release/docker_manager" "$BIN_DIR/docker_manager"
+# Link primary multi-call binary
+ln -sf "$RUST_DIR/target/release/agy-tools" "$BIN_DIR/agy-tools"
 
-echo "Build successful! Binaries linked in $BIN_DIR"
+# Create symlinks for all tool subcommands (argv[0] dispatch)
+cd "$BIN_DIR"
+ln -sf "agy-tools" "fast_system_stats"
+ln -sf "agy-tools" "system_monitor"
+ln -sf "agy-tools" "cliphist_helper"
+ln -sf "agy-tools" "extract_media_color"
+ln -sf "agy-tools" "audio_beat_tracker"
+ln -sf "agy-tools" "docker_manager"
+
+echo "Build successful! Multi-call binary and tool symlinks linked in $BIN_DIR"
