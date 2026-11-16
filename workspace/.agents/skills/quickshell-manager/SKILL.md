@@ -392,7 +392,7 @@ Integrated directly into **Omnibar** (<kbd>Super</kbd> + <kbd>K</kbd>):
 * **Trigger Syntax**:
   - `@file <query>`: Instant global search matching file and folder names across `~/Desktop`, `~/Downloads`, `~/Documents`, `~/Pictures`, and full drive.
   - `@file`: Displays most recently modified files and active directories from user workspaces in **1ms**.
-  - Also matches `@file:`, `file:`, or `@<query>`.
+  - Also matches `@file:` or `file:`. (Lone `@` is reserved for standard application and system search).
 * **Keyboard Navigation**:
   - <kbd>↑</kbd> / <kbd>↓</kbd>: Navigate through matched file items.
   - <kbd>PageUp</kbd> / <kbd>PageDown</kbd>: Scroll by 5 items.
