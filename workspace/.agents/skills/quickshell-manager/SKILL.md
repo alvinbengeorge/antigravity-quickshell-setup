@@ -424,6 +424,9 @@ Integrated directly into **Omnibar** (<kbd>Super</kbd> + <kbd>K</kbd>):
 * **Performance & Safety**:
   - Debounced at 35ms on keystroke; **zero background polling timers**.
   - Intelligent artifact filtering automatically excludes `.git`, `node_modules`, `.venv`, `__pycache__`, `target`, `.cargo`, and `.cache`.
+* **Folder Default Handler**:
+  - `inode/directory` MIME type is explicitly configured to `org.gnome.Nautilus.desktop` in `~/.config/mimeapps.list`.
+  - Both pressing <kbd>Enter</kbd> on a directory and <kbd>Ctrl</kbd> + <kbd>Enter</kbd> (reveal in folder) open GNOME Nautilus.
 
 ---
 
