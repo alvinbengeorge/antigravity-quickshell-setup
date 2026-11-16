@@ -40,7 +40,7 @@ PanelWindow {
 
     readonly property bool isFileSearchMode: {
         const t = omniInput.text.trim().toLowerCase();
-        return t === "@file" || t.startsWith("@file ") || t.startsWith("@file:") || t.startsWith("file:") || (t.startsWith("@") && !t.startsWith("@agy") && !t.startsWith("@jira") && !t.startsWith("@gh"));
+        return t === "@file" || t.startsWith("@file ") || t.startsWith("@file:") || t.startsWith("file:");
     }
 
     onVisibleChanged: {
@@ -1027,7 +1027,7 @@ PanelWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: 8
-                visible: omnibarWindow.spotlightResult === null && omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0
+                visible: !omnibarWindow.isFileSearchMode && omnibarWindow.spotlightResult === null && omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0
 
                 // Header
                 RowLayout {
@@ -1961,7 +1961,7 @@ PanelWindow {
                             color: Theme.accentCyan
                         }
                         Text {
-                            text: "Files & Spotlight v3.1"
+                            text: "v3.1"
                             font.family: Theme.fontMono
                             font.pixelSize: 10
                             color: Theme.accentAmber

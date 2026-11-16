@@ -251,7 +251,7 @@ pub fn search(raw_query: &str, limit: usize) -> SearchResponse {
     let start_time = Instant::now();
     let home_dir = env::var("HOME").unwrap_or_else(|_| "/home/alvin".to_string());
 
-    // Clean query: strip triggers '@file ', '@file:', '@file', '@', 'file:'
+    // Clean query: strip triggers '@file ', '@file:', '@file', 'file:'
     let mut query = raw_query.trim();
     if query.to_lowercase().starts_with("@file ") {
         query = query[6..].trim();
@@ -259,8 +259,6 @@ pub fn search(raw_query: &str, limit: usize) -> SearchResponse {
         query = query[6..].trim();
     } else if query.to_lowercase() == "@file" {
         query = "";
-    } else if query.starts_with('@') {
-        query = query[1..].trim();
     } else if query.to_lowercase().starts_with("file:") {
         query = query[5..].trim();
     }
