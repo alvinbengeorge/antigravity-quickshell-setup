@@ -385,6 +385,45 @@ Compiles with Release LTO (`opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, 
 | `bin/openwa_status` | `rust/src/tools/openwa_status.rs` | OpenWA WhatsApp container REST API client (`127.0.0.1:2785/api`); chats, unread counter, QR base64 decode. |
 | `bin/github_prs` | `rust/src/tools/github_prs.rs` | GitHub GraphQL API query; relative timestamps, review state, CI rollup status, 90s cache. |
 | `bin/jira_tasks` | `rust/src/tools/jira_tasks.rs` | Jira Cloud v3 REST API client; active vs completed tasks, avatar sync, JQL search pagination. |
+| `bin/file_search` | `rust/src/tools/file_search.rs` | Ultra-fast multi-threaded file search engine combining user workspace scanning with indexed `plocate` global lookup in 3–15ms. |
+
+### 10.1 Omnibar Instant File Search (`@file`)
+Integrated directly into **Omnibar** (<kbd>Super</kbd> + <kbd>K</kbd>):
+* **Trigger Syntax**:
+  - `@file <query>`: Instant global search matching file and folder names across `~/Desktop`, `~/Downloads`, `~/Documents`, `~/Pictures`, and full drive.
+  - `@file`: Displays most recently modified files and active directories from user workspaces in **1ms**.
+  - Also matches `@file:`, `file:`, or `@<query>`.
+* **Keyboard Navigation**:
+  - <kbd>↑</kbd> / <kbd>↓</kbd>: Navigate through matched file items.
+  - <kbd>PageUp</kbd> / <kbd>PageDown</kbd>: Scroll by 5 items.
+  - <kbd>Enter</kbd>: Open selected file or directory with default system handler (`xdg-open`).
+  - <kbd>Ctrl</kbd> + <kbd>Enter</kbd>: Reveal file in its parent directory / file manager.
+  - <kbd>Ctrl</kbd> + <kbd>C</kbd>: Copy selected file's absolute path to clipboard (`wl-copy`) and send notification.
+* **Rust JSON Telemetry Format**:
+  ```json
+  {
+    "query": "trading",
+    "count": 30,
+    "latency_ms": 14,
+    "results": [
+      {
+        "name": "tradingview_dom.py",
+        "path": "/home/alvin/Desktop/personal/trading-bot/execution/tradingview_dom.py",
+        "parent": "~/Desktop/personal/trading-bot/execution",
+        "is_dir": false,
+        "kind": "Python Source",
+        "icon": "🐍",
+        "size_bytes": 2799,
+        "size_str": "2.7 KB",
+        "mtime": 1794491614,
+        "mtime_str": "3d ago"
+      }
+    ]
+  }
+  ```
+* **Performance & Safety**:
+  - Debounced at 35ms on keystroke; **zero background polling timers**.
+  - Intelligent artifact filtering automatically excludes `.git`, `node_modules`, `.venv`, `__pycache__`, `target`, `.cargo`, and `.cache`.
 
 ---
 

@@ -151,7 +151,7 @@ fn api_request(
         .timeout(Duration::from_secs(timeout_secs))
         .build();
 
-    let mut req = agent
+    let req = agent
         .request(method, &url)
         .set("x-api-key", &get_api_key())
         .set("Content-Type", "application/json");

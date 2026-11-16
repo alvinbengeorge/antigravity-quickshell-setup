@@ -6,6 +6,7 @@ pub mod tools {
     pub mod docker_manager;
     pub mod extract_media_color;
     pub mod fast_system_stats;
+    pub mod file_search;
     pub mod github_prs;
     pub mod jira_tasks;
     pub mod network_status;

@@ -31,9 +31,17 @@ PanelWindow {
     property var spotlightResult: null
     property var matchedApps: []
     property int selectedAppIndex: 0
+    property var matchedFiles: []
+    property int selectedFileIndex: 0
+    property int fileSearchLatency: 0
     property bool isExecuting: false
     property var commandHistory: []
     property int historyIndex: -1
+
+    readonly property bool isFileSearchMode: {
+        const t = omniInput.text.trim().toLowerCase();
+        return t === "@file" || t.startsWith("@file ") || t.startsWith("@file:") || t.startsWith("file:") || (t.startsWith("@") && !t.startsWith("@agy") && !t.startsWith("@jira") && !t.startsWith("@gh"));
+    }
 
     onVisibleChanged: {
         if (visible) {
@@ -44,9 +52,15 @@ PanelWindow {
             spotlightResult = initQuery ? Spotlight.inspect(initQuery) : null;
             matchedApps = (!spotlightResult && initQuery) ? AppService.search(initQuery) : [];
             selectedAppIndex = 0;
+            matchedFiles = [];
+            selectedFileIndex = 0;
+            fileSearchLatency = 0;
             isExecuting = false;
             historyIndex = -1;
             loadHistoryProc.running = true;
+            if (isFileSearchMode) {
+                fileSearchDebounceTimer.restart();
+            }
             Qt.callLater(() => {
                 omniInput.forceActiveFocus();
                 if (initQuery) {
@@ -104,6 +118,45 @@ PanelWindow {
         }
     }
 
+    // ── Native Rust Instant File Search Subprocess ─────────────────────
+    Timer {
+        id: fileSearchDebounceTimer
+        interval: 35
+        repeat: false
+        onTriggered: {
+            if (!omnibarWindow.isFileSearchMode) {
+                omnibarWindow.matchedFiles = [];
+                return;
+            }
+            const q = omniInput.text.trim();
+            if (fileSearchProc.running) fileSearchProc.running = false;
+            fileSearchProc.command = [
+                Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/file_search",
+                "--limit", "30",
+                q
+            ];
+            fileSearchProc.running = true;
+        }
+    }
+
+    Process {
+        id: fileSearchProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const data = JSON.parse(text.trim());
+                    if (data && Array.isArray(data.results)) {
+                        omnibarWindow.matchedFiles = data.results;
+                        omnibarWindow.fileSearchLatency = data.latency_ms || 1;
+                        omnibarWindow.selectedFileIndex = 0;
+                    }
+                } catch(e) {
+                    // Ignore parse errors on rapid typing
+                }
+            }
+        }
+    }
+
     // ── Real-Time Intent Analyzer Subprocess ────────────────────────────
     Timer {
         id: parseDebounceTimer
@@ -111,7 +164,7 @@ PanelWindow {
         repeat: false
         onTriggered: {
             const q = omniInput.text.trim();
-            if (q.length === 0 || omnibarWindow.spotlightResult !== null || (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0)) {
+            if (omnibarWindow.isFileSearchMode || q.length === 0 || omnibarWindow.spotlightResult !== null || (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0)) {
                 omnibarWindow.parsedPlan = null;
                 return;
             }
@@ -137,11 +190,30 @@ PanelWindow {
         }
     }
 
-    // ── Execute Command / Launch App / Copy Spotlight Result ────────────
+    // ── Execute Command / Launch App / Open File / Copy Spotlight ──────
     function executeCurrentCommand(forceSemantic) {
         const query = omniInput.text.trim();
 
-        // 1. Force Semantic Execution
+        // 1. File Search Selection (Open or Reveal in Folder)
+        if (omnibarWindow.isFileSearchMode && omnibarWindow.matchedFiles && omnibarWindow.matchedFiles.length > 0) {
+            const idx = Math.max(0, Math.min(omnibarWindow.selectedFileIndex, omnibarWindow.matchedFiles.length - 1));
+            const file = omnibarWindow.matchedFiles[idx];
+            if (file) {
+                omnibarWindow.isExecuting = true;
+                if (forceSemantic) {
+                    // Ctrl+Enter reveals file in Nautilus / default file manager
+                    const parentDir = file.path.substring(0, file.path.lastIndexOf("/"));
+                    Quickshell.execDetached(["xdg-open", parentDir || file.path]);
+                } else {
+                    // Enter opens file with default application
+                    Quickshell.execDetached(["xdg-open", file.path]);
+                }
+                dismissTimer.restart();
+                return;
+            }
+        }
+
+        // 2. Force Semantic Execution
         if (forceSemantic && query) {
             omnibarWindow.isExecuting = true;
             Quickshell.execDetached(["laya-cmd", query]);
@@ -149,7 +221,7 @@ PanelWindow {
             return;
         }
 
-        // 2. Spotlight Result (Copy to clipboard)
+        // 3. Spotlight Result (Copy to clipboard)
         if (omnibarWindow.spotlightResult) {
             const val = omnibarWindow.spotlightResult.copyValue || "";
             if (val) {
@@ -160,7 +232,7 @@ PanelWindow {
             return;
         }
 
-        // 3. Application Launch
+        // 4. Application Launch
         if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
             const idx = Math.max(0, Math.min(omnibarWindow.selectedAppIndex, omnibarWindow.matchedApps.length - 1));
             const app = omnibarWindow.matchedApps[idx];
@@ -172,7 +244,7 @@ PanelWindow {
             }
         }
 
-        // 4. Fallback Semantic Execution
+        // 5. Fallback Semantic Execution
         if (!query) return;
         omnibarWindow.isExecuting = true;
         Quickshell.execDetached(["laya-cmd", query]);
@@ -213,6 +285,17 @@ PanelWindow {
 
         // Dynamic height based on active mode
         height: {
+            if (omnibarWindow.isFileSearchMode) {
+                if (omnibarWindow.matchedFiles && omnibarWindow.matchedFiles.length > 0) {
+                    const count = Math.min(omnibarWindow.matchedFiles.length, 5);
+                    if (count === 1) return 295;
+                    if (count === 2) return 365;
+                    if (count === 3) return 435;
+                    if (count === 4) return 505;
+                    return 550;
+                }
+                return 220; // Searching or empty files
+            }
             if (omnibarWindow.spotlightResult) {
                 if (omnibarWindow.spotlightResult.mode === "glyphs") return 290;
                 if (omnibarWindow.spotlightResult.mode === "color") return 245;
@@ -301,27 +384,33 @@ PanelWindow {
                         radius: 8
                         color: omnibarWindow.isExecuting
                             ? Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.20)
-                            : (omnibarWindow.spotlightResult
+                            : (omnibarWindow.isFileSearchMode
                                 ? Qt.rgba(Theme.accentAmber.r, Theme.accentAmber.g, Theme.accentAmber.b, 0.20)
-                                : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0)
-                                    ? Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.20)
-                                    : Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.15)))
+                                : (omnibarWindow.spotlightResult
+                                    ? Qt.rgba(Theme.accentAmber.r, Theme.accentAmber.g, Theme.accentAmber.b, 0.20)
+                                    : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0)
+                                        ? Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.20)
+                                        : Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.15))))
 
                         Icon {
                             anchors.centerIn: parent
                             name: omnibarWindow.isExecuting
                                 ? "check"
-                                : (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.lucide
-                                    ? omnibarWindow.spotlightResult.lucide
-                                    : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0)
-                                        ? "search"
-                                        : "zap"))
+                                : (omnibarWindow.isFileSearchMode
+                                    ? "folder"
+                                    : (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.lucide
+                                        ? omnibarWindow.spotlightResult.lucide
+                                        : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0)
+                                            ? "search"
+                                            : "zap")))
                             size: 16
                             color: omnibarWindow.isExecuting
                                 ? Theme.accentEmerald
-                                : (omnibarWindow.spotlightResult
+                                : (omnibarWindow.isFileSearchMode
                                     ? Theme.accentAmber
-                                    : Theme.accentCyan)
+                                    : (omnibarWindow.spotlightResult
+                                        ? Theme.accentAmber
+                                        : Theme.accentCyan))
                         }
                     }
 
@@ -337,7 +426,7 @@ PanelWindow {
                         clip: true
 
                         Text {
-                            text: "Type to search apps, math (1440 * 0.75), currency (120 usd to inr), hex (#ffaa00), glyphs (:fire:)..."
+                            text: "Type to search apps, files (@file), math (1440 * 0.75), currency (120 usd to inr), hex (#ffaa00)..."
                             font.family: parent.font.family
                             font.pixelSize: parent.font.pixelSize
                             color: Theme.textMuted
@@ -347,6 +436,14 @@ PanelWindow {
 
                         onTextChanged: {
                             omnibarWindow.historyIndex = -1;
+                            if (omnibarWindow.isFileSearchMode) {
+                                omnibarWindow.spotlightResult = null;
+                                omnibarWindow.matchedApps = [];
+                                omnibarWindow.parsedPlan = null;
+                                fileSearchDebounceTimer.restart();
+                                return;
+                            }
+                            omnibarWindow.matchedFiles = [];
                             omnibarWindow.spotlightResult = Spotlight.inspect(omniInput.text);
                             if (!omnibarWindow.spotlightResult) {
                                 const q = omniInput.text.trim();
@@ -373,8 +470,23 @@ PanelWindow {
                                     omnibarWindow.executeCurrentCommand(false);
                                 }
                                 event.accepted = true;
+                            } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_C && omniInput.selectedText.length === 0) {
+                                if (omnibarWindow.isFileSearchMode && omnibarWindow.matchedFiles && omnibarWindow.matchedFiles.length > 0) {
+                                    const idx = Math.max(0, Math.min(omnibarWindow.selectedFileIndex, omnibarWindow.matchedFiles.length - 1));
+                                    const file = omnibarWindow.matchedFiles[idx];
+                                    if (file) {
+                                        Quickshell.execDetached(["wl-copy", file.path]);
+                                        Quickshell.execDetached(["notify-send", "-a", "Antigravity", "Path Copied", file.path]);
+                                        event.accepted = true;
+                                        return;
+                                    }
+                                }
                             } else if (event.key === Qt.Key_Down) {
-                                if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
+                                if (omnibarWindow.isFileSearchMode && omnibarWindow.matchedFiles && omnibarWindow.matchedFiles.length > 0) {
+                                    omnibarWindow.selectedFileIndex = (omnibarWindow.selectedFileIndex + 1) % omnibarWindow.matchedFiles.length;
+                                    if (filesListView) filesListView.positionViewAtIndex(omnibarWindow.selectedFileIndex, ListView.Contain);
+                                    event.accepted = true;
+                                } else if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
                                     omnibarWindow.selectedAppIndex = (omnibarWindow.selectedAppIndex + 1) % omnibarWindow.matchedApps.length;
                                     if (appsListView) appsListView.positionViewAtIndex(omnibarWindow.selectedAppIndex, ListView.Contain);
                                     event.accepted = true;
@@ -389,7 +501,11 @@ PanelWindow {
                                     event.accepted = true;
                                 }
                             } else if (event.key === Qt.Key_Up) {
-                                if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
+                                if (omnibarWindow.isFileSearchMode && omnibarWindow.matchedFiles && omnibarWindow.matchedFiles.length > 0) {
+                                    omnibarWindow.selectedFileIndex = (omnibarWindow.selectedFileIndex - 1 + omnibarWindow.matchedFiles.length) % omnibarWindow.matchedFiles.length;
+                                    if (filesListView) filesListView.positionViewAtIndex(omnibarWindow.selectedFileIndex, ListView.Contain);
+                                    event.accepted = true;
+                                } else if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
                                     omnibarWindow.selectedAppIndex = (omnibarWindow.selectedAppIndex - 1 + omnibarWindow.matchedApps.length) % omnibarWindow.matchedApps.length;
                                     if (appsListView) appsListView.positionViewAtIndex(omnibarWindow.selectedAppIndex, ListView.Contain);
                                     event.accepted = true;
@@ -401,13 +517,21 @@ PanelWindow {
                                     event.accepted = true;
                                 }
                             } else if (event.key === Qt.Key_PageDown) {
-                                if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
+                                if (omnibarWindow.isFileSearchMode && omnibarWindow.matchedFiles && omnibarWindow.matchedFiles.length > 0) {
+                                    omnibarWindow.selectedFileIndex = Math.min(omnibarWindow.matchedFiles.length - 1, omnibarWindow.selectedFileIndex + 5);
+                                    if (filesListView) filesListView.positionViewAtIndex(omnibarWindow.selectedFileIndex, ListView.Contain);
+                                    event.accepted = true;
+                                } else if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
                                     omnibarWindow.selectedAppIndex = Math.min(omnibarWindow.matchedApps.length - 1, omnibarWindow.selectedAppIndex + 5);
                                     if (appsListView) appsListView.positionViewAtIndex(omnibarWindow.selectedAppIndex, ListView.Contain);
                                     event.accepted = true;
                                 }
                             } else if (event.key === Qt.Key_PageUp) {
-                                if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
+                                if (omnibarWindow.isFileSearchMode && omnibarWindow.matchedFiles && omnibarWindow.matchedFiles.length > 0) {
+                                    omnibarWindow.selectedFileIndex = Math.max(0, omnibarWindow.selectedFileIndex - 5);
+                                    if (filesListView) filesListView.positionViewAtIndex(omnibarWindow.selectedFileIndex, ListView.Contain);
+                                    event.accepted = true;
+                                } else if (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) {
                                     omnibarWindow.selectedAppIndex = Math.max(0, omnibarWindow.selectedAppIndex - 5);
                                     if (appsListView) appsListView.positionViewAtIndex(omnibarWindow.selectedAppIndex, ListView.Contain);
                                     event.accepted = true;
@@ -421,11 +545,14 @@ PanelWindow {
 
                     // Detected Mode Badge
                     Rectangle {
-                        visible: omnibarWindow.spotlightResult !== null || (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) || (omnibarWindow.parsedPlan && omnibarWindow.parsedPlan.actions && omnibarWindow.parsedPlan.actions.length > 0)
+                        visible: omnibarWindow.isFileSearchMode || omnibarWindow.spotlightResult !== null || (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) || (omnibarWindow.parsedPlan && omnibarWindow.parsedPlan.actions && omnibarWindow.parsedPlan.actions.length > 0)
                         height: 24
                         radius: 6
                         implicitWidth: intentTagText.implicitWidth + 14
                         color: {
+                            if (omnibarWindow.isFileSearchMode) {
+                                return Qt.rgba(Theme.accentAmber.r, Theme.accentAmber.g, Theme.accentAmber.b, 0.20);
+                            }
                             if (omnibarWindow.spotlightResult) {
                                 return Qt.rgba(Theme.accentAmber.r, Theme.accentAmber.g, Theme.accentAmber.b, 0.20);
                             }
@@ -435,13 +562,16 @@ PanelWindow {
                             const act = omnibarWindow.parsedPlan && omnibarWindow.parsedPlan.actions && omnibarWindow.parsedPlan.actions[0];
                             return act ? Qt.rgba(Theme.accentViolet.r, Theme.accentViolet.g, Theme.accentViolet.b, 0.20) : "transparent";
                         }
-                        border.color: omnibarWindow.spotlightResult ? Theme.accentAmber : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? Theme.accentCyan : Theme.accentViolet)
+                        border.color: omnibarWindow.isFileSearchMode ? Theme.accentAmber : (omnibarWindow.spotlightResult ? Theme.accentAmber : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? Theme.accentCyan : Theme.accentViolet))
                         border.width: 1
 
                         Text {
                             id: intentTagText
                             anchors.centerIn: parent
                             text: {
+                                if (omnibarWindow.isFileSearchMode) {
+                                    return omnibarWindow.matchedFiles.length === 1 ? "1 FILE" : (omnibarWindow.matchedFiles.length + " FILES");
+                                }
                                 if (omnibarWindow.spotlightResult) {
                                     return omnibarWindow.spotlightResult.mode.toUpperCase();
                                 }
@@ -454,7 +584,7 @@ PanelWindow {
                             font.family: Theme.fontMono
                             font.pixelSize: 10
                             font.bold: true
-                            color: omnibarWindow.spotlightResult ? Theme.accentAmber : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? Theme.accentCyan : Theme.accentViolet)
+                            color: omnibarWindow.isFileSearchMode ? Theme.accentAmber : (omnibarWindow.spotlightResult ? Theme.accentAmber : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? Theme.accentCyan : Theme.accentViolet))
                         }
                     }
 
@@ -470,7 +600,13 @@ PanelWindow {
                         Text {
                             id: latencyText
                             anchors.centerIn: parent
-                            text: omnibarWindow.spotlightResult ? "<0.1ms • Local" : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? "<0.2ms • System" : (omnibarWindow.parsedPlan ? (omnibarWindow.parsedPlan.latency_ms + "ms • 0MB") : "<1ms • 0MB"))
+                            text: omnibarWindow.isFileSearchMode
+                                ? ((omnibarWindow.fileSearchLatency || 1) + "ms • Rust")
+                                : (omnibarWindow.spotlightResult
+                                    ? "<0.1ms • Local"
+                                    : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0)
+                                        ? "<0.2ms • System"
+                                        : (omnibarWindow.parsedPlan ? (omnibarWindow.parsedPlan.latency_ms + "ms • 0MB") : "<1ms • 0MB")))
                             font.family: Theme.fontMono
                             font.pixelSize: 10
                             color: Theme.accentEmerald
@@ -502,7 +638,9 @@ PanelWindow {
                                 omnibarWindow.parsedPlan = null;
                                 omnibarWindow.spotlightResult = null;
                                 omnibarWindow.matchedApps = [];
+                                omnibarWindow.matchedFiles = [];
                                 omnibarWindow.selectedAppIndex = 0;
+                                omnibarWindow.selectedFileIndex = 0;
                                 omniInput.forceActiveFocus();
                             }
                         }
@@ -1153,12 +1291,252 @@ PanelWindow {
                 }
             }
 
+            // ── Section F: Matched Files List (Native Rust File Engine) ─────
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                spacing: 8
+                visible: omnibarWindow.isFileSearchMode
+
+                // Header
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+
+                    Text {
+                        text: "FILES & FOLDERS (" + omnibarWindow.matchedFiles.length + ")"
+                        font.family: Theme.fontMono
+                        font.pixelSize: 11
+                        font.bold: true
+                        color: Theme.accentAmber
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    Text {
+                        text: "↑↓ navigate • ↵ open • Ctrl+↵ reveal • Ctrl+C copy path"
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 10
+                        color: Theme.textMuted
+                    }
+                }
+
+                // Files ListView
+                ListView {
+                    id: filesListView
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    spacing: 6
+                    model: omnibarWindow.matchedFiles
+                    currentIndex: omnibarWindow.selectedFileIndex
+                    boundsBehavior: Flickable.StopAtBounds
+
+                    ScrollBar.vertical: ScrollBar {
+                        active: true
+                        policy: filesListView.contentHeight > filesListView.height ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
+                    }
+
+                    delegate: Rectangle {
+                        id: fileItem
+                        required property var modelData
+                        required property int index
+
+                        width: filesListView.width - (filesListView.contentHeight > filesListView.height ? 12 : 0)
+                        height: 58
+                        radius: 10
+                        readonly property bool isSelected: omnibarWindow.selectedFileIndex === fileItem.index
+                        readonly property bool isHovered: fileMouse.containsMouse
+
+                        color: ShellState.glassEnabled
+                            ? "transparent"
+                            : ((isSelected || isHovered) ? Theme.bgHover : Theme.bgCard)
+                        border.color: ShellState.glassEnabled
+                            ? "transparent"
+                            : (isSelected ? Theme.accentAmber : Theme.borderDim)
+                        border.width: isSelected ? 1 : (ShellState.glassEnabled ? 0 : 1)
+
+                        LiquidGlassSurface {
+                            radius: 10
+                            visible: ShellState.glassEnabled && (fileItem.isSelected || fileItem.isHovered)
+                            accentColor: Theme.accentAmber
+                            hovered: fileItem.isHovered
+                            pressed: fileMouse.pressed
+                            showShadow: false
+                        }
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 14
+                            anchors.rightMargin: 14
+                            spacing: 14
+
+                            // File Category / Icon Box
+                            Rectangle {
+                                width: 40
+                                height: 40
+                                radius: 10
+                                color: ShellState.glassEnabled ? Qt.rgba(Theme.bgCard.r, Theme.bgCard.g, Theme.bgCard.b, 0.4) : Theme.bgBase
+                                border.color: fileItem.isSelected ? Qt.rgba(Theme.accentAmber.r, Theme.accentAmber.g, Theme.accentAmber.b, 0.4) : Theme.borderDim
+                                border.width: 1
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: fileItem.modelData.icon || "📄"
+                                    font.pixelSize: 20
+                                }
+                            }
+
+                            // File Name & Parent Path
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 2
+
+                                RowLayout {
+                                    spacing: 8
+                                    Text {
+                                        text: fileItem.modelData.name || ""
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: 13
+                                        font.bold: true
+                                        color: fileItem.isSelected ? Theme.accentAmber : Theme.textPrimary
+                                        elide: Text.ElideRight
+                                    }
+
+                                    // Kind badge
+                                    Rectangle {
+                                        height: 18
+                                        radius: 4
+                                        implicitWidth: kindTxt.implicitWidth + 8
+                                        color: Theme.bgHover
+                                        border.color: Theme.borderDim
+                                        border.width: 1
+
+                                        Text {
+                                            id: kindTxt
+                                            anchors.centerIn: parent
+                                            text: fileItem.modelData.kind || "File"
+                                            font.family: Theme.fontMono
+                                            font.pixelSize: 9
+                                            color: Theme.textMuted
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: fileItem.modelData.parent || fileItem.modelData.path || ""
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 11
+                                    color: fileItem.isSelected ? Theme.textSecondary : Theme.textMuted
+                                    elide: Text.ElideMiddle
+                                }
+                            }
+
+                            // File Size & Time Badges
+                            ColumnLayout {
+                                spacing: 3
+                                Layout.alignment: Qt.AlignRight
+
+                                Text {
+                                    Layout.alignment: Qt.AlignRight
+                                    text: fileItem.modelData.size_str || ""
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    color: Theme.textSecondary
+                                }
+
+                                Text {
+                                    Layout.alignment: Qt.AlignRight
+                                    text: fileItem.modelData.mtime_str || ""
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 10
+                                    color: Theme.textMuted
+                                }
+                            }
+
+                            // Launch / Open Pill
+                            Rectangle {
+                                height: 26
+                                implicitWidth: openTxt.implicitWidth + 14
+                                radius: 6
+                                color: fileItem.isSelected ? Theme.accentAmber : Theme.bgHover
+                                border.color: fileItem.isSelected ? Theme.accentAmber : Theme.borderDim
+                                border.width: 1
+
+                                RowLayout {
+                                    id: openTxt
+                                    anchors.centerIn: parent
+                                    spacing: 4
+                                    Text {
+                                        text: "↵"
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        color: fileItem.isSelected ? Theme.textOnAccent : Theme.accentAmber
+                                    }
+                                    Text {
+                                        text: fileItem.isSelected ? "Open" : (fileItem.modelData.is_dir ? "Browse" : "Open")
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        color: fileItem.isSelected ? Theme.textOnAccent : Theme.textMuted
+                                    }
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            id: fileMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onEntered: {
+                                omnibarWindow.selectedFileIndex = fileItem.index;
+                            }
+                            onClicked: {
+                                omnibarWindow.isExecuting = true;
+                                Quickshell.execDetached(["xdg-open", fileItem.modelData.path]);
+                                omnibarWindow.dismissTimer.restart();
+                            }
+                        }
+                    }
+                }
+
+                // Empty State for files
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 64
+                    radius: 10
+                    color: Theme.bgCard
+                    border.color: Theme.borderDim
+                    border.width: 1
+                    visible: omnibarWindow.matchedFiles.length === 0
+
+                    RowLayout {
+                        anchors.centerIn: parent
+                        spacing: 10
+                        Text {
+                            text: "🔍"
+                            font.pixelSize: 18
+                        }
+                        Text {
+                            text: "No files matching query. Type '@file <filename>' to search across ~/Desktop, ~/Downloads, and entire drive."
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 12
+                            color: Theme.textMuted
+                        }
+                    }
+                }
+            }
+
             // ── Section A: Live Execution Plan Visualizer (Active input, 0 apps) ──
             ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: 8
-                visible: omnibarWindow.spotlightResult === null && (omnibarWindow.matchedApps.length === 0) && omniInput.text.trim().length > 0
+                visible: !omnibarWindow.isFileSearchMode && omnibarWindow.spotlightResult === null && (omnibarWindow.matchedApps.length === 0) && omniInput.text.trim().length > 0
 
                 // Header
                 RowLayout {
@@ -1311,12 +1689,12 @@ PanelWindow {
 
                     Repeater {
                         model: [
+                            { title: "File Search", sub: "Instant Native Rust Engine", cmd: "@file ", icon: "folder", color: Theme.accentAmber },
                             { title: "Pick Screen Color", sub: "Interactive eyedropper", cmd: ":eyedropper", icon: "palette", color: Theme.accentCyan },
-                            { title: "Screenshot", sub: "Snip area to clipboard", cmd: "take a screenshot", icon: "image", color: Theme.accentAmber },
-                            { title: "Currency Converter", sub: "120 USD to INR", cmd: "120 usd to inr", icon: "refresh-cw", color: Theme.accentEmerald },
-                            { title: "World Clock", sub: "Current time in Tokyo", cmd: "time in tokyo", icon: "clock", color: Theme.accentSky },
-                            { title: "Glyph & Symbols", sub: "Arrows, math & symbols", cmd: ":arrow", icon: "sparkles", color: Theme.accentViolet },
-                            { title: "Virtual Display", sub: "Toggle 1080p Headless", cmd: "turn on virtual display", icon: "monitor", color: Theme.accentRose }
+                            { title: "Screenshot", sub: "Snip area to clipboard", cmd: "take a screenshot", icon: "image", color: Theme.accentEmerald },
+                            { title: "Currency Converter", sub: "120 USD to INR", cmd: "120 usd to inr", icon: "refresh-cw", color: Theme.accentSky },
+                            { title: "World Clock", sub: "Current time in Tokyo", cmd: "time in tokyo", icon: "clock", color: Theme.accentViolet },
+                            { title: "Glyph & Symbols", sub: "Arrows, math & symbols", cmd: ":arrow", icon: "sparkles", color: Theme.accentRose }
                         ]
 
                         Rectangle {
@@ -1490,7 +1868,7 @@ PanelWindow {
 
                 RowLayout {
                     anchors.fill: parent
-                    spacing: 14
+                    spacing: 10
 
                     RowLayout {
                         spacing: 4
@@ -1499,10 +1877,22 @@ PanelWindow {
                             Text { anchors.centerIn: parent; text: "↵"; font.pixelSize: 10; color: Theme.textMuted }
                         }
                         Text {
-                            text: omnibarWindow.spotlightResult ? "Copy Result" : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? "Launch App" : "Run as agy")
+                            text: omnibarWindow.isFileSearchMode
+                                ? "Open File"
+                                : (omnibarWindow.spotlightResult
+                                    ? "Copy Result"
+                                    : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0)
+                                        ? "Launch App"
+                                        : "Run as agy"))
                             font.family: Theme.fontMono
                             font.pixelSize: 10
-                            color: omnibarWindow.spotlightResult ? Theme.accentEmerald : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? Theme.accentCyan : Theme.accentAmber)
+                            color: omnibarWindow.isFileSearchMode
+                                ? Theme.accentAmber
+                                : (omnibarWindow.spotlightResult
+                                    ? Theme.accentEmerald
+                                    : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0)
+                                        ? Theme.accentCyan
+                                        : Theme.accentAmber))
                         }
                     }
 
@@ -1513,7 +1903,7 @@ PanelWindow {
                             Text { anchors.centerIn: parent; text: "↑↓"; font.pixelSize: 10; color: Theme.textMuted }
                         }
                         Text {
-                            text: (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0) ? "Navigate" : "History"
+                            text: (omnibarWindow.isFileSearchMode || (omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0)) ? "Navigate" : "History"
                             font.family: Theme.fontMono
                             font.pixelSize: 10
                             color: Theme.textMuted
@@ -1522,7 +1912,27 @@ PanelWindow {
 
                     RowLayout {
                         spacing: 4
-                        visible: omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0
+                        visible: omnibarWindow.isFileSearchMode
+                        Rectangle {
+                            width: 38; height: 16; radius: 3; color: Theme.bgHover
+                            Text { anchors.centerIn: parent; text: "Ctrl+↵"; font.pixelSize: 9; color: Theme.textMuted }
+                        }
+                        Text { text: "Reveal"; font.family: Theme.fontMono; font.pixelSize: 10; color: Theme.textMuted }
+                    }
+
+                    RowLayout {
+                        spacing: 4
+                        visible: omnibarWindow.isFileSearchMode
+                        Rectangle {
+                            width: 38; height: 16; radius: 3; color: Theme.bgHover
+                            Text { anchors.centerIn: parent; text: "Ctrl+C"; font.pixelSize: 9; color: Theme.textMuted }
+                        }
+                        Text { text: "Copy"; font.family: Theme.fontMono; font.pixelSize: 10; color: Theme.textMuted }
+                    }
+
+                    RowLayout {
+                        spacing: 4
+                        visible: !omnibarWindow.isFileSearchMode && omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0
                         Rectangle {
                             width: 38; height: 16; radius: 3; color: Theme.bgHover
                             Text { anchors.centerIn: parent; text: "Ctrl+↵"; font.pixelSize: 9; color: Theme.textMuted }
@@ -1551,7 +1961,7 @@ PanelWindow {
                             color: Theme.accentCyan
                         }
                         Text {
-                            text: "Spotlight & App Suite v3.0"
+                            text: "Files & Spotlight v3.1"
                             font.family: Theme.fontMono
                             font.pixelSize: 10
                             color: Theme.accentAmber

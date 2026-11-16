@@ -29,6 +29,7 @@ AVAILABLE SUBCOMMANDS:
     whatsapp, openwa           WhatsApp OpenWA connection, chats, and actions
     github, github-prs         GitHub open pull requests and CI status
     jira, jira-tasks           Jira assigned issues, status categories, and counts
+    file_search, files         Ultra-fast native multi-threaded file search engine
 
 OPTIONS:
     -h, --help                 Print help information
@@ -110,6 +111,10 @@ fn main() {
             tools::jira_tasks::run(&raw_args[1..]);
             return;
         }
+        "file_search" | "find_files" => {
+            tools::file_search::run(&raw_args[1..]);
+            return;
+        }
         _ => {}
     }
 
@@ -165,6 +170,9 @@ fn main() {
         }
         "jira" | "jira-tasks" | "jira_tasks" => {
             tools::jira_tasks::run(rest);
+        }
+        "file_search" | "find" | "files" | "file-search" | "file" => {
+            tools::file_search::run(rest);
         }
         "-V" | "--version" => {
             println!("agy-tools 0.1.0");
