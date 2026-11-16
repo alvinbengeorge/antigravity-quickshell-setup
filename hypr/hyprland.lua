@@ -182,9 +182,10 @@ hl.window_rule({
     name = "kitty-scratchpad",
     match = { class = "kitty-scratchpad" },
     float = true,
-    size = "75% 60%",
-    move = "12.5% 52",
+    size = "960 540",
+    center = true,
     workspace = "special:scratchpad",
+    suppress_event = "maximize",
     rounding = 16,
 })
 
