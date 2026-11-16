@@ -144,17 +144,28 @@ ClockPill {}
 
 ```bash
 # Manage shell daemon
-qs -c antigravity -d                                    # Start shell
+qs -c antigravity -d                                    # Start shell daemon
 quickshell log -c antigravity -t 30                     # Live log tail
 quickshell list --all                                   # List running instances
-quickshell kill -c antigravity                          # Stop shell
+quickshell kill -c antigravity                          # Stop shell daemon
 
 # Core IPC Triggers
-qs -c antigravity ipc call antigravity toggle           # Toggle HUD (Super + A)
-qs -c antigravity ipc call search toggle                # Toggle App Launcher (Super + Space)
-qs -c antigravity ipc call session toggle               # Toggle Power Menu (Super + X)
-qs -c antigravity ipc call pullRequests toggle          # Toggle Pull Requests Widget
+qs -c antigravity ipc call antigravity toggle           # Toggle HUD (Super + A / Super + I)
+qs -c antigravity ipc call search toggle                # Toggle App Launcher (Super + Space / Super + Slash)
+qs -c antigravity ipc call session toggle               # Toggle Power Menu (Super + X / Super + Escape)
+qs -c antigravity ipc call omnibar toggle               # Toggle Omnibar Command Palette (Super + K)
+qs -c antigravity ipc call pie toggle                   # Toggle 8-Slice Radial Pie Menu (Super + G)
+qs -c antigravity ipc call clipboard toggle             # Toggle Clipboard History Manager (Super + V)
+qs -c antigravity ipc call docker toggle                # Toggle Docker Container Manager (Super + D)
+qs -c antigravity ipc call runner toggle                # Toggle Task Runner Modal (Super + R)
+qs -c antigravity ipc call windowSwitcher toggle        # Toggle Mission Control Window Switcher (Super + Tab)
 qs -c antigravity ipc call systemMonitor toggle         # Toggle System Resource Monitor (Super + Shift + M)
+qs -c antigravity ipc call controlCenter toggle         # Toggle Control Center Panel
+qs -c antigravity ipc call media toggle                 # Toggle Media Player Dropdown
+qs -c antigravity ipc call pullRequests toggle          # Toggle GitHub Pull Requests Desktop Widget
+qs -c antigravity ipc call jira toggle                  # Toggle Jira Issues Desktop Widget
+qs -c antigravity ipc call whatsapp toggle              # Toggle WhatsApp Messenger Panel
+qs -c antigravity ipc call liteMode toggle              # Toggle Lite / Battery Saver Mode (Super + Shift + L)
 
 # Wallpaper, Gradient & Theme Controls
 qs -c antigravity ipc call wallpaperTheme toggle       # Toggle Wallpaper & Theme Dialog (Super + W)
@@ -312,6 +323,98 @@ The **Antigravity Mobile Remote** is a high-performance Progressive Web App (PWA
   - Allows selecting the target workspace (1–10) or controlling window geometry, then 1-tapping any installed app to launch it onto that workspace.
   - Features instant real-time search filtering across 103+ applications with category pills (`Development`, `Internet`, `Media`, `System`, `Utility`).
   - **Clean Media Tab**: With Workspaces and Overlays moved to the Apps page, the `Media` tab is now exclusively dedicated to Workstation Audio (MPRIS playback, PipeWire volume steppers & mute) and the Desktop Theme Studio.
+
+---
+
+## 9. Universal Dropdown Scratchpad Terminal
+
+The Quake-style dropdown terminal is mapped via Hyprland keybinding to provide an instant, minimal floating terminal session.
+
+* **Trigger**: <kbd>SUPER</kbd> + <kbd>`</kbd> (`grave`).
+* **Launcher Script**: `~/.config/hypr/scripts/scratchpad.sh` (mirrored in `custom_quickshell/hypr/scripts/scratchpad.sh`).
+* **Window Dimensions**: Minimal compact **960 × 540** (50% screen width & height), centered on the active display.
+* **Window Rule (`hyprland.lua`)**:
+  ```lua
+  hl.window_rule({
+      name = "kitty-scratchpad",
+      match = { class = "kitty-scratchpad" },
+      float = true,
+      size = "960 540",
+      center = true,
+      workspace = "special:scratchpad",
+      suppress_event = "maximize",
+      rounding = 16,
+  })
+  ```
+* **Kitty Launch Flags**:
+  `kitty --class kitty-scratchpad --title "Antigravity Scratchpad" -o initial_window_width=960 -o initial_window_height=540 -o remember_window_size=no`
+* **Behavior**:
+  - The special workspace `special:scratchpad` is used for instant zero-latency hide/show without killing the underlying bash/zsh shell session.
+  - Floating state, 16px corner rounding, and `suppress_event = "maximize"` prevent the window from expanding to the entire monitor.
+
+---
+
+## 10. Native Rust Multi-Call Engine (`agy-tools`)
+
+All recurring system telemetry, status parsers, and external API collectors are implemented in a single unified, release-optimized Rust multi-call binary located at `rust/target/release/agy-tools` and symlinked into `bin/`.
+
+### 10.1 Build & Deployment
+```bash
+cd ~/Desktop/personal/custom_quickshell
+./scripts/build_rust.sh
+```
+Compiles with Release LTO (`opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, `strip = true`) yielding sub-millisecond execution times and updating symlinks in `bin/`.
+
+### 10.2 Inventory of Ported Native Tools
+
+| Binary / Command | Source File | Function & Output Schema |
+|---|---|---|
+| `bin/fast_system_stats` | `rust/src/tools/fast_system_stats.rs` | High-frequency CPU %, RAM (used/total), Swap, Network in/out, Battery %, Load avg in <1ms via procfs. |
+| `bin/system_monitor` | `rust/src/tools/system_monitor.rs` | Process tree, top 25 CPU/RAM consumers, PID kill handler (`--kill <pid> [--force]`), drop caches. |
+| `bin/cliphist_helper` | `rust/src/tools/cliphist_helper.rs` | Wayland clipboard history parser, search filter, item deletion, and clear history. |
+| `bin/extract_media_color` | `rust/src/tools/extract_media_color.rs` | Dominant palette extraction from Spotify/MPRIS album art for dynamic accent tinting. |
+| `bin/audio_beat_tracker` | `rust/src/tools/audio_beat_tracker.rs` | 22 FFT chunk/s PipeWire audio beat tracker for reactive visualizers. Gated to `MediaService.isPlaying`. |
+| `bin/docker_manager` | `rust/src/tools/docker_manager.rs` | Direct `/var/run/docker.sock` daemon communication; container start/stop/restart/pause/prune, image list/prune. |
+| `bin/battery_helper` | `rust/src/tools/battery_helper.rs` | Linux sysfs battery capacity, status, wattage calculation, cycle mode indicator. |
+| `bin/network_status` | `rust/src/tools/network_status.rs` | NetworkManager Wi-Fi SSID, signal strength %, IP addresses, gateway, and ethernet status. |
+| `bin/wallpaper_helper` | `rust/src/tools/wallpaper_helper.rs` | Scans `~/Pictures/Wallpapers`, creates blurred backdrop cache, thumbnail generation. |
+| `bin/window_switcher` | `rust/src/tools/window_switcher.rs` | Fast `hyprctl clients -j` parser formatting window addresses, titles, icons, and workspace coordinates in 0.7ms. |
+| `bin/tuned_manager` | `rust/src/tools/tuned_manager.rs` | Tuned performance profile query and 1-click switching (Powersave ↔ Balanced ↔ Latency-Performance). |
+| `bin/task_runner` | `rust/src/tools/task_runner.rs` | Executes custom developer scripts and shell commands in background tasks with real-time log tracking. |
+| `bin/antigravity_status` | `rust/src/tools/antigravity_status.rs` | Scans 280+ brain conversation folders and active `transcript.jsonl` in 1.2ms; formats steps, status, quotas. |
+| `bin/openwa_status` | `rust/src/tools/openwa_status.rs` | OpenWA WhatsApp container REST API client (`127.0.0.1:2785/api`); chats, unread counter, QR base64 decode. |
+| `bin/github_prs` | `rust/src/tools/github_prs.rs` | GitHub GraphQL API query; relative timestamps, review state, CI rollup status, 90s cache. |
+| `bin/jira_tasks` | `rust/src/tools/jira_tasks.rs` | Jira Cloud v3 REST API client; active vs completed tasks, avatar sync, JQL search pagination. |
+
+---
+
+## 11. Zero-Idle Scene Graph & Energy Efficiency
+
+To ensure the desktop environment uses near **0.0% – 2.0% idle CPU** on battery and AC:
+
+1. **No Infinite Looping Animations**:
+   - Continuous animations (`SequentialAnimation on opacity { loops: Animation.Infinite }`) dirty the Wayland scene graph at 60Hz/120Hz continuously.
+   - Status dots in `DockerPill.qml`, `WhatsAppPill.qml`, and `AntigravityWidget.qml` use clean static state indicators (`Theme.accentEmerald`, `Theme.accentAmber`, `Theme.accentRose`).
+2. **Audio Service Real-Time Event Streaming**:
+   - `services/AudioService.qml` streams live sink volume and mute updates via `pactl subscribe`.
+   - Fallback polling timers have been removed; zero unnecessary process forks occur when audio volume is static.
+3. **Audio Visualizer Process Gating**:
+   - `services/AudioVisualizerService.qml` binds `audio_beat_tracker` execution strictly to `MediaService.isPlaying`. When Spotify or YouTube is paused, the FFT process sleeps immediately.
+4. **WhatsApp Poller Backoff**:
+   - `services/WhatsAppService.qml` applies exponential backoff (relaxed from 12s to 60s) when the OpenWA container or session is offline.
+
+---
+
+## 12. Display Topology & Hyprland Rules
+
+* **Monitor Configuration**:
+  - `HDMI-A-1`: 1920 × 1080 @ 100% scale (Workspaces 1–5, primary developer display).
+  - `eDP-1`: 1920 × 1080 @ 100% scale (Workspaces 6–10, internal laptop screen).
+  - **Strict Scale Rule**: Dual monitors must strictly maintain `scale = 1.000000` (100%).
+* **Hyprland Lua Engine**:
+  - Configured at `~/.config/hypr/hyprland.lua` (mirrored in `custom_quickshell/hypr/hyprland.lua`).
+  - **Variable Frame Rate (VFR)**: VFR is permanently enabled in modern Hyprland core; do not add deprecated `misc.vfr` keys.
+
 
 
 
