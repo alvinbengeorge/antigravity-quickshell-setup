@@ -6,6 +6,8 @@ import Quickshell.Io
 Singleton {
     id: root
 
+    property bool isOnline: true
+    property string connectivity: "full"
     property bool wifiEnabled: true
     property string activeSsid: ""
     property var activeWifi: ({
@@ -87,6 +89,8 @@ Singleton {
                     if (raw.length > 0) {
                         const data = JSON.parse(raw);
                         root.wifiEnabled = data.wifiEnabled ?? true;
+                        root.isOnline = data.isOnline ?? (data.activeSsid && data.activeSsid.length > 0);
+                        root.connectivity = data.connectivity ?? (root.isOnline ? "full" : "none");
                         root.activeSsid = data.activeSsid ?? "";
                         root.activeWifi = data.activeWifi ?? ({
                             ssid: "",

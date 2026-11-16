@@ -70,13 +70,30 @@ Singleton {
     Timer {
         id: pollTimer
         interval: ShellState.liteMode ? 12000 : 5000
-        running: true
+        running: NetworkService.isOnline
         repeat: true
-        triggeredOnStart: true
+        triggeredOnStart: false
         onTriggered: {
             if (!statusProc.running) {
                 statusProc.running = true;
             }
+        }
+    }
+
+    Connections {
+        target: NetworkService
+        function onIsOnlineChanged() {
+            if (NetworkService.isOnline) {
+                if (!statusProc.running) {
+                    statusProc.running = true;
+                }
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        if (!statusProc.running) {
+            statusProc.running = true;
         }
     }
 
@@ -87,6 +104,7 @@ Singleton {
     }
 
     function refreshQuota() {
+        if (!NetworkService.isOnline) return;
         Quickshell.execDetached([Quickshell.env("HOME") + "/Desktop/personal/custom_quickshell/bin/antigravity_status", "--refresh-quota"]);
     }
 

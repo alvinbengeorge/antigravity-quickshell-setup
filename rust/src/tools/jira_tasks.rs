@@ -429,6 +429,18 @@ fn fetch_jira_data(jira_url: &str, username: &str, token: &str) -> Result<Value,
     }))
 }
 
+fn is_system_online() -> bool {
+    if let Ok(out) = std::process::Command::new("nmcli").args(["networking", "connectivity"]).output() {
+        let text = String::from_utf8_lossy(&out.stdout).trim().to_lowercase();
+        return text == "full";
+    }
+    if let Ok(out) = std::process::Command::new("ip").args(["-4", "route", "show", "default"]).output() {
+        let text = String::from_utf8_lossy(&out.stdout);
+        return text.contains("default via");
+    }
+    false
+}
+
 pub fn run(args: &[String]) {
     let force = args.iter().any(|a| a == "--force");
     let now = SystemTime::now()
@@ -474,6 +486,26 @@ pub fn run(args: &[String]) {
             "user": {"displayName": "Anonymous", "emailAddress": "", "avatarLocal": "", "jiraUrl": jira_url},
             "counts": {"total": 0, "in_progress": 0, "to_do": 0, "done": 0},
             "tasks": []
+        }));
+        return;
+    }
+
+    if !is_system_online() {
+        if let Some(mut c) = cached {
+            if let Value::Object(ref mut map) = c {
+                map.insert("offline".to_string(), Value::Bool(true));
+            }
+            println!("{}", c);
+            return;
+        }
+        let default_display_name = username.split('@').next().unwrap_or(&username);
+        println!("{}", json!({
+            "status": "offline",
+            "error": "Offline (no internet connection)",
+            "user": {"displayName": default_display_name, "emailAddress": username, "avatarLocal": "", "jiraUrl": jira_url},
+            "counts": {"total": 0, "in_progress": 0, "to_do": 0, "done": 0},
+            "tasks": [],
+            "last_updated": "Offline"
         }));
         return;
     }

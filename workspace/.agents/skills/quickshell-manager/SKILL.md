@@ -444,6 +444,13 @@ To ensure the desktop environment uses near **0.0% – 2.0% idle CPU** on batter
    - `services/AudioVisualizerService.qml` binds `audio_beat_tracker` execution strictly to `MediaService.isPlaying`. When Spotify or YouTube is paused, the FFT process sleeps immediately.
 4. **WhatsApp Poller Backoff**:
    - `services/WhatsAppService.qml` applies exponential backoff (relaxed from 12s to 60s) when the OpenWA container or session is offline.
+5. **Offline Network Poller Suspension (Jira, GitHub PRs, Gemini AGY)**:
+   - When the system disconnects from the internet (`NetworkService.isOnline` becomes `false` via `nmcli networking connectivity`), polling timers in `JiraService.qml`, `GithubService.qml`, and `AntigravityService.qml` are immediately paused (`running: NetworkService.isOnline`).
+   - Manual or scheduled `refresh()` calls instantly short-circuit without spawning background network processes, blocking on HTTP socket timeouts, or generating error spam.
+   - In `AntigravityService.qml`, background detached `agy --print /quota` calls are strictly blocked while offline, preventing failed quota network calls.
+   - Native Rust tools (`bin/jira_tasks`, `bin/github_prs`, `bin/antigravity_status`) perform native connectivity checks and return cached models with `"offline": true` in <1ms without network I/O.
+   - When network connectivity is restored (`NetworkService.isOnline` transitions to `true`), services automatically resume polling and trigger an immediate fresh query without user intervention.
+   - Desktop widgets (`JiraWidget.qml`, `PullRequestsWidget.qml`) gracefully display amber "Offline" indicators and cached item counters.
 
 ---
 

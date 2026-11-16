@@ -73,15 +73,40 @@ Singleton {
     Timer {
         id: pollTimer
         interval: 120000 // Refresh every 2 minutes
-        running: true
+        running: NetworkService.isOnline
         repeat: true
-        triggeredOnStart: true
+        triggeredOnStart: false
         onTriggered: {
+            if (NetworkService.isOnline) {
+                root.refresh(false);
+            }
+        }
+    }
+
+    Connections {
+        target: NetworkService
+        function onIsOnlineChanged() {
+            if (NetworkService.isOnline) {
+                root.refresh(false);
+            } else {
+                root.status = "offline";
+                root.loading = false;
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        if (NetworkService.isOnline) {
             root.refresh(false);
         }
     }
 
     function refresh(force) {
+        if (!NetworkService.isOnline) {
+            root.status = "offline";
+            root.loading = false;
+            return;
+        }
         if (jiraProc.running) return;
         root.loading = true;
         if (force) {

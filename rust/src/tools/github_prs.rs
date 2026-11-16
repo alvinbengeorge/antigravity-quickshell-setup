@@ -327,6 +327,18 @@ fn fetch_prs() -> Value {
     })
 }
 
+fn is_system_online() -> bool {
+    if let Ok(out) = Command::new("nmcli").args(["networking", "connectivity"]).output() {
+        let text = String::from_utf8_lossy(&out.stdout).trim().to_lowercase();
+        return text == "full";
+    }
+    if let Ok(out) = Command::new("ip").args(["-4", "route", "show", "default"]).output() {
+        let text = String::from_utf8_lossy(&out.stdout);
+        return text.contains("default via");
+    }
+    false
+}
+
 pub fn run(args: &[String]) {
     let force = args.iter().any(|a| a == "--force");
     let now = SystemTime::now()
@@ -356,6 +368,24 @@ pub fn run(args: &[String]) {
                 return;
             }
         }
+    }
+
+    if !is_system_online() {
+        if let Some(mut c) = cached {
+            if let Value::Object(ref mut map) = c {
+                map.insert("offline".to_string(), Value::Bool(true));
+            }
+            println!("{}", c);
+            return;
+        }
+        println!("{}", json!({
+            "status": "offline",
+            "count": 0,
+            "prs": [],
+            "error": "Offline (no internet connection)",
+            "last_updated": "Offline"
+        }));
+        return;
     }
 
     let data = fetch_prs();

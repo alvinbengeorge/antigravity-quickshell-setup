@@ -98,10 +98,12 @@ PanelWindow {
                         color: Theme.textPrimary
                     }
                     Text {
-                        text: GithubService.loading ? "Refreshing..." : (GithubService.count + " open • " + GithubService.lastUpdated)
+                        text: !NetworkService.isOnline
+                              ? ("Offline • " + GithubService.count + " cached")
+                              : (GithubService.loading ? "Refreshing..." : (GithubService.count + " open • " + GithubService.lastUpdated))
                         font.family: Theme.fontMono
                         font.pixelSize: 8
-                        color: Theme.textMuted
+                        color: !NetworkService.isOnline ? Theme.accentAmber : Theme.textMuted
                     }
                 }
 
@@ -113,17 +115,17 @@ PanelWindow {
                     implicitWidth: countText.implicitWidth + 10
                     radius: 9
                     color: Theme.bgPill
-                    border.color: GithubService.count > 0 ? Theme.accentEmerald : Theme.borderDim
+                    border.color: !NetworkService.isOnline ? Theme.accentAmber : (GithubService.count > 0 ? Theme.accentEmerald : Theme.borderDim)
                     border.width: 1
 
                     Text {
                         id: countText
                         anchors.centerIn: parent
-                        text: GithubService.count + " OPEN"
+                        text: !NetworkService.isOnline ? (GithubService.count + " CACHED") : (GithubService.count + " OPEN")
                         font.family: Theme.fontMono
                         font.pixelSize: 8
                         font.bold: true
-                        color: GithubService.count > 0 ? Theme.accentEmerald : Theme.textMuted
+                        color: !NetworkService.isOnline ? Theme.accentAmber : (GithubService.count > 0 ? Theme.accentEmerald : Theme.textMuted)
                     }
                 }
 

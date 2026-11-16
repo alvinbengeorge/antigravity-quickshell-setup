@@ -42,6 +42,8 @@ pub struct BtDevice {
 #[serde(rename_all = "camelCase")]
 pub struct NetworkReport {
     pub status: String,
+    pub is_online: bool,
+    pub connectivity: String,
     pub wifi_enabled: bool,
     pub active_ssid: String,
     pub active_wifi: ActiveWifi,
@@ -50,6 +52,23 @@ pub struct NetworkReport {
     pub bt_devices: Vec<BtDevice>,
     pub connected_bt_count: usize,
     pub primary_connected_bt: Option<BtDevice>,
+}
+
+fn get_connectivity(active_ip: &str) -> (bool, String) {
+    if let Ok(out) = Command::new("nmcli").args(["networking", "connectivity"]).output() {
+        let text = String::from_utf8_lossy(&out.stdout).trim().to_lowercase();
+        let is_online = text == "full";
+        return (is_online, text);
+    }
+    if !active_ip.is_empty() {
+        if let Ok(out) = Command::new("ip").args(["-4", "route", "show", "default"]).output() {
+            let text = String::from_utf8_lossy(&out.stdout);
+            if text.contains("default via") {
+                return (true, "full".to_string());
+            }
+        }
+    }
+    (false, "none".to_string())
 }
 
 fn get_wifi_details() -> (bool, ActiveWifi, Vec<WifiNetwork>) {
@@ -341,8 +360,12 @@ pub fn run(args: &[String]) {
     let connected_bt: Vec<BtDevice> = bt_devices.iter().filter(|d| d.connected).cloned().collect();
     let primary = connected_bt.first().cloned();
 
+    let (is_online, connectivity) = get_connectivity(&active_wifi.ip);
+
     let report = NetworkReport {
         status: "ok".to_string(),
+        is_online,
+        connectivity,
         wifi_enabled,
         active_ssid: active_wifi.ssid.clone(),
         active_wifi,

@@ -475,10 +475,10 @@ PanelWindow {
                 spacing: 4
 
                 Text {
-                    text: "Click card to open  •  " + JiraService.count + " total  •  Updated " + JiraService.lastUpdated
+                    text: (!NetworkService.isOnline ? "Offline • " : "") + "Click card to open  •  " + JiraService.count + (!NetworkService.isOnline ? " cached" : " total") + "  •  " + (NetworkService.isOnline ? ("Updated " + JiraService.lastUpdated) : "Paused")
                     font.family: Theme.fontMono
                     font.pixelSize: 8
-                    color: Theme.textMuted
+                    color: !NetworkService.isOnline ? Theme.accentAmber : Theme.textMuted
                 }
 
                 Item { Layout.fillWidth: true }

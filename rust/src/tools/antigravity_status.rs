@@ -96,7 +96,23 @@ pub struct AntigravityStatus {
     pub claude_weekly_desc: String,
 }
 
+fn is_system_online() -> bool {
+    if let Ok(out) = Command::new("nmcli").args(["networking", "connectivity"]).output() {
+        let text = String::from_utf8_lossy(&out.stdout).trim().to_lowercase();
+        return text == "full";
+    }
+    if let Ok(out) = Command::new("ip").args(["-4", "route", "show", "default"]).output() {
+        let text = String::from_utf8_lossy(&out.stdout);
+        return text.contains("default via");
+    }
+    false
+}
+
 fn do_update_quota() {
+    if !is_system_online() {
+        return;
+    }
+
     let lock_path = Path::new(LOCK_FILE);
     if lock_path.exists() {
         let mtime = get_mtime(lock_path);
@@ -242,7 +258,7 @@ fn read_quota_cache(force_refresh: bool) -> QuotaData {
         }
     };
 
-    if need_refresh {
+    if need_refresh && is_system_online() {
         trigger_quota_update_detached();
     }
 
