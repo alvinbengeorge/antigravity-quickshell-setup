@@ -20,10 +20,9 @@ PanelWindow {
     }
 
     margins {
-        // Position below DesktopClock (which ends at y=580) with a 16px gap, or at 76 if clock is hidden
-        top: (!root.alignLeft && ShellState.desktopClockVisible) ? 596 : 76
+        top: 76
         left: root.alignLeft ? 48 : 0
-        right: !root.alignLeft ? 48 : 0
+        right: !root.alignLeft ? (ShellState.desktopClockVisible ? (48 + 360 + 16) : 48) : 0
     }
 
     implicitWidth: 300

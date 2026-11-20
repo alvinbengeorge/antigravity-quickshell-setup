@@ -416,23 +416,25 @@ Omnibar (<kbd>Super</kbd> + <kbd>K</kbd>) serves as a unified command bar:
   - Time in city: `time in tokyo`, `time in london`, `time in nyc`.
   - Pressing <kbd>Enter</kbd> copies calculation results directly to clipboard (`wl-copy`).
 
-### 10.3 Native Calendar & Agenda System (`AgendaWidget.qml`)
-Displays live personal and shared calendar events with zero overhead:
+### 10.3 Native Calendar & Agenda System (`DesktopClock.qml`)
+Integrated directly into the desktop clock and calendar card with zero clutter:
 * **Configuration**: `~/.config/quickshell/calendars.json`:
   ```json
   [
     {
-      "name": "LEEE & ALVEE",
+      "name": "Calendar",
       "url": "https://calendar.google.com/calendar/ical/.../basic.ics",
       "color": "#f6c177"
     }
   ]
   ```
 * **Features**:
-  - **Hero Next Event Banner**: Highlights currently active meeting or upcoming event with countdown (`"STARTS IN 2h"` / `"HAPPENING NOW"`).
-  - **Meeting Link Auto-Detection**: Automatically parses Google Meet, Zoom, and Teams URLs; displays 1-click **"Join Call ↗"** button.
-  - **Today's Timeline**: Chronologically sorted cards with calendar color pill, start time, title, and venue/location.
-  - **Upcoming Preview**: Next 3 events across upcoming 7 days.
+  - **Expandable Integrated Schedule**: Nested directly beneath the monthly calendar grid in `DesktopClock.qml`.
+  - **Collapsed Active Ticker**: Displays a sleek one-liner pill (`● 12:00 PM: Dentist`) under the date when the calendar grid is collapsed; clicking it expands the schedule.
+  - **Notification Pip**: Small amber counter badge on the clock's calendar icon showing the number of events scheduled for today.
+  - **Today's Timeline**: Chronologically sorted list showing start/end times, event title, venue, and emerald "NOW" indicator for current events.
+  - **Upcoming Preview**: Next 2 events across the upcoming week.
+  - **Side-by-Side Positioning**: `PullRequestsWidget.qml` sits cleanly beside `DesktopClock.qml` (`top: 76`), preventing any overlap whether the calendar is expanded or collapsed.
   - **IPC Control**: `qs -c antigravity ipc call agenda toggle` or `refresh`.
   - **Zero-Idle Cache**: 5-minute disk cache (`/tmp/quickshell_calendar_cache.json`) with automatic offline detection.
 

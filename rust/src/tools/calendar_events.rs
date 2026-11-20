@@ -65,9 +65,9 @@ fn get_config_calendars() -> Vec<CalendarConfig> {
         }
     }
 
-    // Default fallback to user's LEEE & ALVEE calendar
+    // Default fallback to user's Google Calendar
     vec![CalendarConfig {
-        name: "LEEE & ALVEE".to_string(),
+        name: "Calendar".to_string(),
         url: "https://calendar.google.com/calendar/ical/3ea44f42de0e4107787476156fd9c2c07eb52f22f7fb8ce2b8e86b7910d1963d%40group.calendar.google.com/private-daca012c4d07880e50e8d909b0c1571b/basic.ics".to_string(),
         color: Some("#f6c177".to_string()),
     }]

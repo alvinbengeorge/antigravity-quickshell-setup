@@ -287,6 +287,30 @@ PanelWindow {
                             : (calMouse.containsMouse ? Theme.textPrimary : Theme.textMuted)
                     }
 
+                    // Calendar Event Notification Pip
+                    Rectangle {
+                        visible: CalendarService.count > 0
+                        anchors.top: parent.top
+                        anchors.right: parent.right
+                        anchors.topMargin: -3
+                        anchors.rightMargin: -3
+                        width: 14
+                        height: 14
+                        radius: 7
+                        color: Theme.accentAmber
+                        border.color: Theme.bgCard
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: CalendarService.count
+                            font.family: Theme.fontMono
+                            font.pixelSize: 8
+                            font.bold: true
+                            color: Theme.bgBase
+                        }
+                    }
+
                     MouseArea {
                         id: calMouse
                         anchors.fill: parent
@@ -409,6 +433,53 @@ PanelWindow {
                     font.family: Theme.fontFamily
                     font.pixelSize: 14
                     color: Theme.textSecondary
+                }
+
+                // Compact Next Event Ticker (visible when calendar is collapsed)
+                Rectangle {
+                    visible: !root.showCalendar && CalendarService.nextEvent !== null
+                    Layout.alignment: Qt.AlignHCenter
+                    height: 22
+                    implicitWidth: Math.min(320, tickerRow.implicitWidth + 16)
+                    radius: 11
+                    color: tickerMouse.containsMouse ? Theme.bgHover : Theme.bgPill
+                    border.color: (CalendarService.nextEvent && CalendarService.nextEvent.is_now) ? Theme.accentEmerald : Theme.borderDim
+                    border.width: 1
+
+                    RowLayout {
+                        id: tickerRow
+                        anchors.centerIn: parent
+                        spacing: 6
+
+                        Rectangle {
+                            width: 6
+                            height: 6
+                            radius: 3
+                            color: (CalendarService.nextEvent && CalendarService.nextEvent.is_now) ? Theme.accentEmerald : Theme.accentAmber
+                        }
+
+                        Text {
+                            text: {
+                                const ev = CalendarService.nextEvent;
+                                if (!ev) return "";
+                                const timePrefix = ev.is_now ? "Now: " : (ev.is_all_day ? "Today: " : (ev.time_str.split(" - ")[0] + ": "));
+                                return timePrefix + ev.title;
+                            }
+                            font.family: Theme.fontMono
+                            font.pixelSize: 10
+                            color: tickerMouse.containsMouse ? Theme.textPrimary : Theme.textSecondary
+                            elide: Text.ElideRight
+                            Layout.maximumWidth: 260
+                        }
+                    }
+
+                    MouseArea {
+                        id: tickerMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: ShellState.clockShowCalendar = true
+                    }
                 }
             }
 
@@ -604,6 +675,304 @@ PanelWindow {
                                     color: isToday ? Theme.textOnAccent : Theme.textPrimary
                                 }
                             }
+                        }
+                    }
+                }
+
+                // ── Divider ───────────────────────────────────────────────
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 1
+                    color: Theme.borderDim
+                }
+
+                // ── Today's Schedule Header ───────────────────────────────
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+
+                    Rectangle {
+                        width: 6
+                        height: 6
+                        radius: 3
+                        color: CalendarService.hasEventsToday ? Theme.accentAmber : Theme.textMuted
+                    }
+
+                    Text {
+                        text: "TODAY'S SCHEDULE"
+                        font.family: Theme.fontMono
+                        font.pixelSize: 10
+                        font.bold: true
+                        color: Theme.accentAmber
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    // Count Badge
+                    Rectangle {
+                        height: 18
+                        implicitWidth: schedCountTxt.implicitWidth + 10
+                        radius: 9
+                        color: Theme.bgPill
+                        border.color: CalendarService.count > 0 ? Theme.accentAmber : Theme.borderDim
+                        border.width: 1
+
+                        Text {
+                            id: schedCountTxt
+                            anchors.centerIn: parent
+                            text: CalendarService.loading ? "SYNCING..." : (CalendarService.count + " EVENTS")
+                            font.family: Theme.fontMono
+                            font.pixelSize: 8
+                            font.bold: true
+                            color: CalendarService.count > 0 ? Theme.accentAmber : Theme.textMuted
+                        }
+                    }
+
+                    // Refresh Button
+                    Rectangle {
+                        width: 18
+                        height: 18
+                        radius: 4
+                        color: refCalMouse.containsMouse ? Theme.bgHover : "transparent"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "↻"
+                            font.pixelSize: 11
+                            color: refCalMouse.containsMouse ? Theme.accentAmber : Theme.textMuted
+
+                            RotationAnimation on rotation {
+                                running: CalendarService.loading
+                                loops: Animation.Infinite
+                                from: 0; to: 360
+                                duration: 1000
+                            }
+                        }
+
+                        MouseArea {
+                            id: refCalMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: CalendarService.refresh(true)
+                        }
+                    }
+                }
+
+                // ── Today's Events List ──────────────────────────────────
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+                    visible: CalendarService.todayEvents.length > 0
+
+                    Repeater {
+                        model: CalendarService.todayEvents
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: evCol.implicitHeight + 14
+                            radius: 8
+                            color: evMouse.containsMouse
+                                ? Qt.rgba(Theme.bgHover.r, Theme.bgHover.g, Theme.bgHover.b, 0.8)
+                                : Qt.rgba(Theme.bgCard.r, Theme.bgCard.g, Theme.bgCard.b, 0.5)
+                            border.color: modelData.is_now
+                                ? Theme.accentEmerald
+                                : (evMouse.containsMouse ? Theme.accentAmber : Theme.borderDim)
+                            border.width: 1
+
+                            Behavior on border.color { ColorAnimation { duration: 150 } }
+                            Behavior on color { ColorAnimation { duration: 150 } }
+
+                            RowLayout {
+                                id: evCol
+                                anchors.fill: parent
+                                anchors.margins: 8
+                                spacing: 8
+
+                                // Color pill
+                                Rectangle {
+                                    width: 3
+                                    Layout.fillHeight: true
+                                    radius: 1.5
+                                    color: modelData.calendar_color || Theme.accentAmber
+                                }
+
+                                // Event Info
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 2
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 6
+
+                                        Text {
+                                            text: modelData.title
+                                            font.family: Theme.fontFamily
+                                            font.pixelSize: 11
+                                            font.bold: true
+                                            color: Theme.textPrimary
+                                            Layout.fillWidth: true
+                                            elide: Text.ElideRight
+                                        }
+
+                                        // Status Pill (NOW / Starts in)
+                                        Rectangle {
+                                            visible: modelData.is_now || (!modelData.is_all_day && modelData.starts_in_mins > 0 && modelData.starts_in_mins <= 180)
+                                            height: 14
+                                            implicitWidth: statusTxt.implicitWidth + 8
+                                            radius: 3
+                                            color: modelData.is_now ? Theme.accentEmerald : Qt.rgba(Theme.accentSky.r, Theme.accentSky.g, Theme.accentSky.b, 0.2)
+
+                                            Text {
+                                                id: statusTxt
+                                                anchors.centerIn: parent
+                                                text: modelData.is_now ? "NOW" : (modelData.starts_in_mins <= 60 ? (modelData.starts_in_mins + "m") : (Math.floor(modelData.starts_in_mins / 60) + "h"))
+                                                font.family: Theme.fontMono
+                                                font.pixelSize: 8
+                                                font.bold: true
+                                                color: modelData.is_now ? Theme.bgBase : Theme.accentSky
+                                            }
+                                        }
+                                    }
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 6
+
+                                        Text {
+                                            text: modelData.time_str
+                                            font.family: Theme.fontMono
+                                            font.pixelSize: 9
+                                            color: Theme.accentSky
+                                        }
+
+                                        Text {
+                                            visible: modelData.location && modelData.location.length > 0
+                                            text: "• " + modelData.location
+                                            font.family: Theme.fontFamily
+                                            font.pixelSize: 9
+                                            color: Theme.textMuted
+                                            Layout.fillWidth: true
+                                            elide: Text.ElideRight
+                                        }
+                                    }
+                                }
+                            }
+
+                            MouseArea {
+                                id: evMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: CalendarService.openCalendar()
+                            }
+                        }
+                    }
+                }
+
+                // Empty State
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 34
+                    radius: 8
+                    visible: CalendarService.todayEvents.length === 0
+                    color: Theme.bgPill
+                    border.color: Theme.borderDim
+                    border.width: 1
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "🎉 No events scheduled for today"
+                        font.family: Theme.fontMono
+                        font.pixelSize: 9
+                        color: Theme.textMuted
+                    }
+                }
+
+                // ── Upcoming Preview (Next 2 Days) ─────────────────────────
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+                    visible: CalendarService.upcomingEvents.length > 0
+
+                    Text {
+                        text: "UPCOMING"
+                        font.family: Theme.fontMono
+                        font.pixelSize: 9
+                        font.bold: true
+                        color: Theme.textMuted
+                        Layout.topMargin: 4
+                    }
+
+                    Repeater {
+                        model: CalendarService.upcomingEvents.slice(0, 2)
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+
+                            Rectangle {
+                                width: 4
+                                height: 4
+                                radius: 2
+                                color: Theme.accentViolet
+                            }
+
+                            Text {
+                                text: modelData.date_str
+                                font.family: Theme.fontMono
+                                font.pixelSize: 9
+                                font.bold: true
+                                color: Theme.accentViolet
+                            }
+
+                            Text {
+                                text: modelData.title
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 10
+                                color: Theme.textSecondary
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                text: modelData.time_str
+                                font.family: Theme.fontMono
+                                font.pixelSize: 8
+                                color: Theme.textMuted
+                            }
+                        }
+                    }
+                }
+
+                // ── Footer ────────────────────────────────────────────────
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+
+                    Text {
+                        text: "Calendar • " + (CalendarService.status === "offline" ? "Offline" : "Synced")
+                        font.family: Theme.fontMono
+                        font.pixelSize: 9
+                        color: Theme.textMuted
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    Text {
+                        text: "Google Calendar ↗"
+                        font.family: Theme.fontMono
+                        font.pixelSize: 9
+                        font.bold: true
+                        color: openCalM.containsMouse ? Theme.accentCyan : Theme.textMuted
+
+                        MouseArea {
+                            id: openCalM
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: CalendarService.openCalendar()
                         }
                     }
                 }

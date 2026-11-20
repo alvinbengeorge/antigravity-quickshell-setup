@@ -33,7 +33,6 @@ Singleton {
     property bool desktopAntigravityVisible: true
     property bool desktopPullRequestsVisible: true
     property bool desktopJiraVisible: true
-    property bool desktopAgendaVisible: true
     property real antigravityWidgetHeight: 496
     property bool use24Hour: false
     property bool clockShowCalendar: true
@@ -180,10 +179,6 @@ Singleton {
 
     function toggleDesktopJira() {
         root.desktopJiraVisible = !root.desktopJiraVisible;
-    }
-
-    function toggleDesktopAgenda() {
-        root.desktopAgendaVisible = !root.desktopAgendaVisible;
     }
 
     function toggleControlCenter() {
@@ -538,9 +533,9 @@ Singleton {
 
     IpcHandler {
         target: "agenda"
-        function toggle(): void { root.toggleDesktopAgenda(); }
-        function show(): void { root.desktopAgendaVisible = true; }
-        function hide(): void { root.desktopAgendaVisible = false; }
+        function toggle(): void { root.clockShowCalendar = !root.clockShowCalendar; }
+        function show(): void { root.clockShowCalendar = true; }
+        function hide(): void { root.clockShowCalendar = false; }
         function refresh(): void { CalendarService.refresh(true); }
     }
 
