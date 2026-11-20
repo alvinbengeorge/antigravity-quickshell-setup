@@ -35,6 +35,7 @@ Singleton {
     property bool desktopPullRequestsVisible: true
     property bool desktopJiraVisible: true
     property real antigravityWidgetHeight: 496
+    property real desktopClockHeight: 380
     property bool use24Hour: false
     property bool clockShowCalendar: true
     property string fontPreset: "cupertino"

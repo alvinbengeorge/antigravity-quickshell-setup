@@ -70,6 +70,12 @@ PanelWindow {
     implicitWidth: 360
     implicitHeight: mainCard.implicitHeight
 
+    onImplicitHeightChanged: {
+        if (implicitHeight > 100) {
+            ShellState.desktopClockHeight = implicitHeight;
+        }
+    }
+
     color: "transparent"
 
     exclusionMode: ExclusionMode.Ignore

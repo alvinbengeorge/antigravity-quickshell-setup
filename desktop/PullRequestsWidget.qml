@@ -20,13 +20,17 @@ PanelWindow {
     }
 
     margins {
-        // Position side-by-side with DesktopClock at top: 76
-        top: 76
+        // Position directly below DesktopClock
+        top: (!root.alignLeft && ShellState.desktopClockVisible) ? (76 + ShellState.desktopClockHeight + 14) : 76
         left: root.alignLeft ? 48 : 0
-        right: !root.alignLeft ? (ShellState.desktopClockVisible ? (48 + 360 + 16) : 48) : 0
+        right: !root.alignLeft ? 48 : 0
     }
 
-    implicitWidth: 300
+    Behavior on margins.top {
+        NumberAnimation { duration: 250; easing.type: Easing.OutQuad }
+    }
+
+    implicitWidth: 360
     implicitHeight: mainCard.implicitHeight
 
     color: "transparent"
@@ -38,9 +42,9 @@ PanelWindow {
     // Main Card Surface
     Rectangle {
         id: mainCard
-        width: 300
+        width: 360
         implicitHeight: contentCol.implicitHeight + 24
-        radius: 14
+        radius: 16
         color: ShellState.glassEnabled ? "transparent" : Theme.bgSurfaceGlass
         border.color: ShellState.glassEnabled ? "transparent" : Theme.borderGlow
         border.width: ShellState.glassEnabled ? 0 : 1
@@ -239,7 +243,7 @@ PanelWindow {
                 id: prListContainer
                 visible: GithubService.count > 0
                 Layout.fillWidth: true
-                Layout.preferredHeight: visible ? Math.min(250, GithubService.prs.length * 52) : 0
+                Layout.preferredHeight: visible ? Math.min(190, GithubService.prs.length * 48) : 0
                 implicitHeight: Layout.preferredHeight
 
                 ListView {
