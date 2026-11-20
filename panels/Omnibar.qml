@@ -702,37 +702,55 @@ PanelWindow {
                             }
                         }
 
-                        // Big Hero Result
+                        // Big Hero Result (auto-scaled and constrained to prevent card overflow)
                         Text {
                             text: omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.result : ""
                             font.family: Theme.fontMono
-                            font.pixelSize: 26
+                            font.pixelSize: {
+                                const sr = omnibarWindow.spotlightResult;
+                                if (!sr) return 22;
+                                if (sr.mode === "webjump") return 13;
+                                if (sr.result && sr.result.length > 14) return 18;
+                                return 24;
+                            }
                             font.bold: true
-                            color: Theme.accentEmerald
+                            color: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.url) ? Theme.accentSky : Theme.accentEmerald
+                            elide: Text.ElideMiddle
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.mode === "webjump") ? 280 : 230
+                            horizontalAlignment: Text.AlignRight
                         }
 
-                        // Copy Pill Action
+                        // Copy / Open Action Button (stays strictly inside card)
                         Rectangle {
-                            height: 32
+                            height: 30
                             implicitWidth: copyPillRow.implicitWidth + 16
                             radius: 8
-                            color: copyM.containsMouse ? Theme.accentEmerald : Theme.bgPill
-                            border.color: Theme.accentEmerald
+                            color: {
+                                const isLink = (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.url);
+                                const actCol = isLink ? Theme.accentSky : Theme.accentEmerald;
+                                return copyM.containsMouse ? actCol : Theme.bgPill;
+                            }
+                            border.color: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.url) ? Theme.accentSky : Theme.accentEmerald
                             border.width: 1
 
                             RowLayout {
                                 id: copyPillRow
                                 anchors.centerIn: parent
-                                spacing: 6
+                                spacing: 5
                                 Text {
                                     text: "↵"
                                     font.family: Theme.fontMono
                                     font.pixelSize: 11
                                     font.bold: true
-                                    color: copyM.containsMouse ? Theme.textOnAccent : Theme.accentEmerald
+                                    color: {
+                                        const isLink = (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.url);
+                                        const actCol = isLink ? Theme.accentSky : Theme.accentEmerald;
+                                        return copyM.containsMouse ? Theme.textOnAccent : actCol;
+                                    }
                                 }
                                 Text {
-                                    text: "Copy"
+                                    text: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.url) ? "Open Link" : "Copy"
                                     font.family: Theme.fontFamily
                                     font.pixelSize: 11
                                     font.bold: true

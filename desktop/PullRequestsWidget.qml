@@ -20,6 +20,7 @@ PanelWindow {
     }
 
     margins {
+        // Position side-by-side with DesktopClock at top: 76
         top: 76
         left: root.alignLeft ? 48 : 0
         right: !root.alignLeft ? (ShellState.desktopClockVisible ? (48 + 360 + 16) : 48) : 0

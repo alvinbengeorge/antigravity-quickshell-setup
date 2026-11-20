@@ -610,38 +610,95 @@ function evaluateBaseConversion(raw) {
 function evaluateWebJump(raw) {
     const q = raw.trim();
 
-    // GitHub Search: @gh <query> or gh <query>
-    if (/^(@gh|gh)\s+/i.test(q)) {
-        const term = q.replace(/^(@gh|gh)\s+/i, "").trim();
-        const url = term.length > 0 ? ("https://github.com/search?q=" + encodeURIComponent(term)) : "https://github.com";
+    // GitHub Quick Jump: @gh <query>, @gh prs, @gh issues, @gh <user/repo>
+    if (/^(@gh|gh)(\s+|$)/i.test(q)) {
+        const term = q.replace(/^(@gh|gh)\s*/i, "").trim();
+        let url = "https://github.com";
+        let title = "GITHUB SEARCH";
+        let expr = "Open GitHub.com";
+        let res = "github.com";
+
+        if (term.toLowerCase() === "prs" || term.toLowerCase() === "pulls") {
+            url = "https://github.com/pulls";
+            title = "GITHUB PULL REQUESTS";
+            expr = "Open your GitHub Pull Requests";
+            res = "github.com/pulls";
+        } else if (term.toLowerCase() === "issues") {
+            url = "https://github.com/issues";
+            title = "GITHUB ISSUES";
+            expr = "Open your assigned GitHub Issues";
+            res = "github.com/issues";
+        } else if (term.toLowerCase() === "notifications" || term.toLowerCase() === "notifs") {
+            url = "https://github.com/notifications";
+            title = "GITHUB NOTIFICATIONS";
+            expr = "Open GitHub notifications inbox";
+            res = "github.com/notifications";
+        } else if (/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(term)) {
+            // Direct repo jump: e.g. @gh quickshell-mirror/quickshell
+            url = "https://github.com/" + term;
+            title = "GITHUB REPOSITORY";
+            expr = "Direct jump to " + term;
+            res = "github.com/" + term;
+        } else if (term.length > 0) {
+            url = "https://github.com/search?q=" + encodeURIComponent(term);
+            title = "GITHUB SEARCH";
+            expr = "Search GitHub for '" + term + "'";
+            res = "search: " + term;
+        }
+
         return {
             mode: "webjump",
             icon: "⎇",
             lucide: "git-pull-request",
-            title: "GITHUB SEARCH",
-            expression: term.length > 0 ? ("Search GitHub for '" + term + "'") : "Open GitHub.com",
-            result: term.length > 0 ? ("github.com/search?q=" + term) : "github.com",
+            title: title,
+            expression: expr,
+            result: res,
             url: url,
             copyValue: url
         };
     }
 
-    // Jira Quick Jump: @jira <key/query> or jira <query>
-    if (/^(@jira|jira)\s+/i.test(q)) {
-        const term = q.replace(/^(@jira|jira)\s+/i, "").trim();
-        const isIssue = /^[a-zA-Z]+-\d+$/i.test(term);
-        const url = isIssue
-            ? ("https://askmeidentity.atlassian.net/browse/" + term.toUpperCase())
-            : (term.length > 0
-                ? ("https://askmeidentity.atlassian.net/jira/your-work")
-                : "https://askmeidentity.atlassian.net");
+    // Jira Quick Jump: @jira <key/query>, @jira 29, @jira ABT-29, @jira board, @jira work
+    if (/^(@jira|jira)(\s+|$)/i.test(q)) {
+        const term = q.replace(/^(@jira|jira)\s*/i, "").trim();
+        const cleanTerm = /^\d+$/.test(term) ? ("ABT-" + term) : term;
+        const isIssue = /^[a-zA-Z]+-\d+$/i.test(cleanTerm);
+
+        let url = "https://askmeidentity.atlassian.net";
+        let title = "OPEN JIRA WORK";
+        let expr = "Open AskMeIdentity Jira";
+        let res = "askmeidentity.atlassian.net";
+
+        if (isIssue) {
+            const issueKey = cleanTerm.toUpperCase();
+            url = "https://askmeidentity.atlassian.net/browse/" + issueKey;
+            title = "JUMP TO ISSUE " + issueKey;
+            expr = "Direct jump to AskMeIdentity issue " + issueKey;
+            res = "browse/" + issueKey;
+        } else if (term.toLowerCase() === "my" || term.toLowerCase() === "work" || term.toLowerCase() === "tasks") {
+            url = "https://askmeidentity.atlassian.net/jira/your-work";
+            title = "JIRA ASSIGNED WORK";
+            expr = "Open your assigned Jira tasks & sprints";
+            res = "jira/your-work";
+        } else if (term.toLowerCase() === "boards" || term.toLowerCase() === "board") {
+            url = "https://askmeidentity.atlassian.net/jira/software/projects/ABT/boards";
+            title = "JIRA SPRINT BOARD";
+            expr = "Open AskMeIdentity Agile Board";
+            res = "jira/boards";
+        } else if (term.length > 0) {
+            url = "https://askmeidentity.atlassian.net/issues/?jql=text%20~%20%22" + encodeURIComponent(term) + "%22";
+            title = "SEARCH JIRA: " + term.toUpperCase();
+            expr = "Search AskMeIdentity issues for '" + term + "'";
+            res = "search: " + term;
+        }
+
         return {
             mode: "webjump",
             icon: "🎫",
             lucide: "check",
-            title: isIssue ? ("JUMP TO ISSUE " + term.toUpperCase()) : "OPEN JIRA WORK",
-            expression: isIssue ? ("Direct jump to AskMeIdentity issue " + term.toUpperCase()) : "Open AskMeIdentity Jira",
-            result: url,
+            title: title,
+            expression: expr,
+            result: res,
             url: url,
             copyValue: url
         };

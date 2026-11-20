@@ -26,9 +26,14 @@ PanelWindow {
     WlrLayershell.keyboardFocus: ShellState.controlCenterOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     property string activeTab: "controls"
+    property var now: new Date()
     onVisibleChanged: {
         if (visible) {
             mainFlickable.contentY = 0;
+            now = new Date();
+            if (ShellState.controlCenterTab) {
+                activeTab = ShellState.controlCenterTab;
+            }
         }
     }
 
@@ -2764,6 +2769,386 @@ PanelWindow {
                 Layout.fillWidth: true
                 spacing: 12
                 visible: controlCenterWindow.activeTab === "notifications"
+
+                // ── TODAY'S AGENDA & CALENDAR CARD ────────────────────────
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: calCardCol.implicitHeight + 20
+                    radius: 12
+                    color: Theme.bgCard
+                    border.color: Theme.borderDim
+                    border.width: 1
+
+                    ColumnLayout {
+                        id: calCardCol
+                        anchors.fill: parent
+                        anchors.margins: 12
+                        spacing: 10
+
+                        // Header
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+
+                            Icon {
+                                name: "calendar"
+                                size: 14
+                                color: Theme.accentAmber
+                            }
+
+                            Text {
+                                text: Qt.formatDate(controlCenterWindow.now, "MMMM yyyy").toUpperCase()
+                                font.family: Theme.fontMono
+                                font.pixelSize: 11
+                                font.bold: true
+                                color: Theme.accentSky
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            // Event Count Pill
+                            Rectangle {
+                                height: 18
+                                implicitWidth: countTxt.implicitWidth + 10
+                                radius: 9
+                                color: Theme.bgPill
+                                border.color: CalendarService.count > 0 ? Theme.accentAmber : Theme.borderDim
+                                border.width: 1
+
+                                Text {
+                                    id: countTxt
+                                    anchors.centerIn: parent
+                                    text: CalendarService.loading ? "SYNCING..." : (CalendarService.count + " TODAY")
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 8
+                                    font.bold: true
+                                    color: CalendarService.count > 0 ? Theme.accentAmber : Theme.textMuted
+                                }
+                            }
+
+                            // Refresh
+                            Rectangle {
+                                width: 18
+                                height: 18
+                                radius: 4
+                                color: calRefMouse.containsMouse ? Theme.bgHover : "transparent"
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "↻"
+                                    font.pixelSize: 11
+                                    color: calRefMouse.containsMouse ? Theme.accentAmber : Theme.textMuted
+
+                                    RotationAnimation on rotation {
+                                        running: CalendarService.loading
+                                        loops: Animation.Infinite
+                                        from: 0; to: 360
+                                        duration: 1000
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: calRefMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: CalendarService.refresh(true)
+                                }
+                            }
+                        }
+
+                        // Compact Month Days Grid
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 4
+
+                            // Weekday Initials
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 0
+
+                                Repeater {
+                                    model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+                                    Item {
+                                        Layout.fillWidth: true
+                                        height: 16
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: modelData
+                                            font.family: Theme.fontMono
+                                            font.pixelSize: 9
+                                            font.bold: true
+                                            color: (modelData === "Sa" || modelData === "Su") ? Theme.accentRose : Theme.textMuted
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Days Grid
+                            GridLayout {
+                                Layout.fillWidth: true
+                                columns: 7
+                                columnSpacing: 2
+                                rowSpacing: 2
+
+                                Repeater {
+                                    model: 42
+
+                                    delegate: Item {
+                                        Layout.fillWidth: true
+                                        height: 22
+
+                                        readonly property int currentYear: controlCenterWindow.now.getFullYear()
+                                        readonly property int currentMonth: controlCenterWindow.now.getMonth()
+                                        readonly property int todayDate: controlCenterWindow.now.getDate()
+                                        readonly property int rawFirstDay: new Date(currentYear, currentMonth, 1).getDay()
+                                        readonly property int firstDayOffset: (rawFirstDay + 6) % 7
+                                        readonly property int totalDaysInMonth: new Date(currentYear, currentMonth + 1, 0).getDate()
+                                        readonly property int dayNumber: index - firstDayOffset + 1
+                                        readonly property bool isCurrentMonthDay: (dayNumber >= 1 && dayNumber <= totalDaysInMonth)
+                                        readonly property bool isToday: isCurrentMonthDay && (dayNumber === todayDate)
+
+                                        Rectangle {
+                                            anchors.centerIn: parent
+                                            width: 20
+                                            height: 20
+                                            radius: 10
+                                            visible: isCurrentMonthDay
+                                            color: isToday ? Theme.accentAmber : "transparent"
+
+                                            Text {
+                                                anchors.centerIn: parent
+                                                text: isCurrentMonthDay ? dayNumber : ""
+                                                font.family: Theme.fontMono
+                                                font.pixelSize: 9
+                                                font.bold: isToday
+                                                color: isToday ? Theme.bgBase : Theme.textPrimary
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Divider
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 1
+                            color: Theme.borderDim
+                        }
+
+                        // Today's Events Timeline
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
+                            visible: CalendarService.todayEvents.length > 0
+
+                            Repeater {
+                                model: CalendarService.todayEvents
+
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    implicitHeight: ccEvRow.implicitHeight + 12
+                                    radius: 6
+                                    color: ccEvM.containsMouse ? Theme.bgHover : Theme.bgPill
+                                    border.color: modelData.is_now ? Theme.accentEmerald : Theme.borderDim
+                                    border.width: 1
+
+                                    RowLayout {
+                                        id: ccEvRow
+                                        anchors.fill: parent
+                                        anchors.margins: 8
+                                        spacing: 8
+
+                                        Rectangle {
+                                            width: 3
+                                            Layout.fillHeight: true
+                                            radius: 1.5
+                                            color: modelData.calendar_color || Theme.accentAmber
+                                        }
+
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 2
+
+                                            RowLayout {
+                                                Layout.fillWidth: true
+                                                spacing: 6
+
+                                                Text {
+                                                    text: modelData.title
+                                                    font.family: Theme.fontFamily
+                                                    font.pixelSize: 11
+                                                    font.bold: true
+                                                    color: Theme.textPrimary
+                                                    Layout.fillWidth: true
+                                                    elide: Text.ElideRight
+                                                }
+
+                                                Rectangle {
+                                                    visible: modelData.is_now || (!modelData.is_all_day && modelData.starts_in_mins > 0 && modelData.starts_in_mins <= 180)
+                                                    height: 14
+                                                    implicitWidth: ccNowTxt.implicitWidth + 8
+                                                    radius: 3
+                                                    color: modelData.is_now ? Theme.accentEmerald : Qt.rgba(Theme.accentSky.r, Theme.accentSky.g, Theme.accentSky.b, 0.2)
+
+                                                    Text {
+                                                        id: ccNowTxt
+                                                        anchors.centerIn: parent
+                                                        text: modelData.is_now ? "NOW" : (modelData.starts_in_mins <= 60 ? (modelData.starts_in_mins + "m") : (Math.floor(modelData.starts_in_mins / 60) + "h"))
+                                                        font.family: Theme.fontMono
+                                                        font.pixelSize: 8
+                                                        font.bold: true
+                                                        color: modelData.is_now ? Theme.bgBase : Theme.accentSky
+                                                    }
+                                                }
+                                            }
+
+                                            RowLayout {
+                                                Layout.fillWidth: true
+                                                spacing: 6
+
+                                                Text {
+                                                    text: modelData.time_str
+                                                    font.family: Theme.fontMono
+                                                    font.pixelSize: 9
+                                                    color: Theme.accentSky
+                                                }
+
+                                                Text {
+                                                    visible: modelData.location && modelData.location.length > 0
+                                                    text: "• " + modelData.location
+                                                    font.family: Theme.fontFamily
+                                                    font.pixelSize: 9
+                                                    color: Theme.textMuted
+                                                    Layout.fillWidth: true
+                                                    elide: Text.ElideRight
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        id: ccEvM
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: CalendarService.openCalendar()
+                                    }
+                                }
+                            }
+                        }
+
+                        // Empty State
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 30
+                            radius: 6
+                            visible: CalendarService.todayEvents.length === 0
+                            color: Theme.bgPill
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "🎉 No events scheduled for today"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 9
+                                color: Theme.textMuted
+                            }
+                        }
+
+                        // Upcoming Preview
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 4
+                            visible: CalendarService.upcomingEvents.length > 0
+
+                            Text {
+                                text: "UPCOMING THIS WEEK"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 9
+                                font.bold: true
+                                color: Theme.textMuted
+                            }
+
+                            Repeater {
+                                model: CalendarService.upcomingEvents.slice(0, 2)
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 6
+
+                                    Text {
+                                        text: modelData.date_str
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: 9
+                                        font.bold: true
+                                        color: Theme.accentViolet
+                                    }
+
+                                    Text {
+                                        text: modelData.title
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: 10
+                                        color: Theme.textSecondary
+                                        Layout.fillWidth: true
+                                        elide: Text.ElideRight
+                                    }
+
+                                    Text {
+                                        text: modelData.time_str
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: 8
+                                        color: Theme.textMuted
+                                    }
+                                }
+                            }
+                        }
+
+                        // Footer
+                        RowLayout {
+                            Layout.fillWidth: true
+
+                            Text {
+                                text: "Calendar • " + (CalendarService.status === "offline" ? "Offline" : "Synced")
+                                font.family: Theme.fontMono
+                                font.pixelSize: 9
+                                color: Theme.textMuted
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            Text {
+                                text: "Google Calendar ↗"
+                                font.family: Theme.fontMono
+                                font.pixelSize: 9
+                                font.bold: true
+                                color: ccOpenCalM.containsMouse ? Theme.accentCyan : Theme.textMuted
+
+                                MouseArea {
+                                    id: ccOpenCalM
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: CalendarService.openCalendar()
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ── SYSTEM NOTIFICATIONS SECTION HEADER ───────────────────
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+
+                    Text {
+                        text: "NOTIFICATIONS"
+                        font.family: Theme.fontMono
+                        font.pixelSize: 10
+                        font.bold: true
+                        color: Theme.textMuted
+                    }
+                }
 
                 // Subheader & Actions
                 RowLayout {

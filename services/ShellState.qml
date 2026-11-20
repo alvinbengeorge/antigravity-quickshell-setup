@@ -14,6 +14,7 @@ Singleton {
     property string omnibarInitialQuery: ""
     property bool clipboardOpen: false
     property bool controlCenterOpen: false
+    property string controlCenterTab: "controls"
     property bool wallpaperThemeDialogOpen: false
     property string wallpaperThemeTab: "wallpapers"
     property bool dockerOpen: false
@@ -442,6 +443,7 @@ Singleton {
         target: "controlCenter"
         function toggle(): void { root.toggleControlCenter(); }
         function show(): void { root.controlCenterOpen = true; }
+        function showTab(tab: string): void { root.controlCenterTab = tab; root.controlCenterOpen = true; }
         function hide(): void { root.controlCenterOpen = false; }
     }
 

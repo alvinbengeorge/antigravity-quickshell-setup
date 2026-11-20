@@ -316,7 +316,10 @@ PanelWindow {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: ShellState.clockShowCalendar = !ShellState.clockShowCalendar
+                        onClicked: {
+                            ShellState.controlCenterTab = "notifications";
+                            ShellState.controlCenterOpen = true;
+                        }
                     }
                 }
             }
@@ -434,53 +437,6 @@ PanelWindow {
                     font.pixelSize: 14
                     color: Theme.textSecondary
                 }
-
-                // Compact Next Event Ticker (visible when calendar is collapsed)
-                Rectangle {
-                    visible: !root.showCalendar && CalendarService.nextEvent !== null
-                    Layout.alignment: Qt.AlignHCenter
-                    height: 22
-                    implicitWidth: Math.min(320, tickerRow.implicitWidth + 16)
-                    radius: 11
-                    color: tickerMouse.containsMouse ? Theme.bgHover : Theme.bgPill
-                    border.color: (CalendarService.nextEvent && CalendarService.nextEvent.is_now) ? Theme.accentEmerald : Theme.borderDim
-                    border.width: 1
-
-                    RowLayout {
-                        id: tickerRow
-                        anchors.centerIn: parent
-                        spacing: 6
-
-                        Rectangle {
-                            width: 6
-                            height: 6
-                            radius: 3
-                            color: (CalendarService.nextEvent && CalendarService.nextEvent.is_now) ? Theme.accentEmerald : Theme.accentAmber
-                        }
-
-                        Text {
-                            text: {
-                                const ev = CalendarService.nextEvent;
-                                if (!ev) return "";
-                                const timePrefix = ev.is_now ? "Now: " : (ev.is_all_day ? "Today: " : (ev.time_str.split(" - ")[0] + ": "));
-                                return timePrefix + ev.title;
-                            }
-                            font.family: Theme.fontMono
-                            font.pixelSize: 10
-                            color: tickerMouse.containsMouse ? Theme.textPrimary : Theme.textSecondary
-                            elide: Text.ElideRight
-                            Layout.maximumWidth: 260
-                        }
-                    }
-
-                    MouseArea {
-                        id: tickerMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: ShellState.clockShowCalendar = true
-                    }
-                }
             }
 
             // Divider Line
@@ -580,113 +536,20 @@ PanelWindow {
                 }
             }
 
-            // Expandable Mini Calendar Grid
-            ColumnLayout {
-                id: calendarSection
+            // ── Divider ───────────────────────────────────────────────
+            Rectangle {
                 Layout.fillWidth: true
-                visible: root.showCalendar
-                Layout.preferredHeight: root.showCalendar ? implicitHeight : 0
-                clip: true
+                height: 1
+                color: Theme.borderDim
+            }
+
+            // ── Today's Schedule & Future Events ──────────────────────
+            ColumnLayout {
+                id: scheduleCol
+                Layout.fillWidth: true
                 spacing: 8
 
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: 1
-                    color: Theme.borderDim
-                }
-
-                // Month header
-                Text {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: Qt.formatDate(root.now, "MMMM yyyy").toUpperCase()
-                    font.family: Theme.fontMono
-                    font.pixelSize: 11
-                    font.bold: true
-                    color: Theme.accentSky
-                }
-
-                // Weekday initials
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 0
-
-                    Repeater {
-                        model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
-                        Item {
-                            Layout.fillWidth: true
-                            height: 20
-                            Text {
-                                anchors.centerIn: parent
-                                text: modelData
-                                font.family: Theme.fontMono
-                                font.pixelSize: 10
-                                font.bold: true
-                                color: (modelData === "Sa" || modelData === "Su") ? Theme.accentRose : Theme.textMuted
-                            }
-                        }
-                    }
-                }
-
-                // Days Grid (6 rows x 7 days)
-                GridLayout {
-                    Layout.fillWidth: true
-                    columns: 7
-                    columnSpacing: 2
-                    rowSpacing: 2
-
-                    Repeater {
-                        // 42 cells total (6 weeks x 7 days)
-                        model: 42
-
-                        delegate: Item {
-                            Layout.fillWidth: true
-                            height: 26
-
-                            readonly property int currentYear: root.now.getFullYear()
-                            readonly property int currentMonth: root.now.getMonth()
-                            readonly property int todayDate: root.now.getDate()
-
-                            // First day of current month: 0=Sun, 1=Mon, ..., 6=Sat
-                            readonly property int rawFirstDay: new Date(currentYear, currentMonth, 1).getDay()
-                            // Shift so Mon=0, Sun=6
-                            readonly property int firstDayOffset: (rawFirstDay + 6) % 7
-                            readonly property int totalDaysInMonth: new Date(currentYear, currentMonth + 1, 0).getDate()
-
-                            readonly property int dayNumber: index - firstDayOffset + 1
-                            readonly property bool isCurrentMonthDay: (dayNumber >= 1 && dayNumber <= totalDaysInMonth)
-                            readonly property bool isToday: isCurrentMonthDay && (dayNumber === todayDate)
-
-                            Rectangle {
-                                anchors.centerIn: parent
-                                width: 24
-                                height: 24
-                                radius: 12
-                                visible: isCurrentMonthDay
-                                color: isToday ? Theme.accentViolet : "transparent"
-                                border.color: isToday ? Theme.accentSky : "transparent"
-                                border.width: isToday ? 1 : 0
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: isCurrentMonthDay ? dayNumber : ""
-                                    font.family: Theme.fontMono
-                                    font.pixelSize: 10
-                                    font.bold: isToday
-                                    color: isToday ? Theme.textOnAccent : Theme.textPrimary
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // ── Divider ───────────────────────────────────────────────
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: 1
-                    color: Theme.borderDim
-                }
-
-                // ── Today's Schedule Header ───────────────────────────────
+                // Header Row
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 8
@@ -759,7 +622,7 @@ PanelWindow {
                     }
                 }
 
-                // ── Today's Events List ──────────────────────────────────
+                // Today's Events List
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 6
@@ -890,14 +753,14 @@ PanelWindow {
                     }
                 }
 
-                // ── Upcoming Preview (Next 2 Days) ─────────────────────────
+                // ── Upcoming / Future Events Preview ─────────────────────────
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 4
                     visible: CalendarService.upcomingEvents.length > 0
 
                     Text {
-                        text: "UPCOMING"
+                        text: "UPCOMING THIS WEEK"
                         font.family: Theme.fontMono
                         font.pixelSize: 9
                         font.bold: true
@@ -906,7 +769,7 @@ PanelWindow {
                     }
 
                     Repeater {
-                        model: CalendarService.upcomingEvents.slice(0, 2)
+                        model: CalendarService.upcomingEvents.slice(0, 3)
 
                         RowLayout {
                             Layout.fillWidth: true

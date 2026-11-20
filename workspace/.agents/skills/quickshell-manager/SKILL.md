@@ -405,19 +405,29 @@ Integrated directly into **Omnibar** (<kbd>Super</kbd> + <kbd>K</kbd>):
 
 ### 10.2 Omnibar Smart Web Jumps & Math Engine
 Omnibar (<kbd>Super</kbd> + <kbd>K</kbd>) serves as a unified command bar:
-* **Smart Prefixes**:
-  - `@gh <query>` or `gh <query>`: Instant GitHub search (`https://github.com/search?q=<query>`). Press <kbd>Enter</kbd> to launch in default browser.
-  - `@jira <key>` or `jira <key>`: Direct jump to AskMeIdentity Jira issue (`https://askmeidentity.atlassian.net/browse/<KEY>`) or `/jira/your-work`.
+* **Smart GitHub Prefixes (`@gh` or `gh`)**:
+  - `@gh <query>`: Instant GitHub search (`https://github.com/search?q=<query>`).
+  - `@gh prs` / `@gh pulls`: Direct jump to your assigned & created Pull Requests (`https://github.com/pulls`).
+  - `@gh issues`: Direct jump to your assigned GitHub Issues (`https://github.com/issues`).
+  - `@gh notifs` / `@gh notifications`: Opens your GitHub Notifications inbox (`https://github.com/notifications`).
+  - `@gh <user/repo>`: Direct navigation to repository (e.g. `@gh quickshell-mirror/quickshell`).
+* **Smart Jira Prefixes (`@jira` or `jira`)**:
+  - `@jira <number>`: Instant numeric jump with auto-prefix `ABT-` (e.g. `@jira 29` ➜ jumps directly to `ABT-29`).
+  - `@jira <key>`: Direct jump to specific issue key (e.g. `@jira ABT-326` ➜ `https://askmeidentity.atlassian.net/browse/ABT-326`).
+  - `@jira work` / `@jira tasks`: Jumps to your assigned Jira work (`/jira/your-work`).
+  - `@jira board`: Jumps directly to active AskMeIdentity sprint board.
+  - `@jira <text>`: Text search query across AskMeIdentity Jira issues (`/issues/?jql=text ~ "<query>"`).
+* **Smart Web & Search Prefixes**:
   - `@web <query>` or `@g <query>` or `? <query>`: Instant Google search without opening browser first.
 * **Math & Programmer Base Conversion**:
   - Arbitrary arithmetic: `240 * 1.18`, `(1024 * 16) / 3`, `sqrt(144) + 5^2`, `15% of 850`.
   - Number base conversions: `0x7f to dec` (127), `255 to hex` (`0xFF`), `128 to bin` (`0b10000000`), `0b1010 to dec` (10).
   - Currency & Unit conversions: `150 usd to inr`, `32 c to f`, `100 km/h to mph`, `16 gb to mb`.
   - Time in city: `time in tokyo`, `time in london`, `time in nyc`.
-  - Pressing <kbd>Enter</kbd> copies calculation results directly to clipboard (`wl-copy`).
+  - Pressing <kbd>Enter</kbd> launches web links via `xdg-open` or copies calculation results directly to clipboard (`wl-copy`).
 
 ### 10.3 Native Calendar & Agenda System (`DesktopClock.qml`)
-Integrated directly into the desktop clock and calendar card with zero clutter:
+Displays live personal and shared calendar events with zero clutter:
 * **Configuration**: `~/.config/quickshell/calendars.json`:
   ```json
   [
@@ -429,13 +439,13 @@ Integrated directly into the desktop clock and calendar card with zero clutter:
   ]
   ```
 * **Features**:
-  - **Expandable Integrated Schedule**: Nested directly beneath the monthly calendar grid in `DesktopClock.qml`.
-  - **Collapsed Active Ticker**: Displays a sleek one-liner pill (`● 12:00 PM: Dentist`) under the date when the calendar grid is collapsed; clicking it expands the schedule.
+  - **Schedule & Future Events Only**: Displays Today's Schedule and Upcoming events timeline right on `DesktopClock.qml`.
+  - **No Bulky Calendar Grid**: Omitted the 42-cell Mon/Tues/Wed calendar grid to keep the widget compact and actionable.
   - **Notification Pip**: Small amber counter badge on the clock's calendar icon showing the number of events scheduled for today.
   - **Today's Timeline**: Chronologically sorted list showing start/end times, event title, venue, and emerald "NOW" indicator for current events.
-  - **Upcoming Preview**: Next 2 events across the upcoming week.
-  - **Side-by-Side Positioning**: `PullRequestsWidget.qml` sits cleanly beside `DesktopClock.qml` (`top: 76`), preventing any overlap whether the calendar is expanded or collapsed.
-  - **IPC Control**: `qs -c antigravity ipc call agenda toggle` or `refresh`.
+  - **Upcoming Preview**: Next 3 events across the upcoming week.
+  - **Side-by-Side Positioning**: `PullRequestsWidget.qml` sits cleanly beside `DesktopClock.qml` (`top: 76`), forming a balanced dual-card dashboard in the top right.
+  - **Control Center Integration**: The full monthly calendar grid is available inside `ControlCenter.qml` under the `Notifications` tab.
   - **Zero-Idle Cache**: 5-minute disk cache (`/tmp/quickshell_calendar_cache.json`) with automatic offline detection.
 
 ### 10.4 Antigravity HUD v2 (`AntigravityPanel.qml`)
