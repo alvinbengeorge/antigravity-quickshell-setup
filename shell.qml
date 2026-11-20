@@ -72,6 +72,16 @@ ShellRoot {
         }
     }
 
+    // Instantiate Desktop Agenda & Calendar Widget on all detected screens
+    Variants {
+        model: Quickshell.screens
+
+        AgendaWidget {
+            required property ShellScreen modelData
+            screen: modelData
+        }
+    }
+
     // Centered & Dropdown Overlays
     AntigravityPanel {}
     Omnibar {}

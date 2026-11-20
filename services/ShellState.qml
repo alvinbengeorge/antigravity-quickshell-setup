@@ -33,6 +33,7 @@ Singleton {
     property bool desktopAntigravityVisible: true
     property bool desktopPullRequestsVisible: true
     property bool desktopJiraVisible: true
+    property bool desktopAgendaVisible: true
     property real antigravityWidgetHeight: 496
     property bool use24Hour: false
     property bool clockShowCalendar: true
@@ -179,6 +180,10 @@ Singleton {
 
     function toggleDesktopJira() {
         root.desktopJiraVisible = !root.desktopJiraVisible;
+    }
+
+    function toggleDesktopAgenda() {
+        root.desktopAgendaVisible = !root.desktopAgendaVisible;
     }
 
     function toggleControlCenter() {
@@ -416,6 +421,11 @@ Singleton {
     IpcHandler {
         target: "search"
         function toggle(): void { root.toggleOmnibar(); }
+        function query(q: string): void {
+            root.closeAll();
+            root.omnibarInitialQuery = q;
+            root.omnibarOpen = true;
+        }
         function workspacesToggle(): void { root.toggleOmnibar(); }
         function keybindsToggle(): void { root.toggleOmnibar(); }
         function clipboardToggle(): void { root.toggleClipboard(); }
@@ -524,6 +534,14 @@ Singleton {
         function show(): void { root.desktopJiraVisible = true; }
         function hide(): void { root.desktopJiraVisible = false; }
         function refresh(): void { JiraService.refresh(true); }
+    }
+
+    IpcHandler {
+        target: "agenda"
+        function toggle(): void { root.toggleDesktopAgenda(); }
+        function show(): void { root.desktopAgendaVisible = true; }
+        function hide(): void { root.desktopAgendaVisible = false; }
+        function refresh(): void { CalendarService.refresh(true); }
     }
 
     IpcHandler {

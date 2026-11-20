@@ -520,6 +520,152 @@ function evaluateGlyphs(raw) {
     };
 }
 
+// 5E. Programmer Number Base Conversion (hex / dec / bin / oct)
+function evaluateBaseConversion(raw) {
+    const q = raw.trim().toLowerCase();
+    
+    // Pattern: 0x... to dec / bin / oct
+    const hexMatch = q.match(/^(?:0x)?([0-9a-f]+)\s+(?:in|to|as)\s+(dec|decimal|bin|binary|oct|octal)$/i);
+    if (hexMatch && /^[0-9a-f]+$/i.test(hexMatch[1])) {
+        const val = parseInt(hexMatch[1], 16);
+        if (!isNaN(val)) {
+            const target = hexMatch[2].toLowerCase();
+            let res = "";
+            let title = "";
+            if (target.startsWith("dec")) {
+                res = val.toString(10);
+                title = "HEXADECIMAL ➜ DECIMAL";
+            } else if (target.startsWith("bin")) {
+                res = "0b" + val.toString(2);
+                title = "HEXADECIMAL ➜ BINARY";
+            } else {
+                res = "0o" + val.toString(8);
+                title = "HEXADECIMAL ➜ OCTAL";
+            }
+            return {
+                mode: "math",
+                icon: "💻",
+                lucide: "binary",
+                title: title,
+                expression: "0x" + hexMatch[1].toUpperCase() + " ➜ " + target.toUpperCase(),
+                result: res,
+                rawResult: res,
+                copyValue: res
+            };
+        }
+    }
+
+    // Pattern: [0-9]+ to hex / bin / oct
+    const decMatch = q.match(/^([0-9]+)\s+(?:in|to|as)\s+(hex|hexadecimal|bin|binary|oct|octal)$/i);
+    if (decMatch) {
+        const val = parseInt(decMatch[1], 10);
+        if (!isNaN(val)) {
+            const target = decMatch[2].toLowerCase();
+            let res = "";
+            let title = "";
+            if (target.startsWith("hex")) {
+                res = "0x" + val.toString(16).toUpperCase();
+                title = "DECIMAL ➜ HEXADECIMAL";
+            } else if (target.startsWith("bin")) {
+                res = "0b" + val.toString(2);
+                title = "DECIMAL ➜ BINARY";
+            } else {
+                res = "0o" + val.toString(8);
+                title = "DECIMAL ➜ OCTAL";
+            }
+            return {
+                mode: "math",
+                icon: "💻",
+                lucide: "binary",
+                title: title,
+                expression: decMatch[1] + " ➜ " + target.toUpperCase(),
+                result: res,
+                rawResult: res,
+                copyValue: res
+            };
+        }
+    }
+
+    // Direct standalone hex like 0x7f or 0xDEADBEEF
+    if (/^0x[0-9a-f]+$/i.test(q)) {
+        const val = parseInt(q.slice(2), 16);
+        if (!isNaN(val)) {
+            return {
+                mode: "math",
+                icon: "💻",
+                lucide: "binary",
+                title: "HEX EVALUATION",
+                expression: q.toUpperCase() + " ➜ Decimal",
+                result: val.toLocaleString(),
+                rawResult: val.toString(),
+                copyValue: val.toString()
+            };
+        }
+    }
+
+    return null;
+}
+
+// 5F. Smart Web Jump (@gh, @jira, @web)
+function evaluateWebJump(raw) {
+    const q = raw.trim();
+
+    // GitHub Search: @gh <query> or gh <query>
+    if (/^(@gh|gh)\s+/i.test(q)) {
+        const term = q.replace(/^(@gh|gh)\s+/i, "").trim();
+        const url = term.length > 0 ? ("https://github.com/search?q=" + encodeURIComponent(term)) : "https://github.com";
+        return {
+            mode: "webjump",
+            icon: "⎇",
+            lucide: "git-pull-request",
+            title: "GITHUB SEARCH",
+            expression: term.length > 0 ? ("Search GitHub for '" + term + "'") : "Open GitHub.com",
+            result: term.length > 0 ? ("github.com/search?q=" + term) : "github.com",
+            url: url,
+            copyValue: url
+        };
+    }
+
+    // Jira Quick Jump: @jira <key/query> or jira <query>
+    if (/^(@jira|jira)\s+/i.test(q)) {
+        const term = q.replace(/^(@jira|jira)\s+/i, "").trim();
+        const isIssue = /^[a-zA-Z]+-\d+$/i.test(term);
+        const url = isIssue
+            ? ("https://askmeidentity.atlassian.net/browse/" + term.toUpperCase())
+            : (term.length > 0
+                ? ("https://askmeidentity.atlassian.net/jira/your-work")
+                : "https://askmeidentity.atlassian.net");
+        return {
+            mode: "webjump",
+            icon: "🎫",
+            lucide: "check",
+            title: isIssue ? ("JUMP TO ISSUE " + term.toUpperCase()) : "OPEN JIRA WORK",
+            expression: isIssue ? ("Direct jump to AskMeIdentity issue " + term.toUpperCase()) : "Open AskMeIdentity Jira",
+            result: url,
+            url: url,
+            copyValue: url
+        };
+    }
+
+    // Web / Google Search: @web <query>, @g <query>, or ? <query>
+    if (/^(@web|@g|\?)\s+/i.test(q)) {
+        const term = q.replace(/^(@web|@g|\?)\s+/i, "").trim();
+        const url = term.length > 0 ? ("https://www.google.com/search?q=" + encodeURIComponent(term)) : "https://www.google.com";
+        return {
+            mode: "webjump",
+            icon: "🌐",
+            lucide: "globe",
+            title: "GOOGLE WEB SEARCH",
+            expression: term.length > 0 ? ("Search Google for '" + term + "'") : "Open Google.com",
+            result: term.length > 0 ? ("google.com/search?q=" + term) : "google.com",
+            url: url,
+            copyValue: url
+        };
+    }
+
+    return null;
+}
+
 // ── 6. MASTER INSPECTOR DISPATCHER ─────────────────────────────────────────
 
 function inspect(query) {
@@ -527,25 +673,33 @@ function inspect(query) {
     const q = query.trim();
     if (q.length === 0) return null;
 
+    // 0. Smart Web Jump (@gh, @jira, @web)
+    const webJump = evaluateWebJump(q);
+    if (webJump) return webJump;
+
     // 1. Color check (starts with # or matches hex/rgb)
     const colorRes = evaluateColor(q);
     if (colorRes) return colorRes;
 
-    // 2. Conversion check (contains 'in', 'to', 'as')
+    // 2. Base Conversion (0x7f to dec, 255 to hex)
+    const baseRes = evaluateBaseConversion(q);
+    if (baseRes) return baseRes;
+
+    // 3. Conversion check (contains 'in', 'to', 'as')
     const convRes = evaluateConversion(q);
     if (convRes) return convRes;
 
-    // 3. Time in city check
+    // 4. Time in city check
     const timeRes = evaluateTime(q);
     if (timeRes) return timeRes;
 
-    // 4. Glyphs & emoji check (starts with : or matches glyph/arrow/symbol query)
+    // 5. Glyphs & emoji check (starts with : or matches glyph/arrow/symbol query)
     if (q.startsWith(":") || /^(arrow|glyph|symbol|math|greek|emoji|star|check|heart)/i.test(q)) {
         const glyphRes = evaluateGlyphs(q);
         if (glyphRes) return glyphRes;
     }
 
-    // 5. Math check
+    // 6. Math check
     const mathRes = evaluateMath(q);
     if (mathRes) return mathRes;
 

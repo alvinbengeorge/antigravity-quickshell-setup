@@ -386,6 +386,7 @@ Compiles with Release LTO (`opt-level = 3`, `lto = "fat"`, `codegen-units = 1`, 
 | `bin/github_prs` | `rust/src/tools/github_prs.rs` | GitHub GraphQL API query; relative timestamps, review state, CI rollup status, 90s cache. |
 | `bin/jira_tasks` | `rust/src/tools/jira_tasks.rs` | Jira Cloud v3 REST API client; active vs completed tasks, avatar sync, JQL search pagination. |
 | `bin/file_search` | `rust/src/tools/file_search.rs` | Ultra-fast multi-threaded file search engine combining user workspace scanning with indexed `plocate` global lookup in 3–15ms. |
+| `bin/calendar_events` | `rust/src/tools/calendar_events.rs` | Multi-feed iCalendar (.ics) engine; parses VEVENTs, Google Meet / Zoom extraction, offline cache in 2ms. |
 
 ### 10.1 Omnibar Instant File Search (`@file`)
 Integrated directly into **Omnibar** (<kbd>Super</kbd> + <kbd>K</kbd>):
@@ -399,34 +400,54 @@ Integrated directly into **Omnibar** (<kbd>Super</kbd> + <kbd>K</kbd>):
   - <kbd>Enter</kbd>: Open selected file or directory with default system handler (`xdg-open`).
   - <kbd>Ctrl</kbd> + <kbd>Enter</kbd>: Reveal file in its parent directory / file manager.
   - <kbd>Ctrl</kbd> + <kbd>C</kbd>: Copy selected file's absolute path to clipboard (`wl-copy`) and send notification.
-* **Rust JSON Telemetry Format**:
-  ```json
-  {
-    "query": "trading",
-    "count": 30,
-    "latency_ms": 14,
-    "results": [
-      {
-        "name": "tradingview_dom.py",
-        "path": "/home/alvin/Desktop/personal/trading-bot/execution/tradingview_dom.py",
-        "parent": "~/Desktop/personal/trading-bot/execution",
-        "is_dir": false,
-        "kind": "Python Source",
-        "icon": "🐍",
-        "size_bytes": 2799,
-        "size_str": "2.7 KB",
-        "mtime": 1794491614,
-        "mtime_str": "3d ago"
-      }
-    ]
-  }
-  ```
-* **Performance & Safety**:
-  - Debounced at 35ms on keystroke; **zero background polling timers**.
-  - Intelligent artifact filtering automatically excludes `.git`, `node_modules`, `.venv`, `__pycache__`, `target`, `.cargo`, and `.cache`.
 * **Folder Default Handler**:
   - `inode/directory` MIME type is explicitly configured to `org.gnome.Nautilus.desktop` in `~/.config/mimeapps.list`.
-  - Both pressing <kbd>Enter</kbd> on a directory and <kbd>Ctrl</kbd> + <kbd>Enter</kbd> (reveal in folder) open GNOME Nautilus.
+
+### 10.2 Omnibar Smart Web Jumps & Math Engine
+Omnibar (<kbd>Super</kbd> + <kbd>K</kbd>) serves as a unified command bar:
+* **Smart Prefixes**:
+  - `@gh <query>` or `gh <query>`: Instant GitHub search (`https://github.com/search?q=<query>`). Press <kbd>Enter</kbd> to launch in default browser.
+  - `@jira <key>` or `jira <key>`: Direct jump to AskMeIdentity Jira issue (`https://askmeidentity.atlassian.net/browse/<KEY>`) or `/jira/your-work`.
+  - `@web <query>` or `@g <query>` or `? <query>`: Instant Google search without opening browser first.
+* **Math & Programmer Base Conversion**:
+  - Arbitrary arithmetic: `240 * 1.18`, `(1024 * 16) / 3`, `sqrt(144) + 5^2`, `15% of 850`.
+  - Number base conversions: `0x7f to dec` (127), `255 to hex` (`0xFF`), `128 to bin` (`0b10000000`), `0b1010 to dec` (10).
+  - Currency & Unit conversions: `150 usd to inr`, `32 c to f`, `100 km/h to mph`, `16 gb to mb`.
+  - Time in city: `time in tokyo`, `time in london`, `time in nyc`.
+  - Pressing <kbd>Enter</kbd> copies calculation results directly to clipboard (`wl-copy`).
+
+### 10.3 Native Calendar & Agenda System (`AgendaWidget.qml`)
+Displays live personal and shared calendar events with zero overhead:
+* **Configuration**: `~/.config/quickshell/calendars.json`:
+  ```json
+  [
+    {
+      "name": "LEEE & ALVEE",
+      "url": "https://calendar.google.com/calendar/ical/.../basic.ics",
+      "color": "#f6c177"
+    }
+  ]
+  ```
+* **Features**:
+  - **Hero Next Event Banner**: Highlights currently active meeting or upcoming event with countdown (`"STARTS IN 2h"` / `"HAPPENING NOW"`).
+  - **Meeting Link Auto-Detection**: Automatically parses Google Meet, Zoom, and Teams URLs; displays 1-click **"Join Call ↗"** button.
+  - **Today's Timeline**: Chronologically sorted cards with calendar color pill, start time, title, and venue/location.
+  - **Upcoming Preview**: Next 3 events across upcoming 7 days.
+  - **IPC Control**: `qs -c antigravity ipc call agenda toggle` or `refresh`.
+  - **Zero-Idle Cache**: 5-minute disk cache (`/tmp/quickshell_calendar_cache.json`) with automatic offline detection.
+
+### 10.4 Antigravity HUD v2 (`AntigravityPanel.qml`)
+Triggered via <kbd>Super</kbd> + <kbd>A</kbd> or `qs -c antigravity ipc call antigravity toggle`:
+* **Quick Slash Workflow Launcher**: 1-click execution into Kitty terminal for:
+  - `🚀 /plan`: Interactive multi-step planning
+  - `⚡ /boost`: Deep reasoning & verification
+  - `👥 /teamwork`: Multi-agent swarm orchestration
+  - `🌐 /browser`: Headless/visual browser automation
+  - `▶ Resume`: Resume active session with `agy -c --dangerously-skip-permissions`
+* **Brain & Artifacts Quick Links**:
+  - Direct 1-click button to open `~/.gemini/antigravity-cli/brain/`
+  - 1-click button to browse current session's generated artifacts and reports
+* **Live Telemetry**: Real-time token usage, 5h & weekly quota limits for Gemini and Claude/GPT fallback models.
 
 ---
 

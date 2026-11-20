@@ -13,6 +13,7 @@ image = { version = "0.25", default-features = false, features = ["jpeg", "png",
 ureq = { version = "2.10", default-features = false, features = ["tls", "json"] }
 rustfft = "6.4.1"
 realfft = "3.5.1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
 [lib]
 name = "antigravity_tools"

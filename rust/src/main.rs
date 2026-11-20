@@ -115,6 +115,10 @@ fn main() {
             tools::file_search::run(&raw_args[1..]);
             return;
         }
+        "calendar_events" | "get_calendar_events" | "calendar" | "agenda" => {
+            tools::calendar_events::run(&raw_args[1..]);
+            return;
+        }
         _ => {}
     }
 
@@ -173,6 +177,9 @@ fn main() {
         }
         "file_search" | "find" | "files" | "file-search" | "file" => {
             tools::file_search::run(rest);
+        }
+        "calendar_events" | "calendar" | "agenda" | "events" => {
+            tools::calendar_events::run(rest);
         }
         "-V" | "--version" => {
             println!("agy-tools 0.1.0");

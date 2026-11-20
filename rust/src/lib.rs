@@ -2,6 +2,7 @@ pub mod tools {
     pub mod antigravity_status;
     pub mod audio_beat_tracker;
     pub mod battery_helper;
+    pub mod calendar_events;
     pub mod cliphist_helper;
     pub mod docker_manager;
     pub mod extract_media_color;

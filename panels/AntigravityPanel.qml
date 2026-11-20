@@ -700,6 +700,201 @@ PanelWindow {
                             }
                         }
                     }
+
+                    // ── Quick Slash Workflow Launcher ──
+                    RowLayout {
+                        width: parent.width
+                        spacing: 6
+
+                        // /plan
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 28
+                            radius: 6
+                            color: planMouse.containsMouse ? Theme.bgHover : Theme.bgPill
+                            border.color: planMouse.containsMouse ? Theme.accentCyan : Theme.borderDim
+                            border.width: 1
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 4
+                                Text { text: "🚀"; font.pixelSize: 10 }
+                                Text { text: "/plan"; font.family: Theme.fontMono; font.pixelSize: 9; font.bold: true; color: planMouse.containsMouse ? Theme.accentCyan : Theme.textPrimary }
+                            }
+                            MouseArea {
+                                id: planMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    AntigravityService.runPrompt("/plan");
+                                    ShellState.antigravityPanelOpen = false;
+                                }
+                            }
+                        }
+
+                        // /boost
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 28
+                            radius: 6
+                            color: boostMouse.containsMouse ? Theme.bgHover : Theme.bgPill
+                            border.color: boostMouse.containsMouse ? Theme.accentViolet : Theme.borderDim
+                            border.width: 1
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 4
+                                Text { text: "⚡"; font.pixelSize: 10 }
+                                Text { text: "/boost"; font.family: Theme.fontMono; font.pixelSize: 9; font.bold: true; color: boostMouse.containsMouse ? Theme.accentViolet : Theme.textPrimary }
+                            }
+                            MouseArea {
+                                id: boostMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    AntigravityService.runPrompt("/boost");
+                                    ShellState.antigravityPanelOpen = false;
+                                }
+                            }
+                        }
+
+                        // /teamwork
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 28
+                            radius: 6
+                            color: teamMouse.containsMouse ? Theme.bgHover : Theme.bgPill
+                            border.color: teamMouse.containsMouse ? Theme.accentAmber : Theme.borderDim
+                            border.width: 1
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 4
+                                Text { text: "👥"; font.pixelSize: 10 }
+                                Text { text: "/teamwork"; font.family: Theme.fontMono; font.pixelSize: 9; font.bold: true; color: teamMouse.containsMouse ? Theme.accentAmber : Theme.textPrimary }
+                            }
+                            MouseArea {
+                                id: teamMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    AntigravityService.runPrompt("/teamwork");
+                                    ShellState.antigravityPanelOpen = false;
+                                }
+                            }
+                        }
+
+                        // /browser
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 28
+                            radius: 6
+                            color: browMouse.containsMouse ? Theme.bgHover : Theme.bgPill
+                            border.color: browMouse.containsMouse ? Theme.accentEmerald : Theme.borderDim
+                            border.width: 1
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 4
+                                Text { text: "🌐"; font.pixelSize: 10 }
+                                Text { text: "/browser"; font.family: Theme.fontMono; font.pixelSize: 9; font.bold: true; color: browMouse.containsMouse ? Theme.accentEmerald : Theme.textPrimary }
+                            }
+                            MouseArea {
+                                id: browMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    AntigravityService.runPrompt("/browser");
+                                    ShellState.antigravityPanelOpen = false;
+                                }
+                            }
+                        }
+
+                        // Resume Active Session
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 28
+                            radius: 6
+                            color: resumeMouse.containsMouse ? Theme.accentCyan : Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.15)
+                            border.color: Theme.accentCyan
+                            border.width: 1
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 4
+                                Text { text: "▶"; font.pixelSize: 9; color: resumeMouse.containsMouse ? Theme.bgBase : Theme.accentCyan }
+                                Text { text: "Resume"; font.family: Theme.fontMono; font.pixelSize: 9; font.bold: true; color: resumeMouse.containsMouse ? Theme.bgBase : Theme.accentCyan }
+                            }
+                            MouseArea {
+                                id: resumeMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    AntigravityService.continueCli();
+                                    ShellState.antigravityPanelOpen = false;
+                                }
+                            }
+                        }
+                    }
+
+                    // ── Brain & Artifacts Quick Links ──
+                    RowLayout {
+                        width: parent.width
+                        spacing: 8
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 26
+                            radius: 5
+                            color: brainMouse.containsMouse ? Theme.bgHover : "transparent"
+                            border.color: Theme.borderDim
+                            border.width: 1
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 4
+                                Text { text: "🧠"; font.pixelSize: 10 }
+                                Text { text: "Open Brain Dir ↗"; font.family: Theme.fontMono; font.pixelSize: 9; color: brainMouse.containsMouse ? Theme.accentSky : Theme.textMuted }
+                            }
+
+                            MouseArea {
+                                id: brainMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: AntigravityService.openBrainDir()
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 26
+                            radius: 5
+                            color: convMouse.containsMouse ? Theme.bgHover : "transparent"
+                            border.color: Theme.borderDim
+                            border.width: 1
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 4
+                                Text { text: "📂"; font.pixelSize: 10 }
+                                Text { text: "Session Files ↗"; font.family: Theme.fontMono; font.pixelSize: 9; color: convMouse.containsMouse ? Theme.accentSky : Theme.textMuted }
+                            }
+
+                            MouseArea {
+                                id: convMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: AntigravityService.openCurrentConversation()
+                            }
+                        }
+                    }
                 }
             }
         }

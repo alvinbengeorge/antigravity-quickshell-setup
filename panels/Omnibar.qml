@@ -221,12 +221,16 @@ PanelWindow {
             return;
         }
 
-        // 3. Spotlight Result (Copy to clipboard)
+        // 3. Spotlight Result (Copy to clipboard or open URL)
         if (omnibarWindow.spotlightResult) {
-            const val = omnibarWindow.spotlightResult.copyValue || "";
-            if (val) {
-                Quickshell.execDetached(["wl-copy", val]);
-                Quickshell.execDetached(["notify-send", "-a", "Antigravity", "Copied to Clipboard", val]);
+            if (omnibarWindow.spotlightResult.url) {
+                Quickshell.execDetached(["xdg-open", omnibarWindow.spotlightResult.url]);
+            } else {
+                const val = omnibarWindow.spotlightResult.copyValue || "";
+                if (val) {
+                    Quickshell.execDetached(["wl-copy", val]);
+                    Quickshell.execDetached(["notify-send", "-a", "Antigravity", "Copied to Clipboard", val]);
+                }
             }
             dismissTimer.restart();
             return;
@@ -653,7 +657,7 @@ PanelWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: 8
-                visible: omnibarWindow.spotlightResult !== null && (omnibarWindow.spotlightResult.mode === "math" || omnibarWindow.spotlightResult.mode === "conversion" || omnibarWindow.spotlightResult.mode === "time")
+                visible: omnibarWindow.spotlightResult !== null && (omnibarWindow.spotlightResult.mode === "math" || omnibarWindow.spotlightResult.mode === "conversion" || omnibarWindow.spotlightResult.mode === "time" || omnibarWindow.spotlightResult.mode === "webjump")
 
                 Rectangle {
                     Layout.fillWidth: true
@@ -773,7 +777,7 @@ PanelWindow {
                             width: 68
                             height: 68
                             radius: 10
-                            color: omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.hex : "transparent"
+                            color: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.hex) ? omnibarWindow.spotlightResult.hex : "transparent"
                             border.color: Qt.rgba(1, 1, 1, 0.3)
                             border.width: 1.5
 
@@ -812,7 +816,7 @@ PanelWindow {
                                     Text {
                                         id: hexTxt
                                         anchors.centerIn: parent
-                                        text: omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.hex : ""
+                                        text: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.hex) ? omnibarWindow.spotlightResult.hex : ""
                                         font.family: Theme.fontMono
                                         font.pixelSize: 11
                                         font.bold: true
@@ -842,7 +846,7 @@ PanelWindow {
                                     Text {
                                         id: rgbTxt
                                         anchors.centerIn: parent
-                                        text: omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.rgb : ""
+                                        text: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.rgb) ? omnibarWindow.spotlightResult.rgb : ""
                                         font.family: Theme.fontMono
                                         font.pixelSize: 11
                                         color: rgbM.containsMouse ? Theme.textOnAccent : Theme.textPrimary
@@ -871,7 +875,7 @@ PanelWindow {
                                     Text {
                                         id: hslTxt
                                         anchors.centerIn: parent
-                                        text: omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.hsl : ""
+                                        text: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.hsl) ? omnibarWindow.spotlightResult.hsl : ""
                                         font.family: Theme.fontMono
                                         font.pixelSize: 11
                                         color: hslM.containsMouse ? Theme.textOnAccent : Theme.textMuted
@@ -1880,7 +1884,7 @@ PanelWindow {
                             text: omnibarWindow.isFileSearchMode
                                 ? "Open File"
                                 : (omnibarWindow.spotlightResult
-                                    ? "Copy Result"
+                                    ? (omnibarWindow.spotlightResult.url ? "Open Link" : "Copy Result")
                                     : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0)
                                         ? "Launch App"
                                         : "Run as agy"))
@@ -1889,7 +1893,7 @@ PanelWindow {
                             color: omnibarWindow.isFileSearchMode
                                 ? Theme.accentAmber
                                 : (omnibarWindow.spotlightResult
-                                    ? Theme.accentEmerald
+                                    ? (omnibarWindow.spotlightResult.url ? Theme.accentSky : Theme.accentEmerald)
                                     : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0)
                                         ? Theme.accentCyan
                                         : Theme.accentAmber))
