@@ -239,9 +239,16 @@ PanelWindow {
             return;
         }
 
-        // 3. Spotlight Result (Copy to clipboard or open URL)
+        // 3. Spotlight Result (Command execution, copy to clipboard or open URL)
         if (omnibarWindow.spotlightResult) {
-            if (omnibarWindow.spotlightResult.url) {
+            if (omnibarWindow.spotlightResult.command) {
+                const cmd = omnibarWindow.spotlightResult.command;
+                omnibarWindow.visible = false;
+                ShellState.omnibarOpen = false;
+                Quickshell.execDetached(["sh", "-c", "sleep 0.15 && " + cmd]);
+                dismissTimer.restart();
+                return;
+            } else if (omnibarWindow.spotlightResult.url) {
                 Quickshell.execDetached(["xdg-open", omnibarWindow.spotlightResult.url]);
             } else {
                 const val = omnibarWindow.spotlightResult.copyValue || "";
@@ -676,7 +683,7 @@ PanelWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: 8
-                visible: omnibarWindow.spotlightResult !== null && (omnibarWindow.spotlightResult.mode === "math" || omnibarWindow.spotlightResult.mode === "conversion" || omnibarWindow.spotlightResult.mode === "time" || omnibarWindow.spotlightResult.mode === "webjump" || omnibarWindow.spotlightResult.mode === "jira" || omnibarWindow.spotlightResult.mode === "github")
+                visible: omnibarWindow.spotlightResult !== null && (omnibarWindow.spotlightResult.mode === "math" || omnibarWindow.spotlightResult.mode === "conversion" || omnibarWindow.spotlightResult.mode === "time" || omnibarWindow.spotlightResult.mode === "webjump" || omnibarWindow.spotlightResult.mode === "jira" || omnibarWindow.spotlightResult.mode === "github" || omnibarWindow.spotlightResult.mode === "action")
 
                 Rectangle {
                     Layout.fillWidth: true
@@ -1166,7 +1173,9 @@ PanelWindow {
                                     }
                                 }
                                 Text {
-                                    text: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.url) ? "Open Link" : "Copy"
+                                    text: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.command)
+                                        ? "Run"
+                                        : ((omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.url) ? "Open Link" : "Copy")
                                     font.family: Theme.fontFamily
                                     font.pixelSize: 11
                                     font.bold: true
@@ -2318,7 +2327,7 @@ PanelWindow {
                             text: omnibarWindow.isFileSearchMode
                                 ? "Open File"
                                 : (omnibarWindow.spotlightResult
-                                    ? (omnibarWindow.spotlightResult.url ? "Open Link" : "Copy Result")
+                                    ? (omnibarWindow.spotlightResult.command ? "Run Action" : (omnibarWindow.spotlightResult.url ? "Open Link" : "Copy Result"))
                                     : ((omnibarWindow.matchedApps && omnibarWindow.matchedApps.length > 0)
                                         ? "Launch App"
                                         : "Run as agy"))

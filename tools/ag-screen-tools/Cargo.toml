@@ -1,0 +1,12 @@
+[package]
+name = "ag-screen-tools"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ocrs = "0.14.0"
+rten = "0.28.0"
+rqrr = "0.11.0"
+qrcode = "0.15.0"
+image = "0.25.10"
+anyhow = "1.0"

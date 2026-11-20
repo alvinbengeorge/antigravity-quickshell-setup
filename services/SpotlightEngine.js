@@ -610,6 +610,54 @@ function evaluateBaseConversion(raw) {
 function evaluateWebJump(raw, context) {
     const q = raw.trim();
 
+    // 0. Screen Area OCR: @ocr
+    if (/^(@ocr|ocr)(\s+|$)/i.test(q)) {
+        return {
+            mode: "action",
+            isAction: true,
+            isOcr: true,
+            title: "Screen Area OCR (Pure Rust)",
+            expression: "Select screen area with mouse to extract text and copy to clipboard",
+            result: "OCR",
+            command: "screen-ocr",
+            icon: "🔤",
+            lucide: "copy",
+            copyValue: "screen-ocr"
+        };
+    }
+
+    // 0B. Screen QR Scanner & Generator: @qr <text/url> or @qr
+    if (/^(@qr|qr)(\s+|$)/i.test(q)) {
+        const term = q.replace(/^(@qr|qr)\s*/i, "").trim();
+        if (term.length > 0) {
+            return {
+                mode: "action",
+                isAction: true,
+                isQrGen: true,
+                title: "Generate QR Code (Rust)",
+                expression: "Generate QR image & copy to clipboard for: " + term,
+                result: "Generate",
+                command: "ag-screen-tools qr-gen \"" + term.replace(/"/g, "\\\"") + "\"",
+                icon: "▦",
+                lucide: "camera",
+                copyValue: term
+            };
+        } else {
+            return {
+                mode: "action",
+                isAction: true,
+                isQrScan: true,
+                title: "Scan Screen QR Code (Rust)",
+                expression: "Select a QR code on screen to decode and copy URL",
+                result: "Scan",
+                command: "screen-qr",
+                icon: "▦",
+                lucide: "camera",
+                copyValue: "screen-qr"
+            };
+        }
+    }
+
     // GitHub Quick Jump: @gh <query>, @gh prs, @gh issues, @gh <user/repo>, @pr <num/query>
     if (/^(@gh|@pr|gh|pr)(\s+|$)/i.test(q)) {
         const term = q.replace(/^(@gh|@pr|gh|pr)\s*/i, "").trim();
