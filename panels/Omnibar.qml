@@ -49,7 +49,7 @@ PanelWindow {
             ShellState.omnibarInitialQuery = "";
             omniInput.text = initQuery;
             parsedPlan = null;
-            spotlightResult = initQuery ? Spotlight.inspect(initQuery) : null;
+            spotlightResult = initQuery ? Spotlight.inspect(initQuery, { jiraService: JiraService, githubService: GithubService }) : null;
             matchedApps = (!spotlightResult && initQuery) ? AppService.search(initQuery) : [];
             selectedAppIndex = 0;
             matchedFiles = [];
@@ -78,6 +78,24 @@ PanelWindow {
                 ShellState.omnibarInitialQuery = "";
                 omniInput.forceActiveFocus();
                 omniInput.selectAll();
+            }
+        }
+    }
+
+    Connections {
+        target: JiraService
+        function onIssueFetched() {
+            if (omnibarWindow.visible && omniInput.text.trim().length > 0) {
+                omnibarWindow.spotlightResult = Spotlight.inspect(omniInput.text, { jiraService: JiraService, githubService: GithubService });
+            }
+        }
+    }
+
+    Connections {
+        target: GithubService
+        function onPrFetched() {
+            if (omnibarWindow.visible && omniInput.text.trim().length > 0) {
+                omnibarWindow.spotlightResult = Spotlight.inspect(omniInput.text, { jiraService: JiraService, githubService: GithubService });
             }
         }
     }
@@ -301,6 +319,7 @@ PanelWindow {
                 return 220; // Searching or empty files
             }
             if (omnibarWindow.spotlightResult) {
+                if (omnibarWindow.spotlightResult.isJira || omnibarWindow.spotlightResult.isPr) return 260;
                 if (omnibarWindow.spotlightResult.mode === "glyphs") return 290;
                 if (omnibarWindow.spotlightResult.mode === "color") return 245;
                 return 220; // math, conversion, time
@@ -448,7 +467,7 @@ PanelWindow {
                                 return;
                             }
                             omnibarWindow.matchedFiles = [];
-                            omnibarWindow.spotlightResult = Spotlight.inspect(omniInput.text);
+                            omnibarWindow.spotlightResult = Spotlight.inspect(omniInput.text, { jiraService: JiraService, githubService: GithubService });
                             if (!omnibarWindow.spotlightResult) {
                                 const q = omniInput.text.trim();
                                 if (q.length > 0) {
@@ -652,25 +671,422 @@ PanelWindow {
                 }
             }
 
-            // ── Section S: Spotlight Hero Results (Math, Conversions, Time) ──
+            // ── Section S: Spotlight Hero Results (Math, Conversions, Time, Jira, PR) ──
             ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: 8
-                visible: omnibarWindow.spotlightResult !== null && (omnibarWindow.spotlightResult.mode === "math" || omnibarWindow.spotlightResult.mode === "conversion" || omnibarWindow.spotlightResult.mode === "time" || omnibarWindow.spotlightResult.mode === "webjump")
+                visible: omnibarWindow.spotlightResult !== null && (omnibarWindow.spotlightResult.mode === "math" || omnibarWindow.spotlightResult.mode === "conversion" || omnibarWindow.spotlightResult.mode === "time" || omnibarWindow.spotlightResult.mode === "webjump" || omnibarWindow.spotlightResult.mode === "jira" || omnibarWindow.spotlightResult.mode === "github")
 
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     radius: 12
                     color: Theme.bgCard
-                    border.color: Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.4)
+                    border.color: (omnibarWindow.spotlightResult && (omnibarWindow.spotlightResult.isJira || omnibarWindow.spotlightResult.isPr))
+                        ? Qt.rgba(Theme.accentCyan.r, Theme.accentCyan.g, Theme.accentCyan.b, 0.4)
+                        : Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.4)
                     border.width: 1
 
+                    // ── Case 1: Rich Jira Issue Card ──
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 16
+                        spacing: 8
+                        visible: omnibarWindow.spotlightResult !== null && omnibarWindow.spotlightResult.mode === "jira"
+
+                        // Top Row: Chips (Key, Type, Priority, Status)
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+
+                            Rectangle {
+                                height: 24
+                                implicitWidth: jiraKeyRow.implicitWidth + 14
+                                radius: 6
+                                color: Qt.rgba(Theme.accentAmber.r, Theme.accentAmber.g, Theme.accentAmber.b, 0.20)
+                                border.color: Theme.accentAmber
+                                border.width: 1
+
+                                RowLayout {
+                                    id: jiraKeyRow
+                                    anchors.centerIn: parent
+                                    spacing: 5
+                                    Text { text: "🎫"; font.pixelSize: 12 }
+                                    Text {
+                                        text: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.issueKey) ? omnibarWindow.spotlightResult.issueKey : ""
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        color: Theme.accentAmber
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                visible: !!(omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.issueType)
+                                height: 24
+                                implicitWidth: jiraTypeTxt.implicitWidth + 12
+                                radius: 6
+                                color: {
+                                    const it = (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.issueType || "").toLowerCase();
+                                    if (it.includes("bug")) return Qt.rgba(Theme.accentRose.r, Theme.accentRose.g, Theme.accentRose.b, 0.20);
+                                    return Qt.rgba(Theme.accentSky.r, Theme.accentSky.g, Theme.accentSky.b, 0.18);
+                                }
+                                border.color: {
+                                    const it = (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.issueType || "").toLowerCase();
+                                    if (it.includes("bug")) return Theme.accentRose;
+                                    return Theme.accentSky;
+                                }
+                                border.width: 1
+
+                                Text {
+                                    id: jiraTypeTxt
+                                    anchors.centerIn: parent
+                                    text: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.issueType) ? omnibarWindow.spotlightResult.issueType : ""
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 10
+                                    font.bold: true
+                                    color: {
+                                        const it = (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.issueType || "").toLowerCase();
+                                        if (it.includes("bug")) return Theme.accentRose;
+                                        return Theme.accentSky;
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                visible: !!(omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.priority)
+                                height: 24
+                                implicitWidth: jiraPrioTxt.implicitWidth + 12
+                                radius: 6
+                                color: Theme.bgHover
+                                border.color: Theme.borderDim
+                                border.width: 1
+
+                                Text {
+                                    id: jiraPrioTxt
+                                    anchors.centerIn: parent
+                                    text: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.priority) ? (omnibarWindow.spotlightResult.priority + " Priority") : ""
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 10
+                                    color: {
+                                        const p = (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.priority || "").toLowerCase();
+                                        if (p.includes("high") || p.includes("urgent")) return Theme.accentRose;
+                                        if (p.includes("med")) return Theme.accentAmber;
+                                        return Theme.textSecondary;
+                                    }
+                                }
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            Rectangle {
+                                height: 24
+                                implicitWidth: jiraStatusTxt.implicitWidth + 14
+                                radius: 6
+                                color: {
+                                    const st = (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.status || "").toLowerCase();
+                                    if (st.includes("progress")) return Qt.rgba(Theme.accentSky.r, Theme.accentSky.g, Theme.accentSky.b, 0.22);
+                                    if (st.includes("done") || st.includes("closed")) return Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.22);
+                                    if (st.includes("review")) return Qt.rgba(Theme.accentViolet.r, Theme.accentViolet.g, Theme.accentViolet.b, 0.22);
+                                    return Qt.rgba(Theme.accentAmber.r, Theme.accentAmber.g, Theme.accentAmber.b, 0.22);
+                                }
+                                border.color: {
+                                    const st = (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.status || "").toLowerCase();
+                                    if (st.includes("progress")) return Theme.accentSky;
+                                    if (st.includes("done") || st.includes("closed")) return Theme.accentEmerald;
+                                    if (st.includes("review")) return Theme.accentViolet;
+                                    return Theme.accentAmber;
+                                }
+                                border.width: 1
+
+                                Text {
+                                    id: jiraStatusTxt
+                                    anchors.centerIn: parent
+                                    text: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.status) ? omnibarWindow.spotlightResult.status.toUpperCase() : ""
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 10
+                                    font.bold: true
+                                    color: {
+                                        const st = (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.status || "").toLowerCase();
+                                        if (st.includes("progress")) return Theme.accentSky;
+                                        if (st.includes("done") || st.includes("closed")) return Theme.accentEmerald;
+                                        if (st.includes("review")) return Theme.accentViolet;
+                                        return Theme.accentAmber;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Middle Row: Real Issue Title
+                        Text {
+                            Layout.fillWidth: true
+                            text: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.title) ? omnibarWindow.spotlightResult.title : ""
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 15
+                            font.bold: true
+                            color: Theme.textPrimary
+                            wrapMode: Text.Wrap
+                            maximumLineCount: 2
+                            elide: Text.ElideRight
+                        }
+
+                        // Bottom Row: Assignee / Details + Action Button
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+
+                            Text {
+                                visible: !!(omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.assignee)
+                                text: "👤 " + (omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.assignee : "")
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 12
+                                color: Theme.textSecondary
+                            }
+
+                            Text {
+                                text: "• " + ((omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.updatedAgo) ? (omnibarWindow.spotlightResult.updatedAgo + " • ") : "") + "AskMeIdentity Jira"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 11
+                                color: Theme.textMuted
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            Rectangle {
+                                height: 28
+                                implicitWidth: jiraBtnRow.implicitWidth + 14
+                                radius: 6
+                                color: jiraBtnM.containsMouse ? Theme.accentSky : Theme.bgPill
+                                border.color: Theme.accentSky
+                                border.width: 1
+
+                                RowLayout {
+                                    id: jiraBtnRow
+                                    anchors.centerIn: parent
+                                    spacing: 5
+                                    Text {
+                                        text: "↵"
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        color: jiraBtnM.containsMouse ? Theme.textOnAccent : Theme.accentSky
+                                    }
+                                    Text {
+                                        text: "Open in Jira ↗"
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        color: jiraBtnM.containsMouse ? Theme.textOnAccent : Theme.textPrimary
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: jiraBtnM
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: omnibarWindow.executeCurrentCommand(false)
+                                }
+                            }
+                        }
+                    }
+
+                    // ── Case 2: Rich GitHub PR Card ──
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 16
+                        spacing: 8
+                        visible: omnibarWindow.spotlightResult !== null && omnibarWindow.spotlightResult.mode === "github"
+
+                        // Top Row: Chips (Repo, PR#, CI, State)
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+
+                            Rectangle {
+                                height: 24
+                                implicitWidth: prRepoRow.implicitWidth + 14
+                                radius: 6
+                                color: Qt.rgba(Theme.accentSky.r, Theme.accentSky.g, Theme.accentSky.b, 0.20)
+                                border.color: Theme.accentSky
+                                border.width: 1
+
+                                RowLayout {
+                                    id: prRepoRow
+                                    anchors.centerIn: parent
+                                    spacing: 5
+                                    Text { text: "⎇"; font.pixelSize: 12 }
+                                    Text {
+                                        text: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.repo)
+                                            ? (omnibarWindow.spotlightResult.repo + " #" + omnibarWindow.spotlightResult.prNumber)
+                                            : ("PR #" + (omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.prNumber : ""))
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        color: Theme.accentSky
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                visible: !!(omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.ciStatus && omnibarWindow.spotlightResult.ciStatus !== "none")
+                                height: 24
+                                implicitWidth: prCiTxt.implicitWidth + 12
+                                radius: 6
+                                color: {
+                                    const ci = (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.ciStatus || "").toLowerCase();
+                                    if (ci.includes("success") || ci.includes("pass")) return Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.20);
+                                    if (ci.includes("fail") || ci.includes("error")) return Qt.rgba(Theme.accentRose.r, Theme.accentRose.g, Theme.accentRose.b, 0.20);
+                                    return Qt.rgba(Theme.accentAmber.r, Theme.accentAmber.g, Theme.accentAmber.b, 0.20);
+                                }
+                                border.color: {
+                                    const ci = (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.ciStatus || "").toLowerCase();
+                                    if (ci.includes("success") || ci.includes("pass")) return Theme.accentEmerald;
+                                    if (ci.includes("fail") || ci.includes("error")) return Theme.accentRose;
+                                    return Theme.accentAmber;
+                                }
+                                border.width: 1
+
+                                Text {
+                                    id: prCiTxt
+                                    anchors.centerIn: parent
+                                    text: {
+                                        const ci = (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.ciStatus || "").toLowerCase();
+                                        if (ci.includes("success") || ci.includes("pass")) return "CI: Passing ✓";
+                                        if (ci.includes("fail") || ci.includes("error")) return "CI: Failed ✕";
+                                        return "CI: " + (omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.ciStatus : "");
+                                    }
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 10
+                                    font.bold: true
+                                    color: {
+                                        const ci = (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.ciStatus || "").toLowerCase();
+                                        if (ci.includes("success") || ci.includes("pass")) return Theme.accentEmerald;
+                                        if (ci.includes("fail") || ci.includes("error")) return Theme.accentRose;
+                                        return Theme.accentAmber;
+                                    }
+                                }
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            Rectangle {
+                                height: 24
+                                implicitWidth: prStateTxt.implicitWidth + 14
+                                radius: 6
+                                color: {
+                                    const st = (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.state || "").toLowerCase();
+                                    if (st === "open") return Qt.rgba(Theme.accentEmerald.r, Theme.accentEmerald.g, Theme.accentEmerald.b, 0.22);
+                                    if (st === "merged") return Qt.rgba(Theme.accentViolet.r, Theme.accentViolet.g, Theme.accentViolet.b, 0.22);
+                                    return Qt.rgba(Theme.accentRose.r, Theme.accentRose.g, Theme.accentRose.b, 0.22);
+                                }
+                                border.color: {
+                                    const st = (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.state || "").toLowerCase();
+                                    if (st === "open") return Theme.accentEmerald;
+                                    if (st === "merged") return Theme.accentViolet;
+                                    return Theme.accentRose;
+                                }
+                                border.width: 1
+
+                                Text {
+                                    id: prStateTxt
+                                    anchors.centerIn: parent
+                                    text: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.state) ? omnibarWindow.spotlightResult.state.toUpperCase() : ""
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 10
+                                    font.bold: true
+                                    color: {
+                                        const st = (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.state || "").toLowerCase();
+                                        if (st === "open") return Theme.accentEmerald;
+                                        if (st === "merged") return Theme.accentViolet;
+                                        return Theme.accentRose;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Middle Row: Real PR Title
+                        Text {
+                            Layout.fillWidth: true
+                            text: (omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.title) ? omnibarWindow.spotlightResult.title : ""
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 15
+                            font.bold: true
+                            color: Theme.textPrimary
+                            wrapMode: Text.Wrap
+                            maximumLineCount: 2
+                            elide: Text.ElideRight
+                        }
+
+                        // Bottom Row: Author / Details + Action Button
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+
+                            Text {
+                                visible: !!(omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.author)
+                                text: "👤 @" + (omnibarWindow.spotlightResult ? omnibarWindow.spotlightResult.author : "")
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 12
+                                color: Theme.textSecondary
+                            }
+
+                            Text {
+                                text: "• " + ((omnibarWindow.spotlightResult && omnibarWindow.spotlightResult.updatedAgo) ? (omnibarWindow.spotlightResult.updatedAgo + " • ") : "") + "GitHub Pull Request"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 11
+                                color: Theme.textMuted
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            Rectangle {
+                                height: 28
+                                implicitWidth: prBtnRow.implicitWidth + 14
+                                radius: 6
+                                color: prBtnM.containsMouse ? Theme.accentSky : Theme.bgPill
+                                border.color: Theme.accentSky
+                                border.width: 1
+
+                                RowLayout {
+                                    id: prBtnRow
+                                    anchors.centerIn: parent
+                                    spacing: 5
+                                    Text {
+                                        text: "↵"
+                                        font.family: Theme.fontMono
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        color: prBtnM.containsMouse ? Theme.textOnAccent : Theme.accentSky
+                                    }
+                                    Text {
+                                        text: "Open Pull Request ↗"
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        color: prBtnM.containsMouse ? Theme.textOnAccent : Theme.textPrimary
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: prBtnM
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: omnibarWindow.executeCurrentCommand(false)
+                                }
+                            }
+                        }
+                    }
+
+                    // ── Case 3: Math, Conversions, Time, Standard WebJump ──
                     RowLayout {
                         anchors.fill: parent
                         anchors.margins: 18
                         spacing: 16
+                        visible: omnibarWindow.spotlightResult !== null && omnibarWindow.spotlightResult.mode !== "jira" && omnibarWindow.spotlightResult.mode !== "github"
 
                         ColumnLayout {
                             Layout.fillWidth: true

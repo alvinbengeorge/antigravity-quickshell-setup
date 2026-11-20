@@ -441,8 +441,162 @@ fn is_system_online() -> bool {
     false
 }
 
+const SINGLE_CACHE_FILE: &str = "/tmp/jira_single_issues_cache.json";
+
+fn fetch_single_issue(key: &str, force: bool) {
+    let clean_key = if key.chars().all(|c| c.is_ascii_digit()) {
+        format!("ABT-{}", key)
+    } else {
+        key.to_uppercase()
+    };
+
+    // 1. Check single cache
+    let cache_path = Path::new(SINGLE_CACHE_FILE);
+    let mut cache_map: HashMap<String, Value> = HashMap::new();
+    if cache_path.exists() {
+        if let Ok(content) = fs::read_to_string(cache_path) {
+            if let Ok(map) = serde_json::from_str::<HashMap<String, Value>>(&content) {
+                if !force {
+                    if let Some(cached_issue) = map.get(&clean_key) {
+                        println!("{}", json!({
+                            "status": "ok",
+                            "issue": cached_issue
+                        }));
+                        return;
+                    }
+                }
+                cache_map = map;
+            }
+        }
+    }
+
+    // 2. Check main tasks cache (/tmp/jira_tasks_cache.json)
+    let main_cache_path = Path::new(CACHE_FILE);
+    if !force && main_cache_path.exists() {
+        if let Ok(content) = fs::read_to_string(main_cache_path) {
+            if let Ok(data) = serde_json::from_str::<Value>(&content) {
+                if let Some(tasks) = data.get("tasks").and_then(|t| t.as_array()) {
+                    for t in tasks {
+                        if t.get("key").and_then(|k| k.as_str()).map(|k| k.to_uppercase()) == Some(clean_key.clone()) {
+                            println!("{}", json!({
+                                "status": "ok",
+                                "issue": t
+                            }));
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Fetch live from Jira API
+    let (jira_url, username, token) = find_credentials();
+    if token.is_empty() {
+        println!("{}", json!({
+            "status": "error",
+            "error": "No ATLASSIAN_TOKEN configured"
+        }));
+        return;
+    }
+
+    let auth_str = format!("{}:{}", username, token);
+    let auth_header = format!("Basic {}", BASE64_STANDARD.encode(auth_str.as_bytes()));
+    let agent = ureq::AgentBuilder::new()
+        .timeout(Duration::from_secs(8))
+        .build();
+
+    let resp = agent
+        .get(&format!("{}/rest/api/3/issue/{}", jira_url, clean_key))
+        .set("Authorization", &auth_header)
+        .set("Accept", "application/json")
+        .call();
+
+    match resp {
+        Ok(r) => {
+            if let Ok(data) = r.into_json::<Value>() {
+                let fields = data.get("fields").unwrap_or(&Value::Null);
+                let summary = fields.get("summary").and_then(|s| s.as_str()).unwrap_or("");
+                let status_obj = fields.get("status").unwrap_or(&Value::Null);
+                let status_name = status_obj.get("name").and_then(|n| n.as_str()).unwrap_or("Unknown");
+                let status_cat = status_obj
+                    .get("statusCategory")
+                    .and_then(|sc| sc.get("name"))
+                    .and_then(|n| n.as_str())
+                    .unwrap_or("To Do");
+                let issuetype = fields
+                    .get("issuetype")
+                    .and_then(|it| it.get("name"))
+                    .and_then(|n| n.as_str())
+                    .unwrap_or("Task");
+                let priority = fields
+                    .get("priority")
+                    .and_then(|p| p.get("name"))
+                    .and_then(|n| n.as_str())
+                    .unwrap_or("Medium");
+                let assignee = fields
+                    .get("assignee")
+                    .and_then(|a| a.get("displayName"))
+                    .and_then(|n| n.as_str())
+                    .unwrap_or("Unassigned");
+                let updated = fields.get("updated").and_then(|u| u.as_str()).unwrap_or("");
+                let updated_ago = format_relative_time(updated);
+                let url = format!("{}/browse/{}", jira_url, clean_key);
+
+                let issue_obj = json!({
+                    "key": clean_key,
+                    "summary": summary,
+                    "status": status_name,
+                    "status_category": status_cat,
+                    "issuetype": issuetype,
+                    "priority": priority,
+                    "assignee": assignee,
+                    "updated_ago": updated_ago,
+                    "url": url
+                });
+
+                cache_map.insert(clean_key, issue_obj.clone());
+                if let Ok(s) = serde_json::to_string(&cache_map) {
+                    let _ = fs::write(SINGLE_CACHE_FILE, s);
+                }
+
+                println!("{}", json!({
+                    "status": "ok",
+                    "issue": issue_obj
+                }));
+            } else {
+                println!("{}", json!({
+                    "status": "error",
+                    "error": "Failed to parse Jira issue response"
+                }));
+            }
+        }
+        Err(e) => {
+            println!("{}", json!({
+                "status": "error",
+                "error": format!("Failed to fetch issue {}: {}", clean_key, e)
+            }));
+        }
+    }
+}
+
 pub fn run(args: &[String]) {
     let force = args.iter().any(|a| a == "--force");
+
+    if let Some(pos) = args.iter().position(|a| a == "--issue" || a == "-i") {
+        if let Some(key) = args.get(pos + 1) {
+            fetch_single_issue(key, force);
+            return;
+        }
+    }
+
+    for arg in args {
+        if !arg.starts_with('-') && (arg.contains('-') || arg.chars().all(|c| c.is_ascii_digit())) {
+            fetch_single_issue(arg, force);
+            return;
+        }
+    }
+
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())

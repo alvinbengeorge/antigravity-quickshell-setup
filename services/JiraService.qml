@@ -117,6 +117,72 @@ Singleton {
         jiraProc.running = true;
     }
 
+    property var extraIssues: ({})
+    signal issueFetched(string key, var issue)
+
+    function getIssue(key) {
+        if (!key) return null;
+        const cleanKey = key.toUpperCase().trim();
+        for (let i = 0; i < root.tasks.length; i++) {
+            if (root.tasks[i].key && root.tasks[i].key.toUpperCase() === cleanKey) {
+                return root.tasks[i];
+            }
+        }
+        if (root.extraIssues && root.extraIssues[cleanKey]) {
+            return root.extraIssues[cleanKey];
+        }
+        return null;
+    }
+
+    function searchTasks(term) {
+        if (!term) return [];
+        const t = term.toLowerCase().trim();
+        const results = [];
+        for (let i = 0; i < root.tasks.length; i++) {
+            const task = root.tasks[i];
+            const summary = (task.summary || "").toLowerCase();
+            const key = (task.key || "").toLowerCase();
+            if (summary.includes(t) || key.includes(t)) {
+                results.push(task);
+            }
+        }
+        return results;
+    }
+
+    Process {
+        id: singleIssueProc
+        running: false
+        property string pendingKey: ""
+        stdout: StdioCollector {
+            id: singleCollector
+            onStreamFinished: {
+                try {
+                    const raw = singleCollector.text.trim();
+                    if (raw.length > 0) {
+                        const data = JSON.parse(raw);
+                        if (data.status === "ok" && data.issue) {
+                            const newMap = Object.assign({}, root.extraIssues);
+                            newMap[data.issue.key.toUpperCase()] = data.issue;
+                            root.extraIssues = newMap;
+                            root.issueFetched(data.issue.key.toUpperCase(), data.issue);
+                        }
+                    }
+                } catch(e) {
+                    console.log("Error parsing single Jira issue: " + e);
+                }
+            }
+        }
+    }
+
+    function fetchIssue(key) {
+        if (!key || singleIssueProc.running) return;
+        const cleanKey = key.toUpperCase().trim();
+        if (getIssue(cleanKey)) return;
+        singleIssueProc.pendingKey = cleanKey;
+        singleIssueProc.command = [root.scriptPath, "--issue", cleanKey];
+        singleIssueProc.running = true;
+    }
+
     function openTask(url) {
         if (url && url.length > 0) {
             Quickshell.execDetached(["xdg-open", url]);

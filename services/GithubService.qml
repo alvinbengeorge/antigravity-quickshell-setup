@@ -89,6 +89,74 @@ Singleton {
         prProc.running = true;
     }
 
+    property var extraPrs: ({})
+    signal prFetched(string id, var pr)
+
+    function getPr(identifier) {
+        if (!identifier) return null;
+        const str = String(identifier).replace(/^#/, "").trim().toLowerCase();
+        for (let i = 0; i < root.prs.length; i++) {
+            const p = root.prs[i];
+            if (String(p.number) === str) {
+                return p;
+            }
+        }
+        if (root.extraPrs && root.extraPrs[str]) {
+            return root.extraPrs[str];
+        }
+        return null;
+    }
+
+    function searchPrs(term) {
+        if (!term) return [];
+        const t = term.toLowerCase().trim();
+        const results = [];
+        for (let i = 0; i < root.prs.length; i++) {
+            const p = root.prs[i];
+            const title = (p.title || "").toLowerCase();
+            const repo = (p.repo || "").toLowerCase();
+            const num = String(p.number);
+            if (title.includes(t) || repo.includes(t) || num === t) {
+                results.push(p);
+            }
+        }
+        return results;
+    }
+
+    Process {
+        id: singlePrProc
+        running: false
+        property string pendingId: ""
+        stdout: StdioCollector {
+            id: singlePrCollector
+            onStreamFinished: {
+                try {
+                    const raw = singlePrCollector.text.trim();
+                    if (raw.length > 0) {
+                        const data = JSON.parse(raw);
+                        if (data.status === "ok" && data.pr) {
+                            const newMap = Object.assign({}, root.extraPrs);
+                            newMap[String(data.pr.number)] = data.pr;
+                            root.extraPrs = newMap;
+                            root.prFetched(String(data.pr.number), data.pr);
+                        }
+                    }
+                } catch(e) {
+                    console.log("Error parsing single GitHub PR: " + e);
+                }
+            }
+        }
+    }
+
+    function fetchPr(identifier) {
+        if (!identifier || singlePrProc.running) return;
+        const str = String(identifier).replace(/^#/, "").trim();
+        if (getPr(str)) return;
+        singlePrProc.pendingId = str;
+        singlePrProc.command = [root.scriptPath, "--pr", str];
+        singlePrProc.running = true;
+    }
+
     function openPr(url) {
         if (url && url.length > 0) {
             Quickshell.execDetached(["xdg-open", url]);

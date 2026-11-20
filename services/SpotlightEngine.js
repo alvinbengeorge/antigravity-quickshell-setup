@@ -607,12 +607,105 @@ function evaluateBaseConversion(raw) {
 }
 
 // 5F. Smart Web Jump (@gh, @jira, @web)
-function evaluateWebJump(raw) {
+function evaluateWebJump(raw, context) {
     const q = raw.trim();
 
-    // GitHub Quick Jump: @gh <query>, @gh prs, @gh issues, @gh <user/repo>
-    if (/^(@gh|gh)(\s+|$)/i.test(q)) {
-        const term = q.replace(/^(@gh|gh)\s*/i, "").trim();
+    // GitHub Quick Jump: @gh <query>, @gh prs, @gh issues, @gh <user/repo>, @pr <num/query>
+    if (/^(@gh|@pr|gh|pr)(\s+|$)/i.test(q)) {
+        const term = q.replace(/^(@gh|@pr|gh|pr)\s*/i, "").trim();
+        const isNum = /^#?\d+$/.test(term);
+
+        // 1. Direct PR number lookup (e.g. @gh 436 or @pr #436)
+        if (isNum) {
+            const numStr = term.replace(/^#/, "");
+            let pr = null;
+            if (context && context.githubService && context.githubService.getPr) {
+                pr = context.githubService.getPr(numStr);
+                if (!pr && context.githubService.fetchPr) {
+                    context.githubService.fetchPr(numStr);
+                }
+            }
+
+            if (pr) {
+                const repoName = pr.repo || "repo";
+                const authorName = pr.author || "alvinbengeorge";
+                const authorStr = " • @" + authorName;
+                const ciStr = pr.ci_status ? (" • CI: " + pr.ci_status) : "";
+                const stateStr = (pr.state || "Open").toUpperCase();
+                return {
+                    mode: "github",
+                    isPr: true,
+                    isJira: false,
+                    prNumber: pr.number,
+                    title: pr.title || ("Pull Request #" + pr.number),
+                    expression: repoName + " #" + pr.number + authorStr + ciStr + (pr.updated_ago ? (" • " + pr.updated_ago) : ""),
+                    repo: pr.repo || "",
+                    fullRepo: pr.full_repo || "",
+                    author: authorName,
+                    ciStatus: pr.ci_status || "",
+                    updatedAgo: pr.updated_ago || "",
+                    state: stateStr,
+                    result: stateStr,
+                    url: pr.url || ("https://github.com/askmeidentitycorp/" + (pr.repo || "") + "/pull/" + pr.number),
+                    icon: "⎇",
+                    lucide: "code",
+                    copyValue: "#" + pr.number + " " + (pr.title || "") + " (" + (pr.url || "") + ")"
+                };
+            }
+
+            // Pending / Loading PR
+            const url = "https://github.com/pulls";
+            return {
+                mode: "github",
+                isPr: true,
+                isJira: false,
+                prNumber: numStr,
+                title: "Pull Request #" + numStr,
+                expression: "Querying GitHub repository details...",
+                repo: "GitHub",
+                author: "",
+                ciStatus: "",
+                state: "OPEN",
+                result: "LOOKUP...",
+                url: url,
+                icon: "⎇",
+                lucide: "code",
+                copyValue: "PR #" + numStr
+            };
+        }
+
+        // 2. PR search by keyword in cache (e.g. @gh meetings or @pr stripe)
+        if (context && context.githubService && context.githubService.searchPrs && term.length > 1 && !term.includes("/")) {
+            const matchedPrs = context.githubService.searchPrs(term);
+            if (matchedPrs && matchedPrs.length > 0) {
+                const pr = matchedPrs[0];
+                const repoName = pr.repo || "repo";
+                const authorName = pr.author || "alvinbengeorge";
+                const authorStr = " • @" + authorName;
+                const ciStr = pr.ci_status ? (" • CI: " + pr.ci_status) : "";
+                const stateStr = (pr.state || "Open").toUpperCase();
+                return {
+                    mode: "github",
+                    isPr: true,
+                    isJira: false,
+                    prNumber: pr.number,
+                    title: pr.title || ("Pull Request #" + pr.number),
+                    expression: repoName + " #" + pr.number + authorStr + ciStr + (pr.updated_ago ? (" • " + pr.updated_ago) : ""),
+                    repo: pr.repo || "",
+                    fullRepo: pr.full_repo || "",
+                    author: authorName,
+                    ciStatus: pr.ci_status || "",
+                    updatedAgo: pr.updated_ago || "",
+                    state: stateStr,
+                    result: stateStr,
+                    url: pr.url,
+                    icon: "⎇",
+                    lucide: "code",
+                    copyValue: "#" + pr.number + " " + (pr.title || "") + " (" + (pr.url || "") + ")"
+                };
+            }
+        }
+
         let url = "https://github.com";
         let title = "GITHUB SEARCH";
         let expr = "Open GitHub.com";
@@ -658,24 +751,108 @@ function evaluateWebJump(raw) {
         };
     }
 
-    // Jira Quick Jump: @jira <key/query>, @jira 29, @jira ABT-29, @jira board, @jira work
+    // Jira Quick Jump: @jira <key/query>, @jira 270, @jira ABT-270, @jira board, @jira work
     if (/^(@jira|jira)(\s+|$)/i.test(q)) {
         const term = q.replace(/^(@jira|jira)\s*/i, "").trim();
         const cleanTerm = /^\d+$/.test(term) ? ("ABT-" + term) : term;
         const isIssue = /^[a-zA-Z]+-\d+$/i.test(cleanTerm);
+
+        // 1. Direct Issue Key Lookup (e.g. @jira ABT-270 or @jira 270)
+        if (isIssue) {
+            const issueKey = cleanTerm.toUpperCase();
+            let issue = null;
+            if (context && context.jiraService && context.jiraService.getIssue) {
+                issue = context.jiraService.getIssue(issueKey);
+                if (!issue && context.jiraService.fetchIssue) {
+                    context.jiraService.fetchIssue(issueKey);
+                }
+            }
+
+            if (issue) {
+                const statusStr = (issue.status || "Open").toUpperCase();
+                const assigneeStr = issue.assignee ? (" • " + issue.assignee) : "";
+                const typeStr = issue.issuetype || "Issue";
+                const priorityStr = issue.priority ? (" • " + issue.priority + " Priority") : "";
+                return {
+                    mode: "jira",
+                    isJira: true,
+                    isPr: false,
+                    issueKey: issue.key,
+                    title: issue.summary || ("Issue " + issue.key),
+                    expression: issue.key + " • " + (issue.status || "Open") + " • " + typeStr + priorityStr + assigneeStr,
+                    status: issue.status || "Open",
+                    statusCategory: issue.status_category || "To Do",
+                    issueType: typeStr,
+                    priority: issue.priority || "Medium",
+                    assignee: issue.assignee || (context && context.jiraService && context.jiraService.user ? context.jiraService.user.displayName : "Alvin George"),
+                    updatedAgo: issue.updated_ago || "",
+                    result: statusStr,
+                    url: issue.url || ("https://askmeidentity.atlassian.net/browse/" + issue.key),
+                    icon: "🎫",
+                    lucide: "check",
+                    copyValue: issue.key + ": " + (issue.summary || "") + " (" + (issue.url || "") + ")"
+                };
+            }
+
+            // Interim / Fetching state
+            const url = "https://askmeidentity.atlassian.net/browse/" + issueKey;
+            return {
+                mode: "jira",
+                isJira: true,
+                isPr: false,
+                issueKey: issueKey,
+                title: "Issue " + issueKey,
+                expression: "Querying AskMeIdentity Jira Cloud REST API...",
+                status: "Loading",
+                statusCategory: "To Do",
+                issueType: "Issue",
+                priority: "",
+                assignee: "",
+                result: "LOOKUP...",
+                url: url,
+                icon: "🎫",
+                lucide: "check",
+                copyValue: url
+            };
+        }
+
+        // 2. Search tasks in cache by summary/key (e.g. @jira meetings or @jira password)
+        if (context && context.jiraService && context.jiraService.searchTasks && term.length > 1) {
+            const matchedTasks = context.jiraService.searchTasks(term);
+            if (matchedTasks && matchedTasks.length > 0) {
+                const issue = matchedTasks[0];
+                const statusStr = (issue.status || "Open").toUpperCase();
+                const assigneeStr = issue.assignee ? (" • " + issue.assignee) : "";
+                const typeStr = issue.issuetype || "Issue";
+                const priorityStr = issue.priority ? (" • " + issue.priority + " Priority") : "";
+                return {
+                    mode: "jira",
+                    isJira: true,
+                    isPr: false,
+                    issueKey: issue.key,
+                    title: issue.summary || ("Issue " + issue.key),
+                    expression: issue.key + " • " + (issue.status || "Open") + " • " + typeStr + priorityStr + assigneeStr,
+                    status: issue.status || "Open",
+                    statusCategory: issue.status_category || "To Do",
+                    issueType: typeStr,
+                    priority: issue.priority || "Medium",
+                    assignee: issue.assignee || (context && context.jiraService && context.jiraService.user ? context.jiraService.user.displayName : "Alvin George"),
+                    updatedAgo: issue.updated_ago || "",
+                    result: statusStr,
+                    url: issue.url || ("https://askmeidentity.atlassian.net/browse/" + issue.key),
+                    icon: "🎫",
+                    lucide: "check",
+                    copyValue: issue.key + ": " + (issue.summary || "") + " (" + (issue.url || "") + ")"
+                };
+            }
+        }
 
         let url = "https://askmeidentity.atlassian.net";
         let title = "OPEN JIRA WORK";
         let expr = "Open AskMeIdentity Jira";
         let res = "askmeidentity.atlassian.net";
 
-        if (isIssue) {
-            const issueKey = cleanTerm.toUpperCase();
-            url = "https://askmeidentity.atlassian.net/browse/" + issueKey;
-            title = "JUMP TO ISSUE " + issueKey;
-            expr = "Direct jump to AskMeIdentity issue " + issueKey;
-            res = "browse/" + issueKey;
-        } else if (term.toLowerCase() === "my" || term.toLowerCase() === "work" || term.toLowerCase() === "tasks") {
+        if (term.toLowerCase() === "my" || term.toLowerCase() === "work" || term.toLowerCase() === "tasks") {
             url = "https://askmeidentity.atlassian.net/jira/your-work";
             title = "JIRA ASSIGNED WORK";
             expr = "Open your assigned Jira tasks & sprints";
@@ -725,13 +902,13 @@ function evaluateWebJump(raw) {
 
 // ── 6. MASTER INSPECTOR DISPATCHER ─────────────────────────────────────────
 
-function inspect(query) {
+function inspect(query, context) {
     if (!query) return null;
     const q = query.trim();
     if (q.length === 0) return null;
 
     // 0. Smart Web Jump (@gh, @jira, @web)
-    const webJump = evaluateWebJump(q);
+    const webJump = evaluateWebJump(q, context);
     if (webJump) return webJump;
 
     // 1. Color check (starts with # or matches hex/rgb)

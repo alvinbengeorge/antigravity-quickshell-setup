@@ -2,6 +2,7 @@
 //! Fast, cached GraphQL/Search query of authored PRs via GitHub CLI (`gh`).
 
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -339,8 +340,124 @@ fn is_system_online() -> bool {
     false
 }
 
+const PR_CACHE_FILE: &str = "/tmp/github_single_prs_cache.json";
+
+fn fetch_single_pr(query: &str) {
+    let clean_query = query.trim().trim_start_matches('#');
+    let num = clean_query.parse::<u64>().ok();
+
+    // 1. Check main PR cache (/tmp/github_prs_cache.json)
+    let main_cache = Path::new(CACHE_FILE);
+    if main_cache.exists() {
+        if let Ok(content) = fs::read_to_string(main_cache) {
+            if let Ok(data) = serde_json::from_str::<Value>(&content) {
+                if let Some(prs) = data.get("prs").and_then(|p| p.as_array()) {
+                    for p in prs {
+                        if let Some(p_num) = p.get("number").and_then(|n| n.as_u64()) {
+                            if Some(p_num) == num {
+                                println!("{}", json!({
+                                    "status": "ok",
+                                    "pr": p
+                                }));
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Check single PR cache
+    let cache_path = Path::new(PR_CACHE_FILE);
+    let mut cache_map: HashMap<String, Value> = HashMap::new();
+    if cache_path.exists() {
+        if let Ok(content) = fs::read_to_string(cache_path) {
+            if let Ok(map) = serde_json::from_str::<HashMap<String, Value>>(&content) {
+                if let Some(cached_pr) = map.get(clean_query) {
+                    println!("{}", json!({
+                        "status": "ok",
+                        "pr": cached_pr
+                    }));
+                    return;
+                }
+                cache_map = map;
+            }
+        }
+    }
+
+    // 3. Fallback: Query gh search prs
+    let mut cmd = Command::new("gh");
+    cmd.args([
+        "search", "prs", clean_query,
+        "--owner", "askmeidentitycorp",
+        "--limit", "5",
+        "--json", "number,title,state,url,author,repository,isDraft"
+    ]);
+
+    if let Ok(output) = cmd.output() {
+        if output.status.success() {
+            let out_str = String::from_utf8_lossy(&output.stdout);
+            if let Ok(arr) = serde_json::from_str::<Vec<Value>>(&out_str) {
+                if let Some(first) = arr.first() {
+                    let number = first.get("number").and_then(|n| n.as_u64()).unwrap_or(0);
+                    let title = first.get("title").and_then(|t| t.as_str()).unwrap_or("");
+                    let url = first.get("url").and_then(|u| u.as_str()).unwrap_or("");
+                    let state = first.get("state").and_then(|s| s.as_str()).unwrap_or("open");
+                    let repo_name = first.get("repository").and_then(|r| r.get("name")).and_then(|n| n.as_str()).unwrap_or("");
+                    let full_repo = first.get("repository").and_then(|r| r.get("nameWithOwner")).and_then(|n| n.as_str()).unwrap_or("");
+                    let author = first.get("author").and_then(|a| a.get("login")).and_then(|n| n.as_str()).unwrap_or("");
+
+                    let pr_obj = json!({
+                        "number": number,
+                        "title": title,
+                        "url": url,
+                        "state": state,
+                        "repo": repo_name,
+                        "full_repo": full_repo,
+                        "author": author,
+                        "ci_status": "none",
+                        "updated_ago": "recently"
+                    });
+
+                    cache_map.insert(clean_query.to_string(), pr_obj.clone());
+                    if let Ok(s) = serde_json::to_string(&cache_map) {
+                        let _ = fs::write(PR_CACHE_FILE, s);
+                    }
+
+                    println!("{}", json!({
+                        "status": "ok",
+                        "pr": pr_obj
+                    }));
+                    return;
+                }
+            }
+        }
+    }
+
+    println!("{}", json!({
+        "status": "error",
+        "error": format!("PR {} not found", clean_query)
+    }));
+}
+
 pub fn run(args: &[String]) {
     let force = args.iter().any(|a| a == "--force");
+
+    if let Some(pos) = args.iter().position(|a| a == "--pr" || a == "-p") {
+        if let Some(q) = args.get(pos + 1) {
+            fetch_single_pr(q);
+            return;
+        }
+    }
+
+    for arg in args {
+        if !arg.starts_with('-') && (arg.starts_with('#') || arg.chars().all(|c| c.is_ascii_digit())) {
+            fetch_single_pr(arg);
+            return;
+        }
+    }
+
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
