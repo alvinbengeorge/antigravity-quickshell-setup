@@ -243,7 +243,6 @@ PanelWindow {
         if (omnibarWindow.spotlightResult) {
             if (omnibarWindow.spotlightResult.command) {
                 const cmd = omnibarWindow.spotlightResult.command;
-                omnibarWindow.visible = false;
                 ShellState.omnibarOpen = false;
                 Quickshell.execDetached(["sh", "-c", "sleep 0.15 && " + cmd]);
                 dismissTimer.restart();

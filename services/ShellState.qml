@@ -219,8 +219,9 @@ Singleton {
     }
 
     function toggleOmnibar() {
-        root.omnibarOpen = !root.omnibarOpen;
         if (root.omnibarOpen) {
+            root.omnibarOpen = false;
+        } else {
             root.closeAll();
             root.omnibarOpen = true;
         }

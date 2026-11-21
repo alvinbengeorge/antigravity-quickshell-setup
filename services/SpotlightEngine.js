@@ -639,7 +639,7 @@ function evaluateWebJump(raw, context) {
                 result: "Generate",
                 command: "ag-screen-tools qr-gen \"" + term.replace(/"/g, "\\\"") + "\"",
                 icon: "▦",
-                lucide: "camera",
+                lucide: "copy",
                 copyValue: term
             };
         } else {
@@ -652,7 +652,7 @@ function evaluateWebJump(raw, context) {
                 result: "Scan",
                 command: "screen-qr",
                 icon: "▦",
-                lucide: "camera",
+                lucide: "copy",
                 copyValue: "screen-qr"
             };
         }
