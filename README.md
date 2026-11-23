@@ -1,5 +1,7 @@
 # ✦ Antigravity Quickshell Desktop Setup
 
+## Hello world
+
 A high-performance, modern desktop shell built with **[Quickshell](https://quickshell.org/)** (QtQuick/QML) and tailored specifically for **Hyprland** on Wayland. Designed for pairing with **Google Antigravity** workflows, featuring dynamic reactive theming, real-time audio visualization, hardware telemetry, and fluid macOS-inspired micro-interactions.
 
 > [!NOTE]
