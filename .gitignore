@@ -16,3 +16,5 @@ rust/target/
 *.pem
 *.token
 credentials.json
+calendars.json
+*calendar*.json
